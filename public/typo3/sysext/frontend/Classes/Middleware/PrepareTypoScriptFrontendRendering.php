@@ -19,8 +19,11 @@ namespace TYPO3\CMS\Frontend\Middleware;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
 use Psr\Http\Server\MiddlewareInterface;
-use Psr\Http\Server\RequestHandlerInterface;
+use Psr\Http\Server\RequestHandlerInterface as PsrRequestHandlerInterface;
+use TYPO3\CMS\Core\Routing\PageArguments;
 use TYPO3\CMS\Core\TimeTracker\TimeTracker;
+use TYPO3\CMS\Core\Utility\ArrayUtility;
+use TYPO3\CMS\Core\Utility\GeneralUtility;
 use TYPO3\CMS\Frontend\Controller\TypoScriptFrontendController;
 
 /**
@@ -28,7 +31,7 @@ use TYPO3\CMS\Frontend\Controller\TypoScriptFrontendController;
  *
  * Do all necessary preparation steps for rendering
  *
- * @internal this middleware might get removed in TYPO3 v10.x.
+ * @internal this middleware might get removed in TYPO3 v10.0.
  */
 class PrepareTypoScriptFrontendRendering implements MiddlewareInterface
 {
@@ -42,24 +45,21 @@ class PrepareTypoScriptFrontendRendering implements MiddlewareInterface
      */
     protected $timeTracker;
 
-    public function __construct(TypoScriptFrontendController $controller, TimeTracker $timeTracker)
+    public function __construct(TypoScriptFrontendController $controller = null, TimeTracker $timeTracker = null)
     {
-        $this->controller = $controller;
-        $this->timeTracker = $timeTracker;
+        $this->controller = $controller ?: $GLOBALS['TSFE'];
+        $this->timeTracker = $timeTracker ?: GeneralUtility::makeInstance(TimeTracker::class);
     }
 
     /**
      * Initialize TypoScriptFrontendController to the point right before rendering of the page is triggered
      *
      * @param ServerRequestInterface $request
-     * @param RequestHandlerInterface $handler
+     * @param PsrRequestHandlerInterface $handler
      * @return ResponseInterface
      */
-    public function process(ServerRequestInterface $request, RequestHandlerInterface $handler): ResponseInterface
+    public function process(ServerRequestInterface $request, PsrRequestHandlerInterface $handler): ResponseInterface
     {
-        // as long as TSFE throws errors with the global object, this needs to be set, but
-        // should be removed later-on once TypoScript Condition Matcher is built with the current request object.
-        $GLOBALS['TYPO3_REQUEST'] = $request;
         // Get from cache
         $this->timeTracker->push('Get Page from cache');
         // Locks may be acquired here
@@ -69,19 +69,52 @@ class PrepareTypoScriptFrontendRendering implements MiddlewareInterface
         // After this, we should have a valid config-array ready
         $this->controller->getConfigArray();
 
+        // Merge Query Parameters with config.defaultGetVars
+        // This is done in getConfigArray as well, but does not override the current middleware request object
+        // Since we want to stay in sync with this, the option needs to be set as well.
+        $pageArguments = $request->getAttribute('routing');
+        if (!empty($this->controller->config['config']['defaultGetVars.'] ?? null)) {
+            $modifiedGetVars = GeneralUtility::removeDotsFromTS($this->controller->config['config']['defaultGetVars.']);
+            if ($pageArguments instanceof PageArguments) {
+                $pageArguments = $pageArguments->withQueryArguments($modifiedGetVars);
+                $this->controller->setPageArguments($pageArguments);
+                $request = $request->withAttribute('routing', $pageArguments);
+            }
+            if (!empty($request->getQueryParams())) {
+                ArrayUtility::mergeRecursiveWithOverrule($modifiedGetVars, $request->getQueryParams());
+            }
+            $request = $request->withQueryParams($modifiedGetVars);
+            $GLOBALS['TYPO3_REQUEST'] = $request;
+        }
+
         // Setting language and locale
-        $this->timeTracker->push('Setting language');
+        $this->timeTracker->push('Setting language and locale');
         $this->controller->settingLanguage();
+        $this->controller->settingLocale();
         $this->timeTracker->pull();
 
         // Convert POST data to utf-8 for internal processing if metaCharset is different
-        if ($this->controller->metaCharset !== 'utf-8' && $request->getMethod() === 'POST') {
+        if ($this->controller->metaCharset !== 'utf-8' && is_array($_POST) && !empty($_POST)) {
+            $this->convertCharsetRecursivelyToUtf8($_POST, $this->controller->metaCharset);
+            $GLOBALS['HTTP_POST_VARS'] = $_POST;
             $parsedBody = $request->getParsedBody();
-            if (is_array($parsedBody) && !empty($parsedBody)) {
-                $this->convertCharsetRecursivelyToUtf8($parsedBody, $this->controller->metaCharset);
-                $request = $request->withParsedBody($parsedBody);
+            $this->convertCharsetRecursivelyToUtf8($parsedBody, $this->controller->metaCharset);
+            $request = $request->withParsedBody($parsedBody);
+            $GLOBALS['TYPO3_REQUEST'] = $request;
+        }
+
+        // @deprecated since TYPO3 v9.3, will be removed in TYPO3 v10.0
+        $this->controller->initializeRedirectUrlHandlers(true);
+
+        // Hook for processing data submission to extensions
+        // This is done at this point, because we need the config values
+        if (!empty($GLOBALS['TYPO3_CONF_VARS']['SC_OPTIONS']['tslib/class.tslib_fe.php']['checkDataSubmission'])) {
+            trigger_error('The "checkDataSubmission" hook will be removed in TYPO3 v10.0 in favor of PSR-15. Use a middleware instead.', E_USER_DEPRECATED);
+            foreach ($GLOBALS['TYPO3_CONF_VARS']['SC_OPTIONS']['tslib/class.tslib_fe.php']['checkDataSubmission'] as $className) {
+                GeneralUtility::makeInstance($className)->checkDataSubmission($this->controller);
             }
         }
+
         return $handler->handle($request);
     }
 

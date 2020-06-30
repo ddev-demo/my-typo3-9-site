@@ -77,11 +77,11 @@ class BackendWorkspaceRestriction implements QueryRestrictionInterface
                         )
                     );
                 } else {
-                    $comparisonExpression = $this->workspaceId === 0 ? 'eq' : 'gt';
+                    $comparisonExpression = $this->workspaceId === 0 ? 'neq' : 'eq';
                     $constraints[] = $workspaceIdExpression;
                     $constraints[] = $expressionBuilder->{$comparisonExpression}(
-                        $tableAlias . '.t3ver_oid',
-                        0
+                        $tableAlias . '.pid',
+                        -1
                     );
                 }
             }

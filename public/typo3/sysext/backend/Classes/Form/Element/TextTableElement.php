@@ -151,10 +151,8 @@ class TextTableElement extends AbstractFormElement
             }
         }
 
-        $fieldId = StringUtility::getUniqueId('formengine-textarea-');
-
         $attributes = [
-            'id' => $fieldId,
+            'id' => StringUtility::getUniqueId('formengine-textarea-'),
             'name' => htmlspecialchars($parameterArray['itemFormElName']),
             'data-formengine-validation-rules' => $this->getValidationDataAsJsonString($config),
             'data-formengine-input-name' => htmlspecialchars($parameterArray['itemFormElName']),
@@ -218,11 +216,6 @@ class TextTableElement extends AbstractFormElement
         $html[] =   '</div>';
         $html[] = '</div>';
 
-        $resultArray['requireJsModules'][] = ['TYPO3/CMS/Backend/FormEngine/Element/TextTableElement' => '
-            function(TextTableElement) {
-                new TextTableElement(' . GeneralUtility::quoteJSvalue($fieldId) . ');
-            }'
-        ];
         $resultArray['html'] = implode(LF, $html);
         return $resultArray;
     }

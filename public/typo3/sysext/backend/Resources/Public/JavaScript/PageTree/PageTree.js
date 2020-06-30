@@ -32,6 +32,22 @@ define(['jquery',
      */
     var PageTree = function() {
       SvgTree.call(this);
+      this.settings.defaultProperties = {
+        hasChildren: false,
+        nameSourceField: 'title',
+        prefix: '',
+        suffix: '',
+        locked: false,
+        overlayIcon: '',
+        selectable: true,
+        expanded: false,
+        checked: false,
+        backgroundColor: '',
+        stopPageTree: false,
+        class: '',
+        readableRootline: '',
+        isMountPoint: false,
+      };
     };
 
     PageTree.prototype = Object.create(SvgTree.prototype);
@@ -50,7 +66,7 @@ define(['jquery',
         return false;
       }
 
-      _this.settings.isDragAnDrop = true;
+      _this.settings.isDragAnDrop = settings.allowDragMove;
       _this.dispatch.on('nodeSelectedAfter.pageTree', _this.nodeSelectedAfter);
       _this.dispatch.on('nodeRightClick.pageTree', _this.nodeRightClick);
       _this.dispatch.on('contextmenu.pageTree', _this.contextmenu);
@@ -139,7 +155,7 @@ define(['jquery',
       } else {
         if (data.command === 'delete') {
           if (data.uid === fsMod.recentIds.web) {
-            _this.selectNode(_this.getFirstNode());
+            _this.selectNode(_this.nodes[0]);
           }
           params = '&cmd[pages][' + data.uid + '][delete]=1';
         } else {
@@ -182,10 +198,6 @@ define(['jquery',
             _this.errorNotification();
           }
         });
-    };
-
-    PageTree.prototype.getFirstNode = function() {
-      return this.nodes[0];
     };
 
     /**
@@ -304,7 +316,7 @@ define(['jquery',
     /**
      * Node selection logic (triggered by different events)
      * Page tree supports only one node to be selected at a time
-     * so the default function from SvgTree needs to be overridden
+     * so the default function from SvgTree needs to be overriden
      *
      * @param {Node} node
      */
@@ -465,6 +477,10 @@ define(['jquery',
 
     PageTree.prototype.editNodeLabel = function(node) {
       var _this = this;
+
+      if (!node.allowEdit) {
+        return;
+      }
 
       _this.removeEditedText();
       _this.nodeIsEdit = true;

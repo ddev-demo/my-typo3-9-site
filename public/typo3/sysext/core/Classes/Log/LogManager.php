@@ -136,6 +136,10 @@ class LogManager implements SingletonInterface, LogManagerInterface
         $configuration = $this->getConfigurationForLogger(self::CONFIGURATION_TYPE_WRITER, $logger->getName());
         foreach ($configuration as $severityLevel => $writer) {
             foreach ($writer as $logWriterClassName => $logWriterOptions) {
+                if ($logWriterOptions['disabled'] ?? false) {
+                    continue;
+                }
+                unset($logWriterOptions['disabled']);
                 try {
                     /** @var \TYPO3\CMS\Core\Log\Writer\WriterInterface $logWriter */
                     $logWriter = \TYPO3\CMS\Core\Utility\GeneralUtility::makeInstance($logWriterClassName, $logWriterOptions);
@@ -204,7 +208,7 @@ class LogManager implements SingletonInterface, LogManagerInterface
         // Validate the config
         foreach ($result as $level => $unused) {
             try {
-                LogLevel::validateLevel(LogLevel::normalizeLevel($level));
+                LogLevel::validateLevel($level);
             } catch (\Psr\Log\InvalidArgumentException $e) {
                 throw new \Psr\Log\InvalidArgumentException('The given severity level "' . htmlspecialchars($level) . '" for ' . $configurationKey . ' of logger "' . $loggerName . '" is not valid.', 1326406447);
             }

@@ -133,6 +133,7 @@ class VimeoRenderer implements FileRendererInterface
     protected function createVimeoUrl(array $options, FileInterface $file)
     {
         $videoId = $this->getVideoIdFromFile($file);
+
         $urlParams = [];
         if (!empty($options['autoplay'])) {
             $urlParams[] = 'autoplay=1';
@@ -140,9 +141,8 @@ class VimeoRenderer implements FileRendererInterface
         if (!empty($options['loop'])) {
             $urlParams[] = 'loop=1';
         }
-
-        if (isset($options['api']) && (int)$options['api'] === 1) {
-            $urlParams[] = 'api=1';
+        if (!empty($options['no-cookie'])) {
+            $urlParams[] = 'dnt=1';
         }
         $urlParams[] = 'title=' . (int)!empty($options['showinfo']);
         $urlParams[] = 'byline=' . (int)!empty($options['showinfo']);

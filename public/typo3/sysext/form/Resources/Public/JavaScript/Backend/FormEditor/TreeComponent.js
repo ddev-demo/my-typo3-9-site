@@ -336,6 +336,24 @@ define(['jquery',
             return false;
           }
 
+          if (
+            formElementTypeDefinition['_isGridContainerFormElement']
+            && (
+              getFormEditorApp().findEnclosingGridContainerFormElement(targetFormElementIdentifierPath)
+              || getFormEditorApp().findEnclosingGridRowFormElement(targetFormElementIdentifierPath)
+            )
+          ) {
+            return false;
+          }
+
+          if (
+            !formElementTypeDefinition['_isGridContainerFormElement']
+            && !formElementTypeDefinition['_isGridRowFormElement']
+            && targetFormElementTypeDefinition['_isGridContainerFormElement']
+          ) {
+            return false;
+          }
+
           return true;
         },
         stop: function(e, o) {
@@ -475,9 +493,6 @@ define(['jquery',
       _saveExpanderStates();
       _treeDomElement.off().empty().append(renderCompositeFormElementChildsAsSortableList(formElement));
 
-      // We make use of the same strategy for db click detection as the current core pagetree implementation.
-      // @see https://github.com/TYPO3/TYPO3.CMS/blob/260226e93c651356545e91a7c55ee63e186766d5/typo3/sysext/backend/Resources/Public/JavaScript/PageTree/PageTree.js#L350
-      var clicks = 0;
       _treeDomElement.on("click", function(e) {
         var formElementIdentifierPath;
 
@@ -487,19 +502,7 @@ define(['jquery',
         if (getUtility().isUndefinedOrNull(formElementIdentifierPath) || !getUtility().isNonEmptyString(formElementIdentifierPath)) {
           return;
         }
-
-        clicks++;
-
-        if (clicks === 1) {
-          setTimeout(function() {
-            if (clicks === 1) {
-              getPublisherSubscriber().publish('view/tree/node/clicked', [formElementIdentifierPath]);
-            } else {
-              _editTreeNodeLabel(formElementIdentifierPath);
-            }
-            clicks = 0;
-          }, 300);
-        }
+        getPublisherSubscriber().publish('view/tree/node/clicked', [formElementIdentifierPath]);
       });
 
       $(getHelper().getDomElementDataIdentifierSelector('expander'), _treeDomElement).on('click', function() {
@@ -644,62 +647,6 @@ define(['jquery',
      */
     function getTreeDomElement() {
       return _treeDomElement;
-    };
-
-    /**
-     * @private
-     *
-     * @param string
-     */
-    function _editTreeNodeLabel(formElementIdentifierPath) {
-      var treeNode = getTreeNode(formElementIdentifierPath);
-      var titleNode = $(getHelper().getDomElementDataIdentifierSelector('title'), treeNode);
-      var currentTitle = titleNode.children()[0].childNodes[0].nodeValue.trim();
-      var treeRootWidth = getTreeDomElement().width();
-      var nodeIsEdit = true;
-
-      var input = $('<input>')
-        .attr('class', 'node-edit')
-        .css('top', function() {
-          var top = titleNode.position().top;
-          return top + 'px';
-        })
-        .css('left', titleNode.position().left + 'px')
-        .css('width', treeRootWidth - titleNode.position().left + 'px')
-        .attr('type', 'text')
-        .attr('value', currentTitle)
-        .on('click', function(e) {
-          e.stopPropagation();
-        })
-        .on('keyup', function(e) {
-          if (e.keyCode === 13 || e.keyCode === 9) { //enter || tab
-            var newTitle = this.value.trim();
-
-            if (getUtility().isNonEmptyString(newTitle) && (newTitle !== currentTitle)) {
-              nodeIsEdit = false;
-              input.remove();
-              getPublisherSubscriber().publish('view/tree/node/changed', [formElementIdentifierPath, newTitle]);
-            } else {
-              nodeIsEdit = false;
-              input.remove();
-            }
-          } else if (e.keyCode === 27) { //esc
-            nodeIsEdit = false;
-            input.remove();
-          }
-        })
-        .on('blur', function() {
-          if(nodeIsEdit) {
-            var newTitle = this.value.trim();
-            input.remove();
-            if(getUtility().isNonEmptyString(newTitle) && newTitle !== currentTitle) {
-              getPublisherSubscriber().publish('view/tree/node/changed', [formElementIdentifierPath, newTitle]);
-            }
-          }
-        });
-
-      treeNode.append(input);
-      input.focus();
     };
 
     /**

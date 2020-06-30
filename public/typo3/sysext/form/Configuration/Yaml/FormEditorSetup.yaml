@@ -8,8 +8,7 @@ TYPO3:
           viewModel: 'TYPO3/CMS/Form/Backend/FormManager/ViewModel'
         stylesheets:
           100: 'EXT:form/Resources/Public/Css/form.css'
-        translationFiles:
-          10: 'EXT:form/Resources/Private/Language/Database.xlf'
+        translationFile: 'EXT:form/Resources/Private/Language/Database.xlf'
         javaScriptTranslationFile: 'EXT:form/Resources/Private/Language/locallang_formManager_javascript.xlf'
         selectablePrototypesConfiguration:
           100:
@@ -31,8 +30,7 @@ TYPO3:
       prototypes:
         standard:
           formEditor:
-            translationFiles:
-              10: 'EXT:form/Resources/Private/Language/Database.xlf'
+            translationFile: 'EXT:form/Resources/Private/Language/Database.xlf'
             dynamicRequireJsModules:
               app: 'TYPO3/CMS/Form/Backend/FormEditor'
               mediator: 'TYPO3/CMS/Form/Backend/FormEditor/Mediator'
@@ -59,6 +57,7 @@ TYPO3:
               FormElement-Page: 'Stage/Page'
               FormElement-SummaryPage: 'Stage/SummaryPage'
               FormElement-Fieldset: 'Stage/Fieldset'
+              FormElement-GridContainer: 'Stage/Fieldset'
               FormElement-GridRow: 'Stage/Fieldset'
               FormElement-Text: 'Stage/SimpleTemplate'
               FormElement-Password: 'Stage/SimpleTemplate'
@@ -102,7 +101,6 @@ TYPO3:
               Inspector-CheckboxEditor: 'Inspector/CheckboxEditor'
               Inspector-ValidationErrorMessageEditor: 'Inspector/ValidationErrorMessageEditor'
               Inspector-Typo3WinBrowserEditor: 'Inspector/Typo3WinBrowserEditor'
-              Inspector-MaximumFileSizeEditor: 'Inspector/MaximumFileSizeEditor'
 
             formElementPropertyValidatorsDefinition:
               NotEmpty:
@@ -220,24 +218,26 @@ TYPO3:
                           label: 'formEditor.elements.Form.finisher.EmailToReceiver.editor.header.label'
                         200:
                           label: 'formEditor.elements.Form.finisher.EmailToReceiver.editor.subject.label'
-                        350:
-                          label: 'formEditor.elements.Form.finisher.EmailToReceiver.editor.recipients.label'
-                          fieldExplanationText: 'formEditor.elements.Form.finisher.EmailToReceiver.editor.recipients.fieldExplanationText'
+                        300:
+                          label: 'formEditor.elements.Form.finisher.EmailToReceiver.editor.recipientAddress.label'
+                          fieldExplanationText: 'formEditor.elements.Form.finisher.EmailToReceiver.editor.recipientAddress.fieldExplanationText'
+                        400:
+                          label: 'formEditor.elements.Form.finisher.EmailToReceiver.editor.recipientName.label'
+                          fieldExplanationText: 'formEditor.elements.Form.finisher.EmailToReceiver.editor.recipientName.fieldExplanationText'
                         500:
                           label: 'formEditor.elements.Form.finisher.EmailToReceiver.editor.senderAddress.label'
                           fieldExplanationText: 'formEditor.elements.Form.finisher.EmailToReceiver.editor.senderAddress.fieldExplanationText'
                         600:
                           label: 'formEditor.elements.Form.finisher.EmailToReceiver.editor.senderName.label'
                           fieldExplanationText: 'formEditor.elements.Form.finisher.EmailToReceiver.editor.senderName.fieldExplanationText'
-                        750:
-                          label: 'formEditor.elements.Form.finisher.EmailToReceiver.editor.replyToRecipients.label'
-                        850:
-                          label: 'formEditor.elements.Form.finisher.EmailToReceiver.editor.carbonCopyRecipients.label'
-                        950:
-                          label: 'formEditor.elements.Form.finisher.EmailToReceiver.editor.blindCarbonCopyRecipients.label'
-                        1050:
-                          label: 'formEditor.elements.Form.finisher.EmailToReceiver.editor.addHtmlPart.label'
-                          fieldExplanationText: 'formEditor.elements.Form.finisher.EmailToReceiver.editor.addHtmlPart.fieldExplanationText'
+                        700:
+                          label: 'formEditor.elements.Form.finisher.EmailToReceiver.editor.replyToAddress.label'
+                        800:
+                          label: 'formEditor.elements.Form.finisher.EmailToReceiver.editor.carbonCopyAddress.label'
+                        900:
+                          label: 'formEditor.elements.Form.finisher.EmailToReceiver.editor.blindCarbonCopyAddress.label'
+                        1000:
+                          label: 'formEditor.elements.Form.finisher.EmailToReceiver.editor.format.label'
                         1100:
                           label: 'formEditor.elements.Form.finisher.EmailToReceiver.editor.attachUploads.label'
                         1200:
@@ -343,6 +343,18 @@ TYPO3:
                 editors:
                   200:
                     label: 'formEditor.elements.Fieldset.editor.label.label'
+                  230: null
+                  800: null
+
+            GridContainer:
+              formEditor:
+                label: 'formEditor.elements.GridContainer.label'
+                _isCompositeFormElement: true
+                _isGridContainerFormElement: true
+                iconIdentifier: 'form-gridcontainer'
+                editors:
+                  200:
+                    label: 'formEditor.elements.GridContainer.editor.label.label'
                   230: null
                   800: null
 
@@ -913,13 +925,14 @@ TYPO3:
                 predefinedDefaults:
                   options:
                     subject: ''
-                    recipients: {}
+                    recipientAddress: ''
+                    recipientName: ''
                     senderAddress: ''
                     senderName: ''
-                    replyToRecipients: {}
-                    carbonCopyRecipients: {}
-                    blindCarbonCopyRecipients: {}
-                    addHtmlPart: true
+                    replyToAddress: ''
+                    carbonCopyAddress: ''
+                    blindCarbonCopyAddress: ''
+                    format: 'html'
                     attachUploads: true
 
             EmailToReceiver:
@@ -929,13 +942,14 @@ TYPO3:
                 predefinedDefaults:
                   options:
                     subject: ''
-                    recipients: {}
+                    recipientAddress: ''
+                    recipientName: ''
                     senderAddress: ''
                     senderName: ''
-                    replyToRecipients: {}
-                    carbonCopyRecipients: {}
-                    blindCarbonCopyRecipients: {}
-                    addHtmlPart: true
+                    replyToAddress: ''
+                    carbonCopyAddress: ''
+                    blindCarbonCopyAddress: ''
+                    format: 'html'
                     attachUploads: true
                     translation:
                       language: ''
@@ -1403,8 +1417,6 @@ TYPO3:
                   templateName: 'Inspector-PropertyGridEditor'
                   label: 'formEditor.elements.SelectionMixin.editor.options.label'
                   propertyPath: 'properties.options'
-                  propertyValidators:
-                    10: 'NotEmpty'
                   isSortable: true
                   enableAddRow: true
                   enableDeleteRow: true
@@ -1493,10 +1505,6 @@ TYPO3:
                         20: 'TYPO3.CMS.Form.mixins.formElementMixins.MinimumMaximumEditorsMixin'
                       100:
                         label: 'formEditor.elements.FileUploadMixin.validators.FileSize.editor.header.label'
-                      150:
-                        identifier: 'maximumFileSize'
-                        templateName: 'Inspector-MaximumFileSizeEditor'
-                        label: 'formEditor.elements.FileUpload.editor.maximumFileSize.label'
                       200:
                         propertyValidators:
                           10: 'FileSize'
@@ -1519,23 +1527,26 @@ TYPO3:
                 propertyValidators:
                   10: 'NotEmpty'
                   20: 'FormElementIdentifierWithinCurlyBracesInclusive'
-              350:
-                identifier: 'recipients'
-                templateName: 'Inspector-PropertyGridEditor'
-                label: formEditor.elements.Form.finisher.EmailToSender.editor.recipients.label
-                propertyPath: 'options.recipients'
+              300:
+                identifier: 'recipientAddress'
+                templateName: 'Inspector-TextEditor'
+                label: 'formEditor.elements.Form.finisher.EmailToSender.editor.recipientAddress.label'
+                propertyPath: 'options.recipientAddress'
+                enableFormelementSelectionButton: true
+                propertyValidatorsMode: 'OR'
                 propertyValidators:
-                  10: 'NotEmpty'
-                fieldExplanationText: 'formEditor.elements.Form.finisher.EmailToSender.editor.recipients.fieldExplanationText'
-                isSortable: true
-                enableAddRow: true
-                enableDeleteRow: true
-                useLabelAsFallbackValue: false
-                gridColumns:
-                  - name: value
-                    title: formEditor.elements.Form.finisher.EmailToSender.editor.recipients.gridColumns.value.title
-                  - name: label
-                    title: formEditor.elements.Form.finisher.EmailToSender.editor.recipients.gridColumns.label.title
+                  10: 'NaiveEmail'
+                  20: 'FormElementIdentifierWithinCurlyBracesExclusive'
+                fieldExplanationText: 'formEditor.elements.Form.finisher.EmailToSender.editor.recipientAddress.fieldExplanationText'
+              400:
+                identifier: 'recipientName'
+                templateName: 'Inspector-TextEditor'
+                label: 'formEditor.elements.Form.finisher.EmailToSender.editor.recipientName.label'
+                propertyPath: 'options.recipientName'
+                enableFormelementSelectionButton: true
+                propertyValidators:
+                  10: 'FormElementIdentifierWithinCurlyBracesInclusive'
+                fieldExplanationText: 'formEditor.elements.Form.finisher.EmailToSender.editor.recipientName.fieldExplanationText'
               500:
                 identifier: 'senderAddress'
                 templateName: 'Inspector-TextEditor'
@@ -1556,54 +1567,48 @@ TYPO3:
                 propertyValidators:
                   10: 'FormElementIdentifierWithinCurlyBracesInclusive'
                 fieldExplanationText: 'formEditor.elements.Form.finisher.EmailToSender.editor.senderName.fieldExplanationText'
-              750:
-                identifier: 'replyToRecipients'
-                templateName: 'Inspector-PropertyGridEditor'
-                label: formEditor.elements.Form.finisher.EmailToSender.editor.replyToRecipients.label
-                propertyPath: 'options.replyToRecipients'
-                isSortable: true
-                enableAddRow: true
-                enableDeleteRow: true
-                useLabelAsFallbackValue: false
-                gridColumns:
-                  - name: value
-                    title: formEditor.elements.Form.finisher.EmailToSender.editor.recipients.gridColumns.value.title
-                  - name: label
-                    title: formEditor.elements.Form.finisher.EmailToSender.editor.recipients.gridColumns.label.title
-              850:
-                identifier: 'carbonCopyRecipients'
-                templateName: 'Inspector-PropertyGridEditor'
-                label: formEditor.elements.Form.finisher.EmailToSender.editor.carbonCopyRecipients.label
-                propertyPath: 'options.carbonCopyRecipients'
-                isSortable: true
-                enableAddRow: true
-                enableDeleteRow: true
-                useLabelAsFallbackValue: false
-                gridColumns:
-                  - name: value
-                    title: formEditor.elements.Form.finisher.EmailToSender.editor.recipients.gridColumns.value.title
-                  - name: label
-                    title: formEditor.elements.Form.finisher.EmailToSender.editor.recipients.gridColumns.label.title
-              950:
-                identifier: 'blindCarbonCopyRecipients'
-                templateName: 'Inspector-PropertyGridEditor'
-                label: formEditor.elements.Form.finisher.EmailToSender.editor.blindCarbonCopyRecipients.label
-                propertyPath: 'options.blindCarbonCopyRecipients'
-                isSortable: true
-                enableAddRow: true
-                enableDeleteRow: true
-                useLabelAsFallbackValue: false
-                gridColumns:
-                  - name: value
-                    title: formEditor.elements.Form.finisher.EmailToSender.editor.recipients.gridColumns.value.title
-                  - name: label
-                    title: formEditor.elements.Form.finisher.EmailToSender.editor.recipients.gridColumns.label.title
-              1050:
-                identifier: 'addHtmlPart'
-                templateName: 'Inspector-CheckboxEditor'
-                label: 'formEditor.elements.Form.finisher.EmailToSender.editor.addHtmlPart.label'
-                propertyPath: 'options.addHtmlPart'
-                fieldExplanationText: 'formEditor.elements.Form.finisher.EmailToSender.editor.addHtmlPart.fieldExplanationText'
+              700:
+                identifier: 'replyToAddress'
+                templateName: 'Inspector-TextEditor'
+                label: 'formEditor.elements.Form.finisher.EmailToSender.editor.replyToAddress.label'
+                propertyPath: 'options.replyToAddress'
+                enableFormelementSelectionButton: true
+                propertyValidatorsMode: 'OR'
+                propertyValidators:
+                  10: 'NaiveEmailOrEmpty'
+                  20: 'FormElementIdentifierWithinCurlyBracesExclusive'
+              800:
+                identifier: 'carbonCopyAddress'
+                templateName: 'Inspector-TextEditor'
+                label: 'formEditor.elements.Form.finisher.EmailToSender.editor.carbonCopyAddress.label'
+                propertyPath: 'options.carbonCopyAddress'
+                enableFormelementSelectionButton: true
+                propertyValidatorsMode: 'OR'
+                propertyValidators:
+                  10: 'NaiveEmailOrEmpty'
+                  20: 'FormElementIdentifierWithinCurlyBracesExclusive'
+              900:
+                identifier: 'blindCarbonCopyAddress'
+                templateName: 'Inspector-TextEditor'
+                label: 'formEditor.elements.Form.finisher.EmailToSender.editor.blindCarbonCopyAddress.label'
+                propertyPath: 'options.blindCarbonCopyAddress'
+                enableFormelementSelectionButton: true
+                propertyValidatorsMode: 'OR'
+                propertyValidators:
+                  10: 'NaiveEmailOrEmpty'
+                  20: 'FormElementIdentifierWithinCurlyBracesExclusive'
+              1000:
+                identifier: 'format'
+                templateName: 'Inspector-SingleSelectEditor'
+                label: 'formEditor.elements.Form.finisher.EmailToSender.editor.format.label'
+                propertyPath: 'options.format'
+                selectOptions:
+                  10:
+                    value: 'plaintext'
+                    label: 'formEditor.elements.Form.finisher.EmailToSender.editor.format.1'
+                  20:
+                    value: 'html'
+                    label: 'formEditor.elements.Form.finisher.EmailToSender.editor.format.2'
               1100:
                 identifier: 'attachUploads'
                 templateName: 'Inspector-CheckboxEditor'

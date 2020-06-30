@@ -10,4 +10,102 @@
  *
  * The TYPO3 project - inspiring people to share!
  */
-define(["require","exports","jquery","./ElementBrowser","TYPO3/CMS/Backend/LegacyTree"],function(e,t,n,l,c){"use strict";class s{constructor(){c.noop(),s.File=new r,s.Selector=new i,n(()=>{s.elements=n("body").data("elements"),n("[data-close]").on("click",e=>{e.preventDefault(),s.File.insertElement("file_"+n(e.currentTarget).data("fileIndex"),1===parseInt(n(e.currentTarget).data("close"),10))}),n("#t3js-importSelection").on("click",s.Selector.handle),n("#t3js-toggleSelection").on("click",s.Selector.toggle)})}}class r{insertElement(e,t){let n=!1;if(void 0!==s.elements[e]){const c=s.elements[e];n=l.insertElement(c.table,c.uid,c.type,c.fileName,c.filePath,c.fileExt,c.fileIcon,"",t)}return n}}class i{constructor(){this.toggle=(e=>{e.preventDefault();const t=this.getItems();t.length&&t.each((e,t)=>{t.checked=t.checked?null:"checked"})}),this.handle=(e=>{e.preventDefault();const t=this.getItems(),n=[];if(t.length){if(t.each((e,t)=>{t.checked&&t.name&&n.push(t.name)}),n.length>0)for(let e of n)s.File.insertElement(e);l.focusOpenerAndClose()}})}getItems(){return n("#typo3-filelist").find(".typo3-bulk-item")}}return new s});
+
+/**
+ * Module: TYPO3/CMS/Recordlist/BrowseFiles
+ * File selection
+ */
+define(['jquery', 'TYPO3/CMS/Recordlist/ElementBrowser', 'TYPO3/CMS/Backend/LegacyTree'], function($, ElementBrowser, Tree) {
+  'use strict';
+
+  /**
+   *
+   * @type {{elements: {}}}
+   * @exports TYPO3/CMS/Recordlist/BrowseFiles
+   */
+  var BrowseFiles = {
+    elements: {}
+  };
+
+  /**
+   * when selecting one or multiple files, this action is called
+   *
+   * @type {{insertElement: Function, insertElementMultiple: Function}}
+   */
+  BrowseFiles.File = {
+    insertElement: function(index, close) {
+      var result = false;
+      if (typeof BrowseFiles.elements[index] !== 'undefined') {
+        var element = BrowseFiles.elements[index];
+        result = ElementBrowser.insertElement(element.table, element.uid, element.type, element.fileName, element.filePath, element.fileExt, element.fileIcon, '', close);
+      }
+      return result;
+    },
+    insertElementMultiple: function(list) {
+      var uidList = [];
+      for (var i = 0, n = list.length; i < n; i++) {
+        if (typeof BrowseFiles.elements[list[i]] !== 'undefined') {
+          var element = BrowseFiles.elements[list[i]];
+          uidList.push(element.uid);
+        }
+      }
+      ElementBrowser.insertMultiple('sys_file', uidList);
+    }
+  };
+
+  /**
+   * Selector when using "Import selection" and "Toggle selection"
+   */
+  BrowseFiles.Selector = {
+    // Toggle selection button is pressed
+    toggle: function(e) {
+      e.preventDefault();
+      var items = BrowseFiles.Selector.getItems();
+      if (items.length) {
+        items.each(function(position, item) {
+          item.checked = (item.checked ? null : 'checked');
+        });
+      }
+    },
+    // Import selection button is pressed
+    handle: function(e) {
+      e.preventDefault();
+      var items = BrowseFiles.Selector.getItems();
+      var selectedItems = [];
+      if (items.length) {
+        items.each(function(position, item) {
+          if (item.checked && item.name) {
+            selectedItems.push(item.name);
+          }
+        });
+        if (selectedItems.length > 0) {
+          if (ElementBrowser.hasActionMultipleCode) {
+            BrowseFiles.File.insertElementMultiple(selectedItems);
+          } else {
+            for (var i = 0; i < selectedItems.length; i++) {
+              BrowseFiles.File.insertElement(selectedItems[i]);
+            }
+          }
+        }
+        ElementBrowser.focusOpenerAndClose(true);
+      }
+    },
+    getItems: function() {
+      return $('#typo3-filelist').find('.typo3-bulk-item');
+    }
+  };
+
+  $(function() {
+    $.extend(BrowseFiles.elements, $('body').data('elements'));
+
+    $('[data-close]').on('click', function(e) {
+      e.preventDefault();
+      BrowseFiles.File.insertElement('file_' + $(this).data('fileIndex'), $(this).data('close'));
+    });
+
+    $('#t3js-importSelection').on('click', BrowseFiles.Selector.handle);
+    $('#t3js-toggleSelection').on('click', BrowseFiles.Selector.toggle);
+  });
+
+  return BrowseFiles;
+});

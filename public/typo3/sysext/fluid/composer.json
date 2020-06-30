@@ -13,21 +13,15 @@
 		"sort-packages": true
 	},
 	"require": {
-		"symfony/dependency-injection": "^4.1",
-		"typo3/cms-core": "10.1.0",
-		"typo3/cms-extbase": "10.1.0",
-		"typo3fluid/fluid": "^2.6.4"
+		"typo3/cms-core": "9.5.19",
+		"typo3/cms-extbase": "9.5.19",
+		"typo3fluid/fluid": "^2.6.8"
 	},
 	"conflict": {
-		"typo3/cms": "*"
-	},
-	"replace": {
-		"fluid": "*"
+		"typo3/cms": "*",
+		"typo3fluid/fluid": "2.6.4 || 2.6.5"
 	},
 	"extra": {
-		"branch-alias": {
-			"dev-master": "10.1.x-dev"
-		},
 		"typo3/cms": {
 			"Package": {
 				"protected": true,
@@ -35,6 +29,11 @@
 				"partOfMinimalUsableSystem": true
 			},
 			"extension-key": "fluid"
+		},
+		"typo3/class-alias-loader": {
+			"class-alias-maps": [
+				"Migrations/Code/ClassAliasMap.php"
+			]
 		}
 	},
 	"autoload": {

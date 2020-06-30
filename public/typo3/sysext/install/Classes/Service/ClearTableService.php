@@ -57,6 +57,10 @@ class ClearTableService
             'name' => 'tx_extensionmanager_domain_model_extension',
             'description' => 'List of TER extensions',
         ],
+        [
+            'name' => 'tx_rsaauth_keys',
+            'description' => 'Login process key storage'
+        ],
     ];
 
     /**

@@ -62,9 +62,6 @@ class RecordsXmlSitemapDataProvider extends AbstractXmlSitemapDataProvider
         $lastModifiedField = $this->config['lastModifiedField'] ?? 'tstamp';
         $sortField = $this->config['sortField'] ?? 'sorting';
 
-        $changeFreqField = $this->config['changeFreqField'] ?? '';
-        $priorityField = $this->config['priorityField'] ?? '';
-
         $queryBuilder = GeneralUtility::makeInstance(ConnectionPool::class)
             ->getQueryBuilderForTable($table);
 
@@ -113,15 +110,10 @@ class RecordsXmlSitemapDataProvider extends AbstractXmlSitemapDataProvider
             ->fetchAll();
 
         foreach ($rows as $row) {
-            $item = [
+            $this->items[] = [
                 'data' => $row,
                 'lastMod' => (int)$row[$lastModifiedField]
             ];
-            if (!empty($changeFreqField)) {
-                $item['changefreq'] = $row[$changeFreqField];
-            }
-            $item['priority'] = !empty($priorityField) ? $row[$priorityField] : 0.5;
-            $this->items[] = $item;
         }
     }
 
@@ -148,6 +140,7 @@ class RecordsXmlSitemapDataProvider extends AbstractXmlSitemapDataProvider
             'parameter' => $pageId,
             'additionalParams' => $additionalParamsString ? '&' . $additionalParamsString : '',
             'forceAbsoluteUrl' => 1,
+            'useCacheHash' => $this->config['url']['useCacheHash'] ?? 0
         ];
 
         $data['loc'] = $this->cObj->typoLink_URL($typoLinkConfig);

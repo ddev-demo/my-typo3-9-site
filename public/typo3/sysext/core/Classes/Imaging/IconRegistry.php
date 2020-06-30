@@ -109,6 +109,44 @@ class IconRegistry implements SingletonInterface
             ]
         ],
 
+        // Module
+        'module-web' => [
+            'provider' => FontawesomeIconProvider::class,
+            'options' => [
+                'name' => 'file-o'
+            ]
+        ],
+        'module-site' => [
+            'provider' => FontawesomeIconProvider::class,
+            'options' => [
+                'name' => 'globe'
+            ]
+        ],
+        'module-file' => [
+            'provider' => FontawesomeIconProvider::class,
+            'options' => [
+                'name' => 'image'
+            ]
+        ],
+        'module-tools' => [
+            'provider' => FontawesomeIconProvider::class,
+            'options' => [
+                'name' => 'rocket'
+            ]
+        ],
+        'module-system' => [
+            'provider' => FontawesomeIconProvider::class,
+            'options' => [
+                'name' => 'plug'
+            ]
+        ],
+        'module-help' => [
+            'provider' => FontawesomeIconProvider::class,
+            'options' => [
+                'name' => 'question-circle'
+            ]
+        ],
+
         // Status
         'status-dialog-information' => [
             'provider' => FontawesomeIconProvider::class,
@@ -395,12 +433,6 @@ class IconRegistry implements SingletonInterface
      * @var array
      */
     protected $deprecatedIcons = [
-        'module-web' => 'modulegroup-web',
-        'module-site' => 'modulegroup-site',
-        'module-file' => 'modulegroup-file',
-        'module-tools' => 'modulegroup-tools',
-        'module-system' => 'modulegroup-system',
-        'module-help' => 'modulegroup-help',
         'module-workspaces-action-preview-link' => 'actions-version-workspaces-preview-link',
         'generate-ws-preview-link' => 'actions-version-workspaces-preview-link',
         'extensions-workspaces-generatepreviewlink' => 'actions-version-workspaces-preview-link',
@@ -810,7 +842,7 @@ class IconRegistry implements SingletonInterface
             'JE', 'JM', 'JO', 'JP',
             'KE', 'KG', 'KH', 'KI', 'KM', 'KN', 'KP', 'KR', 'KW', 'KY', 'KZ',
             'LA', 'LB', 'LC', 'LI', 'LK', 'LR', 'LS', 'LT', 'LU', 'LV', 'LY',
-            'MA', 'MC', 'MD', 'ME', 'MF', 'MG', 'MH', 'MK', 'ML', 'MM', 'MN', 'MO', 'MP', 'MQ', 'MR', 'MS', 'MT', 'MU', 'MV', 'MW', 'MX', 'MY', 'MZ',
+            'MA', 'MC', 'MD', 'ME', 'MF', 'MG', 'MH', 'MI', 'MK', 'ML', 'MM', 'MN', 'MO', 'MP', 'MQ', 'MR', 'MS', 'MT', 'MU', 'MV', 'MW', 'MX', 'MY', 'MZ',
             'NA', 'NC', 'NE', 'NF', 'NG', 'NI', 'NL', 'NO', 'NP', 'NR', 'NU', 'NZ',
             'OM',
             'PA', 'PE', 'PF', 'PG', 'PH', 'PK', 'PL', 'PM', 'PN', 'PR', 'PS', 'PT', 'PW', 'PY',

@@ -46,8 +46,7 @@ abstract class AbstractXmlParser implements \SplSubject
      * Method attaches an observer.
      *
      * @param \SplObserver $observer an observer to attach
-     * @see detach()
-     * @see notify()
+     * @see $observers, detach(), notify()
      */
     public function attach(\SplObserver $observer)
     {
@@ -58,8 +57,7 @@ abstract class AbstractXmlParser implements \SplSubject
      * Method detaches an attached observer
      *
      * @param \SplObserver $observer an observer to detach
-     * @see attach()
-     * @see notify()
+     * @see $observers, attach(), notify()
      */
     public function detach(\SplObserver $observer)
     {
@@ -72,8 +70,7 @@ abstract class AbstractXmlParser implements \SplSubject
     /**
      * Method notifies attached observers.
      *
-     * @see attach()
-     * @see detach()
+     * @see $observers, attach(), detach()
      */
     public function notify()
     {

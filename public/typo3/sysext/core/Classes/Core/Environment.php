@@ -32,10 +32,23 @@ namespace TYPO3\CMS\Core\Core;
  *
  * In your application, use it like this:
  *
+ * Instead of writing "PATH_site" call "Environment::getPublicPath() . '/'"
  * Instead of writing "TYPO3_REQUESTTYPE & TYPO3_REQUESTTYPE_CLI" call "Environment::isCli()"
  */
 class Environment
 {
+    /**
+     * A list of supported CGI server APIs
+     * @var array
+     */
+    protected static $supportedCgiServerApis = [
+        'fpm-fcgi',
+        'cgi',
+        'isapi',
+        'cgi-fcgi',
+        'srv', // HHVM with fastcgi
+    ];
+
     protected static $cli;
     protected static $composerMode;
     protected static $context;
@@ -133,8 +146,8 @@ class Environment
     }
 
     /**
-     * The public web folder where index.php (= the frontend application) is put, without trailing slash.
-     * For non-composer installations, the project path = the public path.
+     * The public web folder where index.php (= the frontend application) is put. This is equal to the legacy constant
+     * PATH_site, without the trailing slash. For non-composer installations, the project path = the public path.
      *
      * @return string
      */
@@ -225,6 +238,7 @@ class Environment
     }
 
     /**
+     * Previously known as PATH_site . 'typo3conf/ext/'
      * Please note that this might be gone at some point
      *
      * @return string
@@ -263,5 +277,15 @@ class Environment
     public static function isUnix(): bool
     {
         return self::$os === 'UNIX';
+    }
+
+    /**
+     * Returns true if the server is running on a list of supported CGI server APIs.
+     *
+     * @return bool
+     */
+    public static function isRunningOnCgiServer(): bool
+    {
+        return in_array(PHP_SAPI, self::$supportedCgiServerApis, true);
     }
 }

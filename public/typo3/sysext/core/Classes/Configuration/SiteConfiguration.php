@@ -76,56 +76,26 @@ class SiteConfiguration implements SingletonInterface
     /**
      * Return all site objects which have been found in the filesystem.
      *
+     * @param bool $useCache
      * @return Site[]
      */
-    public function getAllExistingSites(): array
+    public function getAllExistingSites(bool $useCache = true): array
     {
-        return $this->firstLevelCache ?? $this->resolveAllExistingSites();
-    }
-
-    /**
-     * Creates a site configuration with one language "English" which is the de-facto default language for TYPO3 in general.
-     *
-     * @param string $identifier
-     * @param int $rootPageId
-     * @param string $base
-     */
-    public function createNewBasicSite(string $identifier, int $rootPageId, string $base): void
-    {
-        // Create a default site configuration called "main" as best practice
-        $this->write($identifier, [
-            'rootPageId' => $rootPageId,
-            'base' => $base,
-            'languages' => [
-                0 => [
-                    'title' => 'English',
-                    'enabled' => true,
-                    'languageId' => 0,
-                    'base' => '/en/',
-                    'typo3Language' => 'default',
-                    'locale' => 'en_US.UTF-8',
-                    'iso-639-1' => 'en',
-                    'navigationTitle' => 'English',
-                    'hreflang' => 'en-us',
-                    'direction' => 'ltr',
-                    'flag' => 'us',
-                ],
-            ],
-            'errorHandling' => [],
-            'routes' => [],
-        ]);
+        if ($useCache && $this->firstLevelCache !== null) {
+            return $this->firstLevelCache;
+        }
+        return $this->resolveAllExistingSites($useCache);
     }
 
     /**
      * Resolve all site objects which have been found in the filesystem.
      *
-     * @param bool $useCache
      * @return Site[]
      */
-    public function resolveAllExistingSites(bool $useCache = true): array
+    public function resolveAllExistingSites(): array
     {
         $sites = [];
-        $siteConfiguration = $this->getAllSiteConfigurationFromFiles($useCache);
+        $siteConfiguration = $this->getAllSiteConfigurationFromFiles();
         foreach ($siteConfiguration as $identifier => $configuration) {
             $rootPageId = (int)($configuration['rootPageId'] ?? 0);
             if ($rootPageId > 0) {
@@ -139,14 +109,13 @@ class SiteConfiguration implements SingletonInterface
     /**
      * Read the site configuration from config files.
      *
-     * @param bool $useCache
      * @return array
      * @throws \TYPO3\CMS\Core\Cache\Exception\NoSuchCacheException
      */
-    protected function getAllSiteConfigurationFromFiles(bool $useCache = true): array
+    protected function getAllSiteConfigurationFromFiles(): array
     {
         // Check if the data is already cached
-        if ($useCache && $siteConfiguration = $this->getCache()->get($this->cacheIdentifier)) {
+        if ($siteConfiguration = $this->getCache()->get($this->cacheIdentifier)) {
             // Due to the nature of PhpFrontend, the `<?php` and `#` wraps have to be removed
             $siteConfiguration = preg_replace('/^<\?php\s*|\s*#$/', '', $siteConfiguration);
             $siteConfiguration = json_decode($siteConfiguration, true);
@@ -166,6 +135,13 @@ class SiteConfiguration implements SingletonInterface
             foreach ($finder as $fileInfo) {
                 $configuration = $loader->load(GeneralUtility::fixWindowsFilePath((string)$fileInfo));
                 $identifier = basename($fileInfo->getPath());
+                if (isset($configuration['site'])) {
+                    trigger_error(
+                        'Site configuration with key \'site\' has been deprecated, remove indentation level and site key.',
+                        E_USER_DEPRECATED
+                    );
+                    $configuration = $configuration['site'];
+                }
                 $siteConfiguration[$identifier] = $configuration;
             }
             $this->getCache()->set($this->cacheIdentifier, json_encode($siteConfiguration));
@@ -223,6 +199,7 @@ class SiteConfiguration implements SingletonInterface
         GeneralUtility::writeFile($fileName, $yamlFileContents);
         $this->firstLevelCache = null;
         $this->getCache()->remove($this->cacheIdentifier);
+        $this->getCache()->remove('pseudo-sites');
     }
 
     /**
@@ -261,6 +238,7 @@ class SiteConfiguration implements SingletonInterface
         }
         @unlink($fileName);
         $this->getCache()->remove($this->cacheIdentifier);
+        $this->getCache()->remove('pseudo-sites');
         $this->firstLevelCache = null;
     }
 
@@ -272,7 +250,7 @@ class SiteConfiguration implements SingletonInterface
      */
     protected function getCache(): FrontendInterface
     {
-        return GeneralUtility::makeInstance(CacheManager::class)->getCache('core');
+        return GeneralUtility::makeInstance(CacheManager::class)->getCache('cache_core');
     }
 
     /**

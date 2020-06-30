@@ -29,7 +29,6 @@ class LinkService implements SingletonInterface
     const TYPE_PAGE = 'page';
     const TYPE_URL = 'url';
     const TYPE_EMAIL = 'email';
-    const TYPE_TELEPHONE = 'telephone';
     const TYPE_FILE = 'file';
     const TYPE_FOLDER = 'folder';
     const TYPE_RECORD = 'record';
@@ -65,7 +64,7 @@ class LinkService implements SingletonInterface
      *  - "mailto" an email address
      *  - "url" external URL
      *  - "file" a local file (checked AFTER getPublicUrl() is called)
-     *  - "page" a page (integer)
+     *  - "page" a page (integer or alias)
      *
      * Does NOT check if the page exists or the file exists.
      *
@@ -84,7 +83,7 @@ class LinkService implements SingletonInterface
     }
 
     /**
-     * Returns a array with data interpretation of the link target, something like t3:blabla.
+     * Returns an array with data interpretation of the link target, something like t3://page?uid=23.
      *
      * @param string $urn
      * @return array
@@ -115,15 +114,12 @@ class LinkService implements SingletonInterface
             if ($fragment) {
                 $result['fragment'] = $fragment;
             }
-        } elseif (strpos($urn, '://') && $this->handlers[self::TYPE_URL]) {
+        } elseif (stripos($urn, '://') && $this->handlers[self::TYPE_URL]) {
             $result = $this->handlers[self::TYPE_URL]->resolveHandlerData(['url' => $urn]);
             $result['type'] = self::TYPE_URL;
         } elseif (stripos($urn, 'mailto:') === 0 && $this->handlers[self::TYPE_EMAIL]) {
             $result = $this->handlers[self::TYPE_EMAIL]->resolveHandlerData(['email' => $urn]);
             $result['type'] = self::TYPE_EMAIL;
-        } elseif (stripos($urn, 'tel:') === 0 && $this->handlers[self::TYPE_TELEPHONE]) {
-            $result = $this->handlers[self::TYPE_TELEPHONE]->resolveHandlerData(['telephone' => $urn]);
-            $result['type'] = self::TYPE_TELEPHONE;
         } else {
             $result = [];
             if (is_array($GLOBALS['TYPO3_CONF_VARS']['SC_OPTIONS']['Link']['resolveByStringRepresentation'] ?? null)) {

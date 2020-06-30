@@ -125,10 +125,10 @@ class LocalImageProcessor implements ProcessorInterface
     {
         switch ($taskName) {
             case 'Preview':
-                $helper = GeneralUtility::makeInstance(LocalPreviewHelper::class);
+                $helper = GeneralUtility::makeInstance(LocalPreviewHelper::class, $this);
             break;
             case 'CropScaleMask':
-                $helper = GeneralUtility::makeInstance(LocalCropScaleMaskHelper::class);
+                $helper = GeneralUtility::makeInstance(LocalCropScaleMaskHelper::class, $this);
             break;
             default:
                 throw new \InvalidArgumentException('Cannot find helper for task name: "' . $taskName . '"', 1353401352);

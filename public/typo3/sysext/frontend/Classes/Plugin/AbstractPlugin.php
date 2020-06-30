@@ -263,15 +263,25 @@ class AbstractPlugin
                 $this->frontendController->reqCHash();
             }
         }
-        $this->LLkey = $this->getCurrentSiteLanguage()->getTypo3Language();
+        $siteLanguage = $this->getCurrentSiteLanguage();
+        if ($siteLanguage) {
+            $this->LLkey = $siteLanguage->getTypo3Language();
+        } elseif (!empty($this->frontendController->config['config']['language'])) {
+            $this->LLkey = $this->frontendController->config['config']['language'];
+        }
 
-        /** @var Locales $locales */
-        $locales = GeneralUtility::makeInstance(Locales::class);
-        if (in_array($this->LLkey, $locales->getLocales())) {
-            foreach ($locales->getLocaleDependencies($this->LLkey) as $language) {
-                $this->altLLkey .= $language . ',';
+        if (empty($this->frontendController->config['config']['language_alt'])) {
+            /** @var Locales $locales */
+            $locales = GeneralUtility::makeInstance(Locales::class);
+            if (in_array($this->LLkey, $locales->getLocales())) {
+                $this->altLLkey = '';
+                foreach ($locales->getLocaleDependencies($this->LLkey) as $language) {
+                    $this->altLLkey .= $language . ',';
+                }
+                $this->altLLkey = rtrim($this->altLLkey, ',');
             }
-            $this->altLLkey = rtrim($this->altLLkey, ',');
+        } else {
+            $this->altLLkey = $this->frontendController->config['config']['language_alt'];
         }
     }
 
@@ -340,7 +350,7 @@ class AbstractPlugin
      * @param array|string $urlParameters As an array key/value pairs represent URL parameters to set. Values NOT URL-encoded yet, keys should be URL-encoded if needed. As a string the parameter is expected to be URL-encoded already.
      * @return string The resulting URL
      * @see pi_linkToPage()
-     * @see ContentObjectRenderer::getTypoLink()
+     * @see ContentObjectRenderer->getTypoLink()
      */
     public function pi_getPageLink($id, $target = '', $urlParameters = [])
     {
@@ -357,8 +367,7 @@ class AbstractPlugin
      * @param string $target Target value to use. Affects the &type-value of the URL, defaults to current.
      * @param array|string $urlParameters As an array key/value pairs represent URL parameters to set. Values NOT URL-encoded yet, keys should be URL-encoded if needed. As a string the parameter is expected to be URL-encoded already.
      * @return string The input string wrapped in <a> tags with the URL and target set.
-     * @see pi_getPageLink()
-     * @see ContentObjectRenderer::getTypoLink()
+     * @see pi_getPageLink(), ContentObjectRenderer::getTypoLink()
      */
     public function pi_linkToPage($str, $id, $target = '', $urlParameters = [])
     {
@@ -374,12 +383,12 @@ class AbstractPlugin
      * @param bool $cache If $cache is set (0/1), the page is asked to be cached by a &cHash value (unless the current plugin using this class is a USER_INT). Otherwise the no_cache-parameter will be a part of the link.
      * @param int $altPageId Alternative page ID for the link. (By default this function links to the SAME page!)
      * @return string The input string wrapped in <a> tags
-     * @see pi_linkTP_keepPIvars()
-     * @see ContentObjectRenderer::typoLink()
+     * @see pi_linkTP_keepPIvars(), ContentObjectRenderer::typoLink()
      */
     public function pi_linkTP($str, $urlParameters = [], $cache = false, $altPageId = 0)
     {
         $conf = [];
+        $conf['useCacheHash'] = $this->pi_USER_INT_obj ? 0 : $cache;
         $conf['no_cache'] = $this->pi_USER_INT_obj ? 0 : !$cache;
         $conf['parameter'] = $altPageId ? $altPageId : ($this->pi_tmpPageId ? $this->pi_tmpPageId : $this->frontendController->id);
         $conf['additionalParams'] = $this->conf['parent.']['addParams'] . HttpUtility::buildQueryString($urlParameters, '&', true) . $this->pi_moreParams;
@@ -441,8 +450,7 @@ class AbstractPlugin
      * @param bool $urlOnly If TRUE, only the URL is returned, not a full link
      * @param int $altPageId Alternative page ID for the link. (By default this function links to the SAME page!)
      * @return string The input string wrapped in <a> tags
-     * @see pi_linkTP()
-     * @see pi_linkTP_keepPIvars()
+     * @see pi_linkTP(), pi_linkTP_keepPIvars()
      */
     public function pi_list_linkSingle($str, $uid, $cache = false, $mergeArr = [], $urlOnly = false, $altPageId = 0)
     {
@@ -475,7 +483,8 @@ class AbstractPlugin
     public function pi_openAtagHrefInJSwindow($str, $winName = '', $winParams = 'width=670,height=500,status=0,menubar=0,scrollbars=1,resizable=1')
     {
         if (preg_match('/(.*)(<a[^>]*>)(.*)/i', $str, $match)) {
-            $aTagContent = GeneralUtility::get_tag_attributes($match[2]);
+            // decode HTML entities, `href` is used in escaped JavaScript context
+            $aTagContent = GeneralUtility::get_tag_attributes($match[2], true);
             $onClick = 'vHWin=window.open('
                 . GeneralUtility::quoteJSvalue($this->frontendController->baseUrlWrap($aTagContent['href'])) . ','
                 . GeneralUtility::quoteJSvalue($winName ?: md5($aTagContent['href'])) . ','
@@ -720,8 +729,7 @@ class AbstractPlugin
      * @param Statement $statement Result pointer to a SQL result which can be traversed.
      * @param string $tableParams Attributes for the table tag which is wrapped around the table rows containing the list
      * @return string Output HTML, wrapped in <div>-tags with a class attribute
-     * @see pi_list_row()
-     * @see pi_list_header()
+     * @see pi_list_row(), pi_list_header()
      */
     public function pi_list_makelist($statement, $tableParams = '')
     {
@@ -1099,11 +1107,12 @@ class AbstractPlugin
         }
         // Search word:
         if ($this->piVars['sword'] && $this->internal['searchFieldList']) {
-            $queryBuilder->andWhere(
-                QueryHelper::stripLogicalOperatorPrefix(
-                    $this->cObj->searchWhere($this->piVars['sword'], $this->internal['searchFieldList'], $table)
-                )
+            $searchWhere = QueryHelper::stripLogicalOperatorPrefix(
+                $this->cObj->searchWhere($this->piVars['sword'], $this->internal['searchFieldList'], $table)
             );
+            if (!empty($searchWhere)) {
+                $queryBuilder->andWhere($searchWhere);
+            }
         }
 
         if ($count) {

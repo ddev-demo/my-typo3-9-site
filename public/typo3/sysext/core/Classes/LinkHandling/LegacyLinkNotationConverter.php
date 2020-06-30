@@ -46,7 +46,7 @@ class LegacyLinkNotationConverter
      *  - "mailto" an email address
      *  - "url" external URL
      *  - "file" a local file (checked AFTER getPublicUrl() is called)
-     *  - "page" a page (integer)
+     *  - "page" a page (integer or alias)
      *
      * Does NOT check if the page exists or the file exists.
      *
@@ -64,8 +64,6 @@ class LegacyLinkNotationConverter
         }
 
         $result = [];
-        // Parse URL scheme
-        $scheme = parse_url($linkParameter, PHP_URL_SCHEME);
 
         // Resolve FAL-api "file:UID-of-sys_file-record" and "file:combined-identifier"
         if (stripos($linkParameter, 'file:') === 0) {
@@ -73,9 +71,6 @@ class LegacyLinkNotationConverter
         } elseif (GeneralUtility::validEmail(parse_url($linkParameter, PHP_URL_PATH))) {
             $result['type'] = LinkService::TYPE_EMAIL;
             $result['email'] = $linkParameter;
-        } elseif (strpos($linkParameter, 'tel:') === 0) {
-            $result['type'] = LinkService::TYPE_TELEPHONE;
-            $result['telephone'] = $linkParameter;
         } elseif (strpos($linkParameter, ':') !== false) {
             // Check for link-handler keyword
             list($linkHandlerKeyword, $linkHandlerValue) = explode(':', $linkParameter, 2);
@@ -134,12 +129,8 @@ class LegacyLinkNotationConverter
             // url (external): If doubleSlash or if a '.' comes before a '/'.
             if (!$isIdOrAlias && $isLocalFile !== 1 && $urlChar && (!$containsSlash || $urlChar < $fileChar)) {
                 $result['type'] = LinkService::TYPE_URL;
-                if (!$scheme) {
-                    $result['url'] = 'http://' . $linkParameter;
-                } else {
-                    $result['url'] = $linkParameter;
-                }
-                // file (internal) or folder
+                $result['url'] = 'http://' . $linkParameter;
+            // file (internal) or folder
             } elseif ($containsSlash || $isLocalFile) {
                 $result = $this->getFileOrFolderObjectFromMixedIdentifier($linkParameter);
             } else {
@@ -173,7 +164,7 @@ class LegacyLinkNotationConverter
         }
         if (empty($data)) {
             $result['pageuid'] = 'current';
-        } elseif ($data{0} === '#') {
+        } elseif ($data[0] === '#') {
             $result['pageuid'] = 'current';
             $result['fragment'] = substr($data, 1);
         } elseif (strpos($data, ',') !== false) {
@@ -190,6 +181,13 @@ class LegacyLinkNotationConverter
         } else {
             $result['pageuid'] = $data;
         }
+
+        // expect an alias
+        if (!MathUtility::canBeInterpretedAsInteger($result['pageuid']) && $result['pageuid'] !== 'current') {
+            $result['pagealias'] = $result['pageuid'];
+            unset($result['pageuid']);
+        }
+
         return $result;
     }
 
@@ -204,14 +202,25 @@ class LegacyLinkNotationConverter
     {
         $result = [];
         try {
-            $fileOrFolderObject = $this->getResourceFactory()->retrieveFileOrFolderObject($mixedIdentifier);
+            $fileIdentifier = $mixedIdentifier;
+            $fragment = null;
+            if (strpos($fileIdentifier, '#') !== false) {
+                [$fileIdentifier, $fragment] = explode('#', $fileIdentifier, 2);
+            }
+            $fileOrFolderObject = $this->getResourceFactory()->retrieveFileOrFolderObject($fileIdentifier);
             // Link to a folder or file
             if ($fileOrFolderObject instanceof File) {
                 $result['type'] = LinkService::TYPE_FILE;
                 $result['file'] = $fileOrFolderObject;
+                if ($fragment) {
+                    $result['fragment'] = $fragment;
+                }
             } elseif ($fileOrFolderObject instanceof Folder) {
                 $result['type'] = LinkService::TYPE_FOLDER;
                 $result['folder'] = $fileOrFolderObject;
+                if ($fragment) {
+                    $result['fragment'] = $fragment;
+                }
             } else {
                 $result['type'] = LinkService::TYPE_UNKNOWN;
                 $result['file'] = $mixedIdentifier;

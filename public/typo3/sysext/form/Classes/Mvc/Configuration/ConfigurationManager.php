@@ -57,7 +57,7 @@ class ConfigurationManager extends ExtbaseConfigurationManager implements Config
      * @return array The configuration
      * @internal
      */
-    public function getConfiguration(string $configurationType, string $extensionName = null, string $pluginName = null): array
+    public function getConfiguration($configurationType, $extensionName = null, $pluginName = null)
     {
         switch ($configurationType) {
             case self::CONFIGURATION_TYPE_YAML_SETTINGS:
@@ -190,7 +190,7 @@ class ConfigurationManager extends ExtbaseConfigurationManager implements Config
 
     /**
      * @param string $extensionName
-     * @return array
+     * @return null|[]
      */
     protected function getTypoScriptSettings(string $extensionName)
     {

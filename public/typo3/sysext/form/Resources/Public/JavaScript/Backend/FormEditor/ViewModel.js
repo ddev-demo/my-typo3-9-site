@@ -201,8 +201,7 @@ define(['jquery',
      */
     function _addPropertyValidators() {
       getFormEditorApp().addPropertyValidationValidator('NotEmpty', function(formElement, propertyPath) {
-        var value = formElement.get(propertyPath);
-        if (value === '' || $.isArray(value) && !value.length) {
+        if (formElement.get(propertyPath) === '') {
           return getFormEditorApp().getFormElementPropertyValidatorDefinition('NotEmpty')['errorMessage'] || 'invalid value';
         }
       });

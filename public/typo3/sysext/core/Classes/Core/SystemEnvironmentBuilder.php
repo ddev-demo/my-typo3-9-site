@@ -16,6 +16,7 @@ namespace TYPO3\CMS\Core\Core;
 
 use TYPO3\CMS\Core\Utility\GeneralUtility;
 use TYPO3\CMS\Core\Utility\PathUtility;
+use TYPO3\CMS\Core\Utility\StringUtility;
 
 /**
  * Class to encapsulate base setup of bootstrap.
@@ -85,21 +86,28 @@ class SystemEnvironmentBuilder
         self::defineTypo3RequestTypes();
         self::setRequestType($requestType | ($requestType === self::REQUESTTYPE_BE && strpos($_REQUEST['route'] ?? '', '/ajax/') === 0 ? TYPO3_REQUESTTYPE_AJAX : 0));
         self::defineLegacyConstants($requestType === self::REQUESTTYPE_FE ? 'FE' : 'BE');
-        $scriptPath = self::calculateScriptPath($entryPointLevel, $requestType);
-        $rootPath = self::calculateRootPath($entryPointLevel, $requestType);
-
+        self::definePaths($entryPointLevel, $requestType);
+        self::checkMainPathsExist();
         self::initializeGlobalVariables();
         self::initializeGlobalTimeTrackingVariables();
         self::initializeBasicErrorReporting();
 
         $applicationContext = static::createApplicationContext();
-        self::initializeEnvironment($applicationContext, $requestType, $scriptPath, $rootPath);
+        self::initializeEnvironment($applicationContext, $requestType);
         GeneralUtility::presetApplicationContext($applicationContext);
     }
 
+    /**
+     * Some notes:
+     *
+     * HTTP_TYPO3_CONTEXT -> used with Apache suexec support
+     * REDIRECT_TYPO3_CONTEXT -> used under some circumstances when value is set in the webserver and proxying the values to FPM
+     * @return ApplicationContext
+     * @throws \TYPO3\CMS\Core\Exception
+     */
     protected static function createApplicationContext(): ApplicationContext
     {
-        $applicationContext = getenv('TYPO3_CONTEXT') ?: (getenv('REDIRECT_TYPO3_CONTEXT') ?: 'Production');
+        $applicationContext = getenv('TYPO3_CONTEXT') ?: (getenv('REDIRECT_TYPO3_CONTEXT') ?: (getenv('HTTP_TYPO3_CONTEXT') ?: 'Production'));
 
         return new ApplicationContext($applicationContext);
     }
@@ -109,15 +117,14 @@ class SystemEnvironmentBuilder
      */
     protected static function defineBaseConstants()
     {
-        // Check one of the constants and return early if already defined,
-        // needed if multiple requests are handled in one process, for instance in functional testing.
+        // Check one of the constants and return early if defined already
         if (defined('TYPO3_version')) {
             return;
         }
 
         // This version, branch and copyright
-        define('TYPO3_version', '10.1.0');
-        define('TYPO3_branch', '10.1');
+        define('TYPO3_version', '9.5.19');
+        define('TYPO3_branch', '9.5');
         define('TYPO3_copyright_year', '1998-' . date('Y'));
 
         // TYPO3 external links
@@ -127,32 +134,65 @@ class SystemEnvironmentBuilder
         define('TYPO3_URL_DONATE', 'https://typo3.org/community/contribute/donate/');
         define('TYPO3_URL_WIKI_OPCODECACHE', 'https://wiki.typo3.org/Opcode_Cache');
 
+        // @deprecated since TYPO3 v9.4 and will be removed in TYPO3 v10.0
+        define('TYPO3_URL_MAILINGLISTS', 'http://lists.typo3.org/cgi-bin/mailman/listinfo');
+        define('TYPO3_URL_DOCUMENTATION', 'https://typo3.org/documentation/');
+        define('TYPO3_URL_DOCUMENTATION_TSREF', 'https://docs.typo3.org/typo3cms/TyposcriptReference/');
+        define('TYPO3_URL_DOCUMENTATION_TSCONFIG', 'https://docs.typo3.org/typo3cms/TSconfigReference/');
+        define('TYPO3_URL_CONSULTANCY', 'https://typo3.org/support/professional-services/');
+        define('TYPO3_URL_CONTRIBUTE', 'https://typo3.org/contribute/');
+        define('TYPO3_URL_SECURITY', 'https://typo3.org/teams/security/');
+        define('TYPO3_URL_DOWNLOAD', 'https://typo3.org/download/');
+        define('TYPO3_URL_SYSTEMREQUIREMENTS', 'https://typo3.org/typo3-cms/overview/requirements/');
+
         // A linefeed, a carriage return, a CR-LF combination
         defined('LF') ?: define('LF', chr(10));
         defined('CR') ?: define('CR', chr(13));
         defined('CRLF') ?: define('CRLF', CR . LF);
 
-        // Security related constant: Default value of fileDenyPattern
-        define('FILE_DENY_PATTERN_DEFAULT', '\\.(php[3-7]?|phpsh|phtml|pht|phar|shtml|cgi)(\\..*)?$|\\.pl$|^\\.htaccess$');
-        // Security related constant: List of file extensions that should be registered as php script file extensions
-        define('PHP_EXTENSIONS_DEFAULT', 'php,php3,php4,php5,php6,php7,phpsh,inc,phtml,pht,phar');
+        // @deprecated since TYPO3 v9.4 and will be removed in TYPO3 v10.0
+        defined('NUL') ?: define('NUL', "\0");
+        defined('TAB') ?: define('TAB', "\t");
+        defined('SUB') ?: define('SUB', chr(26));
 
-        // Relative path from document root to typo3/ directory, hardcoded to "typo3/"
-        if (!defined('TYPO3_mainDir')) {
-            define('TYPO3_mainDir', 'typo3/');
-        }
+        // Security related constant: Default value of fileDenyPattern
+        define('FILE_DENY_PATTERN_DEFAULT', '\\.(php[3-8]?|phpsh|phtml|pht|phar|shtml|cgi)(\\..*)?$|\\.pl$|^\\.htaccess$');
+        // Security related constant: List of file extensions that should be registered as php script file extensions
+        define('PHP_EXTENSIONS_DEFAULT', 'php,php3,php4,php5,php6,php7,php8,phpsh,inc,phtml,pht,phar');
+
+        // Operating system identifier
+        // Either "WIN" or empty string
+        defined('TYPO3_OS') ?: define('TYPO3_OS', self::getTypo3Os());
+
+        // Service error constants
+        // @deprecated since TYPO3 v9.3, will be removed in TYPO3 v10.0, use the class constants in AbstractService instead.
+        // General error - something went wrong
+        define('T3_ERR_SV_GENERAL', -1);
+        // During execution it showed that the service is not available and should be ignored. The service itself should call $this->setNonAvailable()
+        define('T3_ERR_SV_NOT_AVAIL', -2);
+        // Passed subtype is not possible with this service
+        define('T3_ERR_SV_WRONG_SUBTYPE', -3);
+        // Passed subtype is not possible with this service
+        define('T3_ERR_SV_NO_INPUT', -4);
+        // File not found which the service should process
+        define('T3_ERR_SV_FILE_NOT_FOUND', -20);
+        // File not readable
+        define('T3_ERR_SV_FILE_READ', -21);
+        // File not writable
+        define('T3_ERR_SV_FILE_WRITE', -22);
+        // Passed subtype is not possible with this service
+        define('T3_ERR_SV_PROG_NOT_FOUND', -40);
+        // Passed subtype is not possible with this service
+        define('T3_ERR_SV_PROG_FAILED', -41);
     }
 
     /**
-     * Calculate script path. This is the absolute path to the entry script.
-     * Can be something like '.../public/index.php' or '.../public/typo3/index.php' for
-     * web calls, or '.../bin/typo3' or similar for cli calls.
+     * Calculate all required base paths and set as constants.
      *
      * @param int $entryPointLevel Number of subdirectories where the entry script is located under the document root
      * @param int $requestType
-     * @return string Absolute path to entry script
      */
-    protected static function calculateScriptPath(int $entryPointLevel, int $requestType): string
+    protected static function definePaths(int $entryPointLevel, int $requestType)
     {
         $isCli = self::isCliRequestType($requestType);
         // Absolute path of the entry script that was called
@@ -160,45 +200,58 @@ class SystemEnvironmentBuilder
         $rootPath = self::getRootPathFromScriptPath($scriptPath, $entryPointLevel);
         // Check if the root path has been set in the environment (e.g. by the composer installer)
         if (getenv('TYPO3_PATH_ROOT')) {
-            if ($isCli && self::usesComposerClassLoading()) {
-                // $scriptPath is used for various path calculations based on the document root
+            if ($isCli && self::usesComposerClassLoading() && StringUtility::endsWith($scriptPath, 'typo3')) {
+                // PATH_thisScript is used for various path calculations based on the document root
                 // Therefore we assume it is always a subdirectory of the document root, which is not the case
                 // in composer mode on cli, as the binary is in the composer bin directory.
                 // Because of that, we enforce the document root path of this binary to be set
-                $scriptName = 'typo3/sysext/core/bin/typo3';
+                $scriptName = '/typo3/sysext/core/bin/typo3';
             } else {
                 // Base the script path on the path taken from the environment
                 // to make relative path calculations work in case only one of both is symlinked
                 // or has the real path
-                $scriptName = ltrim(substr($scriptPath, strlen($rootPath)), '/');
+                $scriptName = substr($scriptPath, strlen($rootPath));
             }
-            $rootPath = rtrim(GeneralUtility::fixWindowsFilePath(getenv('TYPO3_PATH_ROOT')), '/');
-            $scriptPath = $rootPath . '/' . $scriptName;
+            $rootPath = GeneralUtility::fixWindowsFilePath(getenv('TYPO3_PATH_ROOT'));
+            $scriptPath = $rootPath . $scriptName;
         }
-        return $scriptPath;
+
+        if (!defined('PATH_thisScript')) {
+            // @deprecated since TYPO3 v9, will be removed in TYPO3 v10.0
+            define('PATH_thisScript', $scriptPath);
+        }
+        // Absolute path of the document root of the instance with trailing slash
+        if (!defined('PATH_site')) {
+            // @deprecated since TYPO3 v9, will be removed in TYPO3 v10.0
+            define('PATH_site', $rootPath . '/');
+        }
+        // Relative path from document root to typo3/ directory
+        // Hardcoded to "typo3/"
+        if (!defined('TYPO3_mainDir')) {
+            define('TYPO3_mainDir', 'typo3/');
+        }
+        // Absolute path of the typo3 directory of the instance with trailing slash
+        // Example "/var/www/instance-name/htdocs/typo3/"
+        if (!defined('PATH_typo3')) {
+            // @deprecated since TYPO3 v9, will be removed in TYPO3 v10.0
+            define('PATH_typo3', PATH_site . TYPO3_mainDir);
+        }
+        // Absolute path to the typo3conf directory with trailing slash
+        // Example "/var/www/instance-name/htdocs/typo3conf/"
+        if (!defined('PATH_typo3conf')) {
+            // @deprecated since TYPO3 v9, will be removed in TYPO3 v10.0
+            define('PATH_typo3conf', PATH_site . 'typo3conf/');
+        }
     }
 
     /**
-     * Absolute path to the root of the typo3 instance. This is often identical to the web document root path (eg. .../public),
-     * but may be different. For instance helhum/typo3-secure-web uses this: Then, rootPath TYPO3_PATH_ROOT is the absolute path to
-     * the private directory where code and runtime files are located (currently typo3/ext, typo3/sysext, fileadmin, typo3temp),
-     * while TYPO3_PATH_WEB is the public/ web document folder that gets assets like filedamin and Resources/Public folders
-     * from extensions linked in.
-     *
-     * @param int $entryPointLevel Number of subdirectories where the entry script is located under the document root
-     * @param int $requestType
-     * @return string Absolute path without trailing slash
+     * Check if path and script file name calculation was successful, exit if not.
      */
-    protected static function calculateRootPath(int $entryPointLevel, int $requestType): string
+    protected static function checkMainPathsExist()
     {
-        // Check if the root path has been set in the environment (e.g. by the composer installer)
-        if (getenv('TYPO3_PATH_ROOT')) {
-            return rtrim(GeneralUtility::fixWindowsFilePath(getenv('TYPO3_PATH_ROOT')), '/');
+        if (!is_file(PATH_thisScript)) {
+            static::exitWithMessage('Unable to determine path to entry script.');
         }
-        $isCli = self::isCliRequestType($requestType);
-        // Absolute path of the entry script that was called
-        $scriptPath = GeneralUtility::fixWindowsFilePath(self::getPathThisScript($isCli));
-        return self::getRootPathFromScriptPath($scriptPath, $entryPointLevel);
     }
 
     /**
@@ -207,6 +260,8 @@ class SystemEnvironmentBuilder
     protected static function initializeGlobalVariables()
     {
         // Unset variable(s) in global scope (security issue #13959)
+        $GLOBALS['TYPO3_MISC'] = [];
+        $GLOBALS['T3_VAR'] = [];
         $GLOBALS['T3_SERVICES'] = [];
     }
 
@@ -216,6 +271,8 @@ class SystemEnvironmentBuilder
      */
     protected static function initializeGlobalTimeTrackingVariables()
     {
+        // Microtime of (nearly) script start
+        $GLOBALS['TYPO3_MISC']['microtime_start'] = microtime(true);
         // EXEC_TIME is set so that the rest of the script has a common value for the script execution time
         $GLOBALS['EXEC_TIME'] = time();
         // $ACCESS_TIME is a common time in minutes for access control
@@ -231,14 +288,16 @@ class SystemEnvironmentBuilder
      * Initialize the Environment class
      *
      * @param ApplicationContext $context
-     * @param int $requestType
-     * @param string $scriptPath
-     * @param string $sitePath
+     * @param int|null $requestType
      */
-    protected static function initializeEnvironment(ApplicationContext $context, int $requestType, string $scriptPath, string $sitePath)
+    public static function initializeEnvironment(ApplicationContext $context, int $requestType = null)
     {
+        // Absolute path of the entry script that was called
+        $scriptPath = PATH_thisScript;
+        $sitePath = rtrim(PATH_site, '/');
+
         if (getenv('TYPO3_PATH_ROOT')) {
-            $rootPathFromEnvironment = rtrim(GeneralUtility::fixWindowsFilePath(getenv('TYPO3_PATH_ROOT')), '/');
+            $rootPathFromEnvironment = GeneralUtility::fixWindowsFilePath(getenv('TYPO3_PATH_ROOT'));
             if ($sitePath !== $rootPathFromEnvironment) {
                 // This means, that we re-initialized the environment during a single request
                 // This currently only happens in custom code or during functional testing
@@ -285,21 +344,21 @@ class SystemEnvironmentBuilder
     protected static function getTypo3Os()
     {
         $typoOs = '';
-        if (stripos(PHP_OS, 'darwin') === false && stripos(PHP_OS, 'cygwin') === false && stripos(PHP_OS, 'win') !== false) {
+        if (!stristr(PHP_OS, 'darwin') && !stristr(PHP_OS, 'cygwin') && stristr(PHP_OS, 'win')) {
             $typoOs = 'WIN';
         }
         return $typoOs;
     }
 
     /**
-     * Calculate script path.
+     * Calculate PATH_thisScript
      *
      * First step in path calculation: Goal is to find the absolute path of the entry script
      * that was called without resolving any links. This is important since the TYPO3 entry
      * points are often linked to a central core location, so we can not use the php magic
      * __FILE__ here, but resolve the called script path from given server environments.
      *
-     * This path is important to calculate the document root. The strategy is to
+     * This path is important to calculate the document root (PATH_site). The strategy is to
      * find out the script name that was called in the first place and to subtract the local
      * part from it to find the document root.
      *
@@ -383,8 +442,8 @@ class SystemEnvironmentBuilder
     }
 
     /**
-     * Calculate the document root part to the instance from $scriptPath.
-     * This is based on the amount of subdirectories "under" root path where $scriptPath is located.
+     * Calculate the document root part to the instance from PATH_thisScript.
+     * This is based on the amount of subdirectories "under" PATH_site where PATH_thisScript is located.
      *
      * The following main scenarios for entry points exist by default in the TYPO3 core:
      * - Directly called documentRoot/index.php (-> FE call or eiD include): index.php is located in the same directory
@@ -395,7 +454,7 @@ class SystemEnvironmentBuilder
      *
      * @param string $scriptPath Calculated path to the entry script
      * @param int $entryPointLevel Number of subdirectories where the entry script is located under the document root
-     * @return string Absolute path to document root of installation without trailing slash
+     * @return string Absolute path to document root of installation
      */
     protected static function getRootPathFromScriptPath($scriptPath, $entryPointLevel)
     {
@@ -460,9 +519,7 @@ class SystemEnvironmentBuilder
      */
     protected static function defineTypo3RequestTypes()
     {
-        // Check one of the constants and return early if already defined,
-        // needed if multiple requests are handled in one process, for instance in functional testing.
-        if (defined('TYPO3_REQUESTTYPE_FE')) {
+        if (defined('TYPO3_REQUESTTYPE_FE')) { // @todo remove once Bootstrap::getInstance() is dropped
             return;
         }
         define('TYPO3_REQUESTTYPE_FE', self::REQUESTTYPE_FE);
@@ -479,9 +536,7 @@ class SystemEnvironmentBuilder
      */
     protected static function setRequestType(int $requestType)
     {
-        // Return early if already defined,
-        // needed if multiple requests are handled in one process, for instance in functional testing.
-        if (defined('TYPO3_REQUESTTYPE')) {
+        if (defined('TYPO3_REQUESTTYPE')) { // @todo remove once Bootstrap::getInstance() is dropped
             return;
         }
         define('TYPO3_REQUESTTYPE', $requestType);
@@ -494,9 +549,7 @@ class SystemEnvironmentBuilder
      */
     protected static function defineLegacyConstants(string $mode)
     {
-        // Return early if already defined,
-        // needed if multiple requests are handled in one process, for instance in functional testing.
-        if (defined('TYPO3_MODE')) {
+        if (defined('TYPO3_MODE')) { // @todo remove once Bootstrap::getInstance() is dropped
             return;
         }
         define('TYPO3_MODE', $mode);

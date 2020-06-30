@@ -15,6 +15,10 @@ namespace TYPO3\CMS\Core\Database\Query;
  * The TYPO3 project - inspiring people to share!
  */
 
+use Doctrine\DBAL\Platforms\MySqlPlatform;
+use Doctrine\DBAL\Platforms\OraclePlatform;
+use Doctrine\DBAL\Platforms\PostgreSqlPlatform;
+use Doctrine\DBAL\Platforms\SqlitePlatform;
 use Doctrine\DBAL\Platforms\SQLServerPlatform;
 use Doctrine\DBAL\Query\Expression\CompositeExpression;
 use TYPO3\CMS\Core\Database\Connection;
@@ -607,15 +611,14 @@ class QueryBuilder
      * @param string $key The column to set.
      * @param string $value The value, expression, placeholder, etc.
      * @param bool $createNamedParameter Automatically create a named parameter for the value
-     * @param int $type
      *
      * @return QueryBuilder This QueryBuilder instance.
      */
-    public function set(string $key, $value, bool $createNamedParameter = true, int $type = \PDO::PARAM_STR): QueryBuilder
+    public function set(string $key, $value, bool $createNamedParameter = true): QueryBuilder
     {
         $this->concreteQueryBuilder->set(
             $this->quoteIdentifier($key),
-            $createNamedParameter ? $this->createNamedParameter($value, $type) : $value
+            $createNamedParameter ? $this->createNamedParameter($value) : $value
         );
 
         return $this;
@@ -625,7 +628,7 @@ class QueryBuilder
      * Specifies one or more restrictions to the query result.
      * Replaces any previously specified restrictions, if any.
      *
-     * @param mixed $predicates
+     * @param mixed,... $predicates
      * @return QueryBuilder This QueryBuilder instance.
      */
     public function where(...$predicates): QueryBuilder
@@ -639,7 +642,7 @@ class QueryBuilder
      * Adds one or more restrictions to the query results, forming a logical
      * conjunction with any previously specified restrictions.
      *
-     * @param mixed $where The query restrictions.
+     * @param mixed,... $where The query restrictions.
      *
      * @return QueryBuilder This QueryBuilder instance.
      *
@@ -656,7 +659,7 @@ class QueryBuilder
      * Adds one or more restrictions to the query results, forming a logical
      * disjunction with any previously specified restrictions.
      *
-     * @param mixed $where The WHERE statement.
+     * @param mixed,... $where The WHERE statement.
      *
      * @return QueryBuilder This QueryBuilder instance.
      *
@@ -673,7 +676,7 @@ class QueryBuilder
      * Specifies a grouping over the results of the query.
      * Replaces any previously specified groupings, if any.
      *
-     * @param mixed $groupBy The grouping expression.
+     * @param mixed,... $groupBy The grouping expression.
      *
      * @return QueryBuilder This QueryBuilder instance.
      */
@@ -687,7 +690,7 @@ class QueryBuilder
     /**
      * Adds a grouping expression to the query.
      *
-     * @param mixed $groupBy The grouping expression.
+     * @param mixed,... $groupBy The grouping expression.
      *
      * @return QueryBuilder This QueryBuilder instance.
      */
@@ -743,7 +746,7 @@ class QueryBuilder
      * Specifies a restriction over the groups of the query.
      * Replaces any previous having restrictions, if any.
      *
-     * @param mixed $having The restriction over the groups.
+     * @param mixed,... $having The restriction over the groups.
      *
      * @return QueryBuilder This QueryBuilder instance.
      */
@@ -757,7 +760,7 @@ class QueryBuilder
      * Adds a restriction over the groups of the query, forming a logical
      * conjunction with any existing having restrictions.
      *
-     * @param mixed $having The restriction to append.
+     * @param mixed,... $having The restriction to append.
      *
      * @return QueryBuilder This QueryBuilder instance.
      */
@@ -772,7 +775,7 @@ class QueryBuilder
      * Adds a restriction over the groups of the query, forming a logical
      * disjunction with any existing having restrictions.
      *
-     * @param mixed $having The restriction to add.
+     * @param mixed,... $having The restriction to add.
      *
      * @return QueryBuilder This QueryBuilder instance.
      */
@@ -1032,6 +1035,46 @@ class QueryBuilder
     public function quoteColumnValuePairs(array $input): array
     {
         return $this->getConnection()->quoteColumnValuePairs($input);
+    }
+
+    /**
+     * Creates a cast of the $fieldName to a text datatype depending on the database management system.
+     *
+     * @param string $fieldName The fieldname will be quoted and casted according to database platform automatically
+     * @return string
+     */
+    public function castFieldToTextType(string $fieldName): string
+    {
+        $databasePlatform = $this->connection->getDatabasePlatform();
+        // https://dev.mysql.com/doc/refman/5.7/en/cast-functions.html#function_convert
+        if ($databasePlatform instanceof MySqlPlatform) {
+            return sprintf('CONVERT(%s, CHAR)', $this->connection->quoteIdentifier($fieldName));
+        }
+        // https://www.postgresql.org/docs/current/sql-createcast.html
+        if ($databasePlatform instanceof PostgreSqlPlatform) {
+            return sprintf('%s::text', $this->connection->quoteIdentifier($fieldName));
+        }
+        // https://www.sqlite.org/lang_expr.html#castexpr
+        if ($databasePlatform instanceof SqlitePlatform) {
+            return sprintf('CAST(%s as TEXT)', $this->connection->quoteIdentifier($fieldName));
+        }
+        // https://docs.microsoft.com/en-us/sql/t-sql/functions/cast-and-convert-transact-sql?view=sql-server-ver15#implicit-conversions
+        if ($databasePlatform instanceof SQLServerPlatform) {
+            return sprintf('CAST(%s as VARCHAR)', $this->connection->quoteIdentifier($fieldName));
+        }
+        // https://docs.oracle.com/javadb/10.8.3.0/ref/rrefsqlj33562.html
+        if ($databasePlatform instanceof OraclePlatform) {
+            return sprintf('CAST(%s as VARCHAR)', $this->connection->quoteIdentifier($fieldName));
+        }
+
+        throw new \RuntimeException(
+            sprintf(
+                '%s is not implemented for the used database platform "%s", yet!',
+                __METHOD__,
+                get_class($this->connection->getDatabasePlatform())
+            ),
+            1584637096
+        );
     }
 
     /**

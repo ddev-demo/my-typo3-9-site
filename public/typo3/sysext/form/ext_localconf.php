@@ -36,7 +36,7 @@ call_user_func(function () {
 
     // Add new content element wizard entry
     \TYPO3\CMS\Core\Utility\ExtensionManagementUtility::addPageTSConfig(
-        '<INCLUDE_TYPOSCRIPT: source="FILE:EXT:form/Configuration/PageTS/modWizards.tsconfig">'
+        "@import 'EXT:form/Configuration/PageTS/modWizards.tsconfig'"
     );
 
     // Add module configuration
@@ -82,10 +82,10 @@ call_user_func(function () {
 
     // Register FE plugin
     \TYPO3\CMS\Extbase\Utility\ExtensionUtility::configurePlugin(
-        'Form',
+        'TYPO3.CMS.Form',
         'Formframework',
-        [\TYPO3\CMS\Form\Controller\FormFrontendController::class => 'render, perform'],
-        [\TYPO3\CMS\Form\Controller\FormFrontendController::class => 'perform'],
+        ['FormFrontend' => 'render, perform'],
+        ['FormFrontend' => 'perform'],
         \TYPO3\CMS\Extbase\Utility\ExtensionUtility::PLUGIN_TYPE_CONTENT_ELEMENT
     );
 

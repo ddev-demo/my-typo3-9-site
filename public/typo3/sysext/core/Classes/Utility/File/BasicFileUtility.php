@@ -116,7 +116,8 @@ class BasicFileUtility
      * @param string $_ not in use anymore
      * @param string $filename Filename to check against TYPO3_CONF_VARS[BE][fileDenyPattern]
      * @return bool TRUE if extension/filename is allowed
-     * @internal May be removed without further notice. Method has been marked as deprecated for various versions but is still used in core.
+     * @todo Deprecate, but still in use by DataHandler
+     * @deprecated but still in use in the Core. Don't use in your extensions!
      */
     public function checkIfAllowed($ext, $_, $filename = '')
     {
@@ -151,7 +152,8 @@ class BasicFileUtility
      * @param bool $dontCheckForUnique If set the filename is returned with the path prepended without checking whether it already existed!
      * @return string The destination absolute filepath (not just the name!) of a unique filename/foldername in that path.
      * @see \TYPO3\CMS\Core\DataHandling\DataHandler::checkValue()
-     * @internal May be removed without further notice. Method has been marked as deprecated for various versions but is still used in core.
+     * @todo Deprecate, but still in use by the Core (DataHandler...)
+     * @deprecated but still in use in the Core. Don't use in your extensions!
      */
     public function getUniqueName($theFile, $theDest, $dontCheckForUnique = false)
     {
@@ -204,7 +206,8 @@ class BasicFileUtility
      *
      * @param string $fileName Input string, typically the body of a filename
      * @return string Output string with any characters not matching [.a-zA-Z0-9_-] is substituted by '_' and trailing dots removed
-     * @internal May be removed without further notice. Method has been marked as deprecated for various versions but is still used in core.
+     * @todo Deprecate, but still in use by the core
+     * @deprecated but still in use in the Core. Don't use in your extensions!
      */
     public function cleanFileName($fileName)
     {

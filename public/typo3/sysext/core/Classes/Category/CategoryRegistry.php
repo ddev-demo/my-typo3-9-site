@@ -365,6 +365,9 @@ class CategoryRegistry implements SingletonInterface
             if (isset($options['displayCond'])) {
                 $columns[$fieldName]['displayCond'] = $options['displayCond'];
             }
+            if (isset($options['onChange'])) {
+                $columns[$fieldName]['onChange'] = $options['onChange'];
+            }
 
             // Register opposite references for the foreign side of a relation
             if (empty($GLOBALS['TCA']['sys_category']['columns']['items']['config']['MM_oppositeUsage'][$tableName])) {
@@ -405,7 +408,7 @@ class CategoryRegistry implements SingletonInterface
             'type' => 'select',
             'renderType' => 'selectTree',
             'foreign_table' => 'sys_category',
-            'foreign_table_where' => ' AND sys_category.sys_language_uid IN (-1, 0)',
+            'foreign_table_where' => ' AND sys_category.sys_language_uid IN (-1, 0) ORDER BY sys_category.sorting ASC',
             'MM' => 'sys_category_record_mm',
             'MM_opposite_field' => 'items',
             'MM_match_fields' => [

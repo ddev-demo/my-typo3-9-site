@@ -78,8 +78,14 @@ class SelectCheckBoxElement extends AbstractFormElement
 
         $selItems = $config['items'];
         if (!empty($selItems)) {
-            // Get values in an array (and make unique, which is fine because there can be no duplicates anyway):
-            $itemArray = array_flip($parameterArray['itemFormElValue']);
+            // Get values in an array (and make unique, which is fine because there can be no duplicates anyway)
+            // In case e.g. "l10n_display" is set to "defaultAsReadonly" only one value (as string) could be handed in
+            if (is_array($parameterArray['itemFormElValue'])) {
+                $itemArray = $parameterArray['itemFormElValue'];
+            } else {
+                $itemArray = [(string)$parameterArray['itemFormElValue']];
+            }
+            $itemArray = array_flip($itemArray);
 
             // Traverse the Array of selector box items:
             $groups = [];
@@ -166,11 +172,10 @@ class SelectCheckBoxElement extends AbstractFormElement
             // Building the checkboxes
             foreach ($groups as $groupKey => $group) {
                 $groupId = htmlspecialchars($parameterArray['itemFormElID']) . '-group-' . $groupKey;
-                $groupIdCollapsible = $groupId . '-collapse';
-                $html[] = '<div id="' . $groupId . '" class="panel panel-default">';
+                $html[] = '<div class="panel panel-default">';
                 if (is_array($group['header'])) {
                     $html[] = '<div class="panel-heading">';
-                    $html[] = '<a data-toggle="collapse" href="#' . $groupIdCollapsible . '" aria-expanded="false" aria-controls="' . $groupIdCollapsible . '">';
+                    $html[] = '<a data-toggle="collapse" href="#' . $groupId . '" aria-expanded="false" aria-controls="' . $groupId . '">';
                     $html[] = $group['header']['icon'];
                     $html[] = htmlspecialchars($group['header']['title']);
                     $html[] = '</a>';
@@ -178,6 +183,7 @@ class SelectCheckBoxElement extends AbstractFormElement
                 }
                 if (is_array($group['items']) && !empty($group['items'])) {
                     $tableRows = [];
+                    $resetGroup = [];
 
                     // Render rows
                     foreach ($group['items'] as $item) {
@@ -199,22 +205,24 @@ class SelectCheckBoxElement extends AbstractFormElement
                         $tableRows[] =    '</td>';
                         $tableRows[] =    '<td class="text-right">' . $item['help'] . '</td>';
                         $tableRows[] = '</tr>';
+                        $resetGroup[] = 'document.editform[' . GeneralUtility::quoteJSvalue($item['name']) . '].checked=' . $item['checked'] . ';';
                     }
 
                     // Build reset group button
                     $resetGroupBtn = '';
-                    if (!empty($group['items'])) {
+                    if (!empty($resetGroup)) {
+                        $resetGroup[] = 'TYPO3.FormEngine.updateCheckboxState(this);';
                         $title = htmlspecialchars($this->getLanguageService()->sL('LLL:EXT:core/Resources/Private/Language/locallang_core.xlf:labels.revertSelection'));
-                        $resetGroupBtn = '<button type="button" '
-                            . 'class="btn btn-default btn-sm t3js-revert-selection" '
-                            . 'title="' . $title . '"'
-                            . '>'
+                        $resetGroupBtn = '<a href="#" '
+                            . 'class="btn btn-default btn-sm" '
+                            . 'onclick="' . implode('', $resetGroup) . ' return false;" '
+                            . 'title="' . $title . '">'
                             . $this->iconFactory->getIcon('actions-edit-undo', Icon::SIZE_SMALL)->render() . ' '
-                            . $this->getLanguageService()->sL('LLL:EXT:core/Resources/Private/Language/locallang_core.xlf:labels.revertSelection') . '</button>';
+                            . $this->getLanguageService()->sL('LLL:EXT:core/Resources/Private/Language/locallang_core.xlf:labels.revertSelection') . '</a>';
                     }
 
                     if (is_array($group['header'])) {
-                        $html[] = '<div id="' . $groupIdCollapsible . '" class="panel-collapse collapse" role="tabpanel">';
+                        $html[] = '<div id="' . $groupId . '" class="panel-collapse collapse" role="tabpanel">';
                     }
                     $checkboxId = uniqid($groupId);
                     $title = htmlspecialchars($this->getLanguageService()->sL('LLL:EXT:core/Resources/Private/Language/locallang_core.xlf:labels.toggleall'));
@@ -235,12 +243,6 @@ class SelectCheckBoxElement extends AbstractFormElement
                     if (is_array($group['header'])) {
                         $html[] = '</div>';
                     }
-
-                    $resultArray['requireJsModules'][] = ['TYPO3/CMS/Backend/FormEngine/Element/SelectCheckBoxElement' => '
-                        function(SelectCheckBoxElement) {
-                            new SelectCheckBoxElement(' . GeneralUtility::quoteJSvalue($checkboxId) . ');
-                        }'
-                    ];
                 }
                 $html[] = '</div>';
             }

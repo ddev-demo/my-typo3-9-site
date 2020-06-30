@@ -136,7 +136,7 @@ class ConfigurationService implements SingletonInterface
      * property paths by one of the above described inspector editor properties (e.g "propertyPath") within
      * the form setup, you must provide the writable property paths with a hook.
      *
-     * @see executeBuildFormDefinitionValidationConfigurationHooks()
+     * @see $this->executeBuildFormDefinitionValidationConfigurationHooks()
      * @param ValidationDto $dto
      * @return bool
      * @internal
@@ -171,7 +171,7 @@ class ConfigurationService implements SingletonInterface
      * property paths by one of the above described inspector editor properties (e.g "propertyPath") within
      * the form setup, you must provide the writable property paths with a hook.
      *
-     * @see executeBuildFormDefinitionValidationConfigurationHooks()
+     * @see $this->executeBuildFormDefinitionValidationConfigurationHooks()
      * @param ValidationDto $dto
      * @return bool
      * @internal
@@ -214,11 +214,12 @@ class ConfigurationService implements SingletonInterface
      * * formElementsDefinition.<formElementType>.formEditor.predefinedDefaults.<propertyPath> = "default value"
      *
      * @param ValidationDto $dto
+     * @param bool $translated
      * @return mixed
      * @throws PropertyException
      * @internal
      */
-    public function getFormElementPredefinedDefaultValueFromFormEditorSetup(ValidationDto $dto)
+    public function getFormElementPredefinedDefaultValueFromFormEditorSetup(ValidationDto $dto, bool $translated = true)
     {
         if (!$this->isFormElementPropertyDefinedInPredefinedDefaultsInFormEditorSetup($dto)) {
             throw new PropertyException(
@@ -234,7 +235,9 @@ class ConfigurationService implements SingletonInterface
         $formDefinitionValidationConfiguration = $this->buildFormDefinitionValidationConfigurationFromFormEditorSetup(
             $dto->getPrototypeName()
         );
-        return $formDefinitionValidationConfiguration['formElements'][$dto->getFormElementType()]['predefinedDefaults'][$dto->getPropertyPath()];
+
+        $property = $translated ? 'predefinedDefaults' : 'untranslatedPredefinedDefaults';
+        return $formDefinitionValidationConfiguration['formElements'][$dto->getFormElementType()][$property][$dto->getPropertyPath()];
     }
 
     /**
@@ -265,11 +268,12 @@ class ConfigurationService implements SingletonInterface
      * * <validatorsDefinition|finishersDefinition>.<index>.formEditor.predefinedDefaults.<propertyPath> = "default value"
      *
      * @param ValidationDto $dto
+     * @param bool $translated
      * @return mixed
      * @throws PropertyException
      * @internal
      */
-    public function getPropertyCollectionPredefinedDefaultValueFromFormEditorSetup(ValidationDto $dto)
+    public function getPropertyCollectionPredefinedDefaultValueFromFormEditorSetup(ValidationDto $dto, bool $translated = true)
     {
         if (!$this->isPropertyCollectionPropertyDefinedInPredefinedDefaultsInFormEditorSetup($dto)) {
             throw new PropertyException(
@@ -286,7 +290,9 @@ class ConfigurationService implements SingletonInterface
         $formDefinitionValidationConfiguration = $this->buildFormDefinitionValidationConfigurationFromFormEditorSetup(
             $dto->getPrototypeName()
         );
-        return $formDefinitionValidationConfiguration['collections'][$dto->getPropertyCollectionName()][$dto->getPropertyCollectionElementIdentifier()]['predefinedDefaults'][$dto->getPropertyPath()];
+
+        $property = $translated ? 'predefinedDefaults' : 'untranslatedPredefinedDefaults';
+        return $formDefinitionValidationConfiguration['collections'][$dto->getPropertyCollectionName()][$dto->getPropertyCollectionElementIdentifier()][$property][$dto->getPropertyPath()];
     }
 
     /**
@@ -347,6 +353,27 @@ class ConfigurationService implements SingletonInterface
             $prototypeConfiguration,
             'formElementsDefinition.' . $dto->getFormElementType(),
             '.'
+        );
+    }
+
+    /**
+     * @param string $key
+     * @param string $prototypeName
+     * @return array
+     */
+    public function getAllBackendTranslationsForTranslationKey(string $key, string $prototypeName): array
+    {
+        $prototypeConfiguration = $this->getPrototypeConfiguration($prototypeName);
+
+        $translationFiles = $prototypeConfiguration['formEditor']['translationFile'] ?? [];
+        if (is_string($translationFiles)) {
+            $translationFiles = [$translationFiles];
+        }
+
+        return $this->getTranslationService()->translateToAllBackendLanguages(
+            $key,
+            [],
+            $translationFiles
         );
     }
 
@@ -448,8 +475,8 @@ class ConfigurationService implements SingletonInterface
      * property paths by one of the described inspector editor properties (e.g "propertyPath") within
      * the form setup, you must provide the writable property paths with a hook.
      *
-     * @see isFormElementPropertyDefinedInFormEditorSetup()
-     * @see isPropertyCollectionPropertyDefinedInFormEditorSetup()
+     * @see $this->isFormElementPropertyDefinedInFormEditorSetup()
+     * @see $this->isPropertyCollectionPropertyDefinedInFormEditorSetup()
      * Connect to the hook:
      * $GLOBALS['TYPO3_CONF_VARS']['SC_OPTIONS']['ext/form']['buildFormDefinitionValidationConfiguration'][] = \Vendor\YourNamespace\YourClass::class;
      * Use the hook:
@@ -626,9 +653,10 @@ class ConfigurationService implements SingletonInterface
             if (!isset($formElement['predefinedDefaults'])) {
                 continue;
             }
+            $formElement['untranslatedPredefinedDefaults'] = $formElement['predefinedDefaults'];
             $formElement['predefinedDefaults'] = $this->getTranslationService()->translateValuesRecursive(
                 $formElement['predefinedDefaults'],
-                $prototypeConfiguration['formEditor']['translationFiles'] ?? []
+                $prototypeConfiguration['formEditor']['translationFile'] ?? null
             );
             $formElements[$name] = $formElement;
         }

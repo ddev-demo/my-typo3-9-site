@@ -38,7 +38,7 @@ class ElementBrowser extends AbstractNode
         $elementName = $parameterArray['itemFormElName'];
         $config = $parameterArray['fieldConf']['config'];
         $internalType = (string)$config['internal_type'];
-        $allowed = GeneralUtility::trimExplode(',', $config['allowed'], true);
+        $allowed = $config['allowed'];
 
         if (isset($config['readOnly']) && $config['readOnly']) {
             return [];
@@ -61,24 +61,29 @@ class ElementBrowser extends AbstractNode
             && $this->data['inlineParentConfig']['foreign_unique'] === $fieldName
         ) {
             $objectPrefix = $inlineStackProcessor->getCurrentStructureDomObjectIdPrefix($this->data['inlineFirstPid']) . '-' . $table;
-            $elementBrowserOnClickInline = $objectPrefix;
+            $elementBrowserOnClickInline = $objectPrefix . '|inline.checkUniqueElement|inline.setUniqueElement';
         }
         $elementBrowserType = $internalType;
         if (is_array($config['appearance']) && isset($config['appearance']['elementBrowserType'])) {
             $elementBrowserType = $config['appearance']['elementBrowserType'];
         }
-        $elementBrowserAllowed = implode(',', $allowed);
         if (is_array($config['appearance']) && isset($config['appearance']['elementBrowserAllowed'])) {
-            $elementBrowserAllowed = $config['appearance']['elementBrowserAllowed'];
+            $allowed = $config['appearance']['elementBrowserAllowed'];
         }
+        // Remove any white-spaces from the allowed extension lists
+        $elementBrowserAllowed = implode(',', GeneralUtility::trimExplode(',', $allowed, true));
+
+        $elementBrowserOnClick = 'setFormValueOpenBrowser('
+                . GeneralUtility::quoteJSvalue($elementBrowserType) . ','
+                . GeneralUtility::quoteJSvalue($elementName . '|||' . $elementBrowserAllowed . '|' . $elementBrowserOnClickInline)
+            . ');'
+            . ' return false;';
 
         return [
             'iconIdentifier' => 'actions-insert-record',
             'title' => $title,
             'linkAttributes' => [
-                'class' => 't3js-element-browser',
-                'data-mode' => htmlspecialchars($elementBrowserType),
-                'data-params' => htmlspecialchars($elementName . '|||' . $elementBrowserAllowed . '|' . $elementBrowserOnClickInline)
+                'onClick' => $elementBrowserOnClick,
             ],
         ];
     }

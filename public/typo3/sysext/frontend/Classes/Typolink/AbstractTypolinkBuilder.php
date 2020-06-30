@@ -15,20 +15,13 @@ namespace TYPO3\CMS\Frontend\Typolink;
  * The TYPO3 project - inspiring people to share!
  */
 
-use TYPO3\CMS\Core\Context\Context;
-use TYPO3\CMS\Core\Domain\Repository\PageRepository;
-use TYPO3\CMS\Core\Http\ServerRequestFactory;
-use TYPO3\CMS\Core\Routing\PageArguments;
 use TYPO3\CMS\Core\Service\DependencyOrderingService;
-use TYPO3\CMS\Core\Site\Entity\NullSite;
-use TYPO3\CMS\Core\Site\Entity\Site;
-use TYPO3\CMS\Core\Site\Entity\SiteLanguage;
-use TYPO3\CMS\Core\Site\SiteFinder;
 use TYPO3\CMS\Core\TypoScript\TemplateService;
 use TYPO3\CMS\Core\Utility\GeneralUtility;
 use TYPO3\CMS\Frontend\ContentObject\ContentObjectRenderer;
 use TYPO3\CMS\Frontend\Controller\TypoScriptFrontendController;
 use TYPO3\CMS\Frontend\Http\UrlProcessorInterface;
+use TYPO3\CMS\Frontend\Page\PageRepository;
 
 /**
  * Abstract class to provide proper helper for most types necessary
@@ -117,6 +110,20 @@ abstract class AbstractTypolinkBuilder
     }
 
     /**
+     * Determines whether lib.parseFunc is defined.
+     *
+     * @return bool
+     */
+    protected function isLibParseFuncDefined(): bool
+    {
+        $configuration = $this->contentObjectRenderer->mergeTSRef(
+            ['parseFunc' => '< lib.parseFunc'],
+            'parseFunc'
+        );
+        return !empty($configuration['parseFunc.']) && is_array($configuration['parseFunc.']);
+    }
+
+    /**
      * Helper method to a fallback method parsing HTML out of it
      *
      * @param string $originalLinkText the original string, if empty, the fallback link text
@@ -125,10 +132,29 @@ abstract class AbstractTypolinkBuilder
      */
     protected function parseFallbackLinkTextIfLinkTextIsEmpty(string $originalLinkText, string $fallbackLinkText): string
     {
-        if ($originalLinkText === '') {
+        if ($originalLinkText !== '') {
+            return $originalLinkText;
+        }
+        if ($this->isLibParseFuncDefined()) {
             return $this->contentObjectRenderer->parseFunc($fallbackLinkText, ['makelinks' => 0], '< lib.parseFunc');
         }
-        return $originalLinkText;
+        // encode in case `lib.parseFunc` is not configured
+        return $this->encodeFallbackLinkTextIfLinkTextIsEmpty($originalLinkText, $fallbackLinkText);
+    }
+
+    /**
+     * Helper method to a fallback method properly encoding HTML.
+     *
+     * @param string $originalLinkText the original string, if empty, the fallback link text
+     * @param string $fallbackLinkText the string to be used.
+     * @return string the final text
+     */
+    protected function encodeFallbackLinkTextIfLinkTextIsEmpty(string $originalLinkText, string $fallbackLinkText): string
+    {
+        if ($originalLinkText !== '') {
+            return $originalLinkText;
+        }
+        return htmlspecialchars($fallbackLinkText, ENT_QUOTES);
     }
 
     /**
@@ -150,7 +176,7 @@ abstract class AbstractTypolinkBuilder
         $target = '';
         if (isset($conf[$name])) {
             $target = $conf[$name];
-        } elseif ($targetAttributeAllowed) {
+        } elseif ($targetAttributeAllowed && !$conf['directImageLink']) {
             $target = $fallbackTarget;
         }
         if (isset($conf[$name . '.']) && $conf[$name . '.']) {
@@ -211,32 +237,12 @@ abstract class AbstractTypolinkBuilder
         // This usually happens when typolink is created by the TYPO3 Backend, where no TSFE object
         // is there. This functionality is currently completely internal, as these links cannot be
         // created properly from the Backend.
-        // However, this is added to avoid any exceptions when trying to create a link.
-        // Detecting the "first" site usually comes from the fact that TSFE needs to be instantiated
-        // during tests
-        $request = $GLOBALS['TYPO3_REQUEST'] ?? ServerRequestFactory::fromGlobals();
-        $site = $request->getAttribute('site');
-        if (!$site instanceof Site) {
-            $sites = GeneralUtility::makeInstance(SiteFinder::class)->getAllSites();
-            $site = reset($sites);
-            if (!$site instanceof Site) {
-                $site = new NullSite();
-            }
-        }
-        $language = $request->getAttribute('language');
-        if (!$language instanceof SiteLanguage) {
-            $language = $site->getDefaultLanguage();
-        }
-
-        $id = $request->getQueryParams()['id'] ?? $request->getParsedBody()['id'] ?? $site->getRootPageId();
-        $type = $request->getQueryParams()['type'] ?? $request->getParsedBody()['type'] ?? '0';
-
+        // However, this is added to avoid any exceptions when trying to create a link
         $this->typoScriptFrontendController = GeneralUtility::makeInstance(
             TypoScriptFrontendController::class,
-            GeneralUtility::makeInstance(Context::class),
-            $site,
-            $language,
-            $request->getAttribute('routing', new PageArguments((int)$id, (string)$type, []))
+            null,
+            GeneralUtility::_GP('id'),
+            (int)GeneralUtility::_GP('type')
         );
         $this->typoScriptFrontendController->sys_page = GeneralUtility::makeInstance(PageRepository::class);
         $this->typoScriptFrontendController->tmpl = GeneralUtility::makeInstance(TemplateService::class);

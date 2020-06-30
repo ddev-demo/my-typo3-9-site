@@ -84,8 +84,7 @@ class QueryResult implements QueryResultInterface
      */
     public function initializeObject()
     {
-        $this->dataMapper = $this->objectManager->get(DataMapper::class);
-        $this->dataMapper->setQuery($this->query);
+        $this->dataMapper = $this->objectManager->get(DataMapper::class, $this->query);
     }
 
     /**
@@ -193,6 +192,7 @@ class QueryResult implements QueryResultInterface
     public function offsetSet($offset, $value)
     {
         $this->initialize();
+        $this->numberOfResults = null;
         $this->queryResult[$offset] = $value;
     }
 
@@ -205,6 +205,7 @@ class QueryResult implements QueryResultInterface
     public function offsetUnset($offset)
     {
         $this->initialize();
+        $this->numberOfResults = null;
         unset($this->queryResult[$offset]);
     }
 
@@ -265,6 +266,7 @@ class QueryResult implements QueryResultInterface
     {
         $objectManager = \TYPO3\CMS\Core\Utility\GeneralUtility::makeInstance(\TYPO3\CMS\Extbase\Object\ObjectManager::class);
         $this->persistenceManager = $objectManager->get(\TYPO3\CMS\Extbase\Persistence\PersistenceManagerInterface::class);
+        $this->dataMapper = $objectManager->get(DataMapper::class);
     }
 
     /**

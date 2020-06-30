@@ -16,6 +16,7 @@ namespace TYPO3\CMS\Core\Resource\Service;
 
 use TYPO3\CMS\Core\Resource;
 use TYPO3\CMS\Core\Utility\GeneralUtility;
+use TYPO3\CMS\Core\Utility\MathUtility;
 use TYPO3\CMS\Extbase\Object\ObjectManager;
 use TYPO3\CMS\Extbase\SignalSlot\Dispatcher;
 
@@ -73,6 +74,13 @@ class FileProcessingService
         if ($taskType === Resource\ProcessedFile::CONTEXT_IMAGEPREVIEW) {
             $configuration = Resource\Processing\LocalPreviewHelper::preProcessConfiguration($configuration);
         }
+        // Ensure that the processing configuration which is part of the hash sum is properly cast, so
+        // unnecessary duplicate images are not produced, see #80942
+        foreach ($configuration as &$value) {
+            if (MathUtility::canBeInterpretedAsInteger($value)) {
+                $value = (int)$value;
+            }
+        }
 
         /** @var Resource\ProcessedFileRepository $processedFileRepository */
         $processedFileRepository = GeneralUtility::makeInstance(Resource\ProcessedFileRepository::class);
@@ -110,7 +118,8 @@ class FileProcessingService
         if ($processedFile->isNew() || (!$processedFile->usesOriginalFile() && !$processedFile->exists()) ||
             $processedFile->isOutdated()) {
             $task = $processedFile->getTask();
-            $processor = $this->getProcessorByTask($task);
+            /** @var Resource\Processing\LocalImageProcessor $processor */
+            $processor = GeneralUtility::makeInstance(Resource\Processing\LocalImageProcessor::class);
             $processor->processTask($task);
 
             if ($task->isExecuted() && $task->isSuccessful() && $processedFile->isProcessed()) {
@@ -119,17 +128,6 @@ class FileProcessingService
                 $processedFileRepository->add($processedFile);
             }
         }
-    }
-
-    /**
-     * @param Resource\Processing\TaskInterface $task
-     * @return Resource\Processing\ProcessorInterface
-     */
-    protected function getProcessorByTask(Resource\Processing\TaskInterface $task): Resource\Processing\ProcessorInterface
-    {
-        $processorRegistry = GeneralUtility::makeInstance(Resource\Processing\ProcessorRegistry::class);
-
-        return $processorRegistry->getProcessorByTask($task);
     }
 
     /**

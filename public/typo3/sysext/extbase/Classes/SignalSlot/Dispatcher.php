@@ -1,6 +1,4 @@
 <?php
-declare(strict_types = 1);
-
 namespace TYPO3\CMS\Extbase\SignalSlot;
 
 /*
@@ -17,7 +15,9 @@ namespace TYPO3\CMS\Extbase\SignalSlot;
  */
 
 use Psr\Log\LoggerInterface;
-use TYPO3\CMS\Extbase\Object\ObjectManagerInterface;
+use TYPO3\CMS\Core\Log\LogManager;
+use TYPO3\CMS\Core\Utility\GeneralUtility;
+use TYPO3\CMS\Extbase\Object\ObjectManager;
 
 /**
  * A dispatcher which dispatches signals by calling its registered slot methods
@@ -27,7 +27,12 @@ use TYPO3\CMS\Extbase\Object\ObjectManagerInterface;
 class Dispatcher implements \TYPO3\CMS\Core\SingletonInterface
 {
     /**
-     * @var ObjectManagerInterface
+     * @var bool
+     */
+    protected $isInitialized = false;
+
+    /**
+     * @var \TYPO3\CMS\Extbase\Object\ObjectManagerInterface
      */
     protected $objectManager;
 
@@ -46,13 +51,21 @@ class Dispatcher implements \TYPO3\CMS\Core\SingletonInterface
     protected $logger;
 
     /**
-     * @param ObjectManagerInterface $objectManager
-     * @param LoggerInterface $logger
+     * Initializes this object.
+     *
+     * This methods needs to be used as alternative to inject aspects.
+     * Since this dispatches is used very early when the ObjectManager
+     * is not fully initialized (especially concerning caching framework),
+     * this is the only way.
      */
-    public function __construct(ObjectManagerInterface $objectManager, LoggerInterface $logger)
+    public function initializeObject()
     {
-        $this->objectManager = $objectManager;
-        $this->logger = $logger;
+        if (!$this->isInitialized) {
+            $this->objectManager = GeneralUtility::makeInstance(ObjectManager::class);
+            $logManager = GeneralUtility::makeInstance(LogManager::class);
+            $this->logger = $logManager->getLogger(self::class);
+            $this->isInitialized = true;
+        }
     }
 
     /**
@@ -66,7 +79,7 @@ class Dispatcher implements \TYPO3\CMS\Core\SingletonInterface
      * @param bool $passSignalInformation If set to TRUE, the last argument passed to the slot will be information about the signal (EmitterClassName::signalName)
      * @throws \InvalidArgumentException
      */
-    public function connect(string $signalClassName, string $signalName, $slotClassNameOrObject, string $slotMethodName = '', bool $passSignalInformation = true): void
+    public function connect($signalClassName, $signalName, $slotClassNameOrObject, $slotMethodName = '', $passSignalInformation = true)
     {
         $class = null;
         $object = null;
@@ -103,8 +116,9 @@ class Dispatcher implements \TYPO3\CMS\Core\SingletonInterface
      * @throws Exception\InvalidSlotException if the slot is not valid
      * @throws Exception\InvalidSlotReturnException if a slot returns invalid arguments (too few or return value is not an array)
      */
-    public function dispatch(string $signalClassName, string $signalName, array $signalArguments = [])
+    public function dispatch($signalClassName, $signalName, array $signalArguments = [])
     {
+        $this->initializeObject();
         $this->logger->debug(
             'Triggered signal ' . $signalClassName . ' ' . $signalName,
             [
@@ -120,6 +134,9 @@ class Dispatcher implements \TYPO3\CMS\Core\SingletonInterface
             if (isset($slotInformation['object'])) {
                 $object = $slotInformation['object'];
             } else {
+                if (!isset($this->objectManager)) {
+                    throw new Exception\InvalidSlotException(sprintf('Cannot dispatch %s::%s to class %s. The object manager is not yet available in the Signal Slot Dispatcher and therefore it cannot dispatch classes.', $signalClassName, $signalName, $slotInformation['class'] ?? ''), 1298113624);
+                }
                 if (!$this->objectManager->isRegistered($slotInformation['class'])) {
                     throw new Exception\InvalidSlotException('The given class "' . $slotInformation['class'] . '" is not a registered object.', 1245673367);
                 }
@@ -160,7 +177,7 @@ class Dispatcher implements \TYPO3\CMS\Core\SingletonInterface
      * @param string $signalName Name of the signal
      * @return array An array of arrays with slot information
      */
-    public function getSlots(string $signalClassName, string $signalName): array
+    public function getSlots($signalClassName, $signalName)
     {
         return $this->slots[$signalClassName][$signalName] ?? [];
     }

@@ -49,10 +49,13 @@ class CacheHashCalculator implements SingletonInterface
 
     /**
      * Initialise class properties by using the relevant TYPO3 configuration
+     *
+     * @param array $configuration
      */
-    public function __construct()
+    public function __construct(array $configuration = null)
     {
-        $this->setConfiguration($GLOBALS['TYPO3_CONF_VARS']['FE']['cacheHash'] ?? []);
+        $configuration = $configuration ?? $GLOBALS['TYPO3_CONF_VARS']['FE']['cacheHash'] ?? [];
+        $this->setConfiguration($configuration);
     }
 
     /**
@@ -187,7 +190,7 @@ class CacheHashCalculator implements SingletonInterface
      */
     protected function isCoreParameter($key)
     {
-        return $key === 'id' || $key === 'type' || $key === 'no_cache' || $key === 'cHash' || $key === 'MP';
+        return $key === 'id' || $key === 'type' || $key === 'no_cache' || $key === 'cHash' || $key === 'MP' || $key === 'ftu';
     }
 
     /**

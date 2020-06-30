@@ -16,6 +16,7 @@ $GLOBALS['TYPO3_CONF_VARS']['FE']['ContentObjects'] = array_merge($GLOBALS['TYPO
     'COA_INT'          => \TYPO3\CMS\Frontend\ContentObject\ContentObjectArrayInternalContentObject::class,
     'USER'             => \TYPO3\CMS\Frontend\ContentObject\UserContentObject::class,
     'USER_INT'         => \TYPO3\CMS\Frontend\ContentObject\UserInternalContentObject::class,
+    'FILE'             => \TYPO3\CMS\Frontend\ContentObject\FileContentObject::class,
     'FILES'            => \TYPO3\CMS\Frontend\ContentObject\FilesContentObject::class,
     'IMAGE'            => \TYPO3\CMS\Frontend\ContentObject\ImageContentObject::class,
     'IMG_RESOURCE'     => \TYPO3\CMS\Frontend\ContentObject\ImageResourceContentObject::class,
@@ -102,9 +103,9 @@ $GLOBALS['TYPO3_CONF_VARS']['SYS']['livesearch']['content'] = 'tt_content';
 
 // Include new content elements to modWizards
 \TYPO3\CMS\Core\Utility\ExtensionManagementUtility::addPageTSConfig(
-    '<INCLUDE_TYPOSCRIPT: source="FILE:EXT:frontend/Configuration/TSconfig/Page/Mod/Wizards/NewContentElement.tsconfig">'
+    "@import 'EXT:frontend/Configuration/TSconfig/Page/Mod/Wizards/NewContentElement.tsconfig'"
 );
 // Include FormEngine adjustments
 \TYPO3\CMS\Core\Utility\ExtensionManagementUtility::addPageTSConfig(
-    '<INCLUDE_TYPOSCRIPT: source="FILE:EXT:frontend/Configuration/TSconfig/Page/TCEFORM.tsconfig">'
+    "@import 'EXT:frontend/Configuration/TSconfig/Page/TCEFORM.tsconfig'"
 );

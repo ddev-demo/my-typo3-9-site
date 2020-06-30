@@ -22,6 +22,8 @@ use TYPO3\CMS\Backend\Routing\UriBuilder;
 use TYPO3\CMS\Backend\Template\ModuleTemplate;
 use TYPO3\CMS\Backend\Utility\BackendUtility;
 use TYPO3\CMS\Core\Authentication\BackendUserAuthentication;
+use TYPO3\CMS\Core\Compatibility\PublicMethodDeprecationTrait;
+use TYPO3\CMS\Core\Compatibility\PublicPropertyDeprecationTrait;
 use TYPO3\CMS\Core\Core\Environment;
 use TYPO3\CMS\Core\Crypto\PasswordHashing\InvalidPasswordHashException;
 use TYPO3\CMS\Core\Crypto\PasswordHashing\PasswordHashFactory;
@@ -31,7 +33,6 @@ use TYPO3\CMS\Core\FormProtection\FormProtectionFactory;
 use TYPO3\CMS\Core\Http\HtmlResponse;
 use TYPO3\CMS\Core\Imaging\Icon;
 use TYPO3\CMS\Core\Imaging\IconFactory;
-use TYPO3\CMS\Core\Localization\LanguageService;
 use TYPO3\CMS\Core\Localization\Locales;
 use TYPO3\CMS\Core\Messaging\FlashMessage;
 use TYPO3\CMS\Core\Messaging\FlashMessageService;
@@ -46,6 +47,8 @@ use TYPO3\CMS\Core\Utility\GeneralUtility;
  */
 class SetupModuleController
 {
+    use PublicPropertyDeprecationTrait;
+    use PublicMethodDeprecationTrait;
 
     /**
      * Flag if password has not been updated
@@ -69,6 +72,39 @@ class SetupModuleController
     const PASSWORD_OLD_WRONG = 3;
 
     /**
+     * Properties which have been moved to protected status from public
+     *
+     * @var array
+     */
+    private $deprecatedPublicProperties = [
+        'OLD_BE_USER' => 'Using $OLD_BE_USER of class SetupModuleController from the outside is discouraged, the variable will be removed.',
+        'MOD_MENU' => 'Using $MOD_MENU of class SetupModuleController from the outside is discouraged, the variable will be removed.',
+        'MOD_SETTINGS' => 'Using $MOD_SETTINGS of class SetupModuleController from the outside is discouraged, the variable will be removed.',
+        'content' => 'Using $content of class SetupModuleController from the outside is discouraged, as this variable is only used for internal storage.',
+        'overrideConf' => 'Using $overrideConf of class SetupModuleController from the outside is discouraged, as this variable is only used for internal storage.',
+        'languageUpdate' => 'Using $languageUpdate of class SetupModuleController from the outside is discouraged, as this variable is only used for internal storage.',
+    ];
+
+    /**
+     * @var array
+     */
+    private $deprecatedPublicMethods = [
+        'storeIncomingData' => 'Using SetupModuleController::storeIncomingData() is deprecated and will not be possible anymore in TYPO3 v10.0.',
+        'main' => 'Using SetupModuleController::main() is deprecated and will not be possible anymore in TYPO3 v10.0.',
+        'init' => 'Using SetupModuleController::init() is deprecated and will not be possible anymore in TYPO3 v10.0.',
+    ];
+
+    /**
+     * @var array
+     */
+    protected $MOD_MENU = [];
+
+    /**
+     * @var array
+     */
+    protected $MOD_SETTINGS = [];
+
+    /**
      * @var string
      */
     protected $content;
@@ -79,6 +115,11 @@ class SetupModuleController
     protected $overrideConf;
 
     /**
+     * @deprecated will be removed in TYPO3 v10.0
+     */
+    protected $OLD_BE_USER;
+
+    /**
      * @var bool
      */
     protected $languageUpdate;
@@ -87,6 +128,11 @@ class SetupModuleController
      * @var bool
      */
     protected $pagetreeNeedsRefresh = false;
+
+    /**
+     * @var bool
+     */
+    protected $isAdmin;
 
     /**
      * @var array
@@ -126,6 +172,16 @@ class SetupModuleController
     protected $formProtection;
 
     /**
+     * @var string
+     */
+    protected $simulateSelector = '';
+
+    /**
+     * @var int
+     */
+    protected $simUser;
+
+    /**
      * The name of the module
      *
      * @var string
@@ -153,48 +209,40 @@ class SetupModuleController
         $pageRenderer->addInlineLanguageLabelArray([
             'FormEngine.remainingCharacters' => $this->getLanguageService()->sL('LLL:EXT:core/Resources/Private/Language/locallang_core.xlf:labels.remainingCharacters'),
         ]);
-        $pageRenderer->addJsFile('EXT:backend/Resources/Public/JavaScript/md5.js');
     }
 
     /**
-     * Initializes the module for display of the settings form.
+     * Getter for the form protection instance.
+     *
+     * @return \TYPO3\CMS\Core\FormProtection\BackendFormProtection
+     * @deprecated since TYPO3 v9, will be removed in TYPO3 v10.0.
      */
-    protected function initialize()
+    public function getFormProtection()
     {
-        $this->getLanguageService()->includeLLFile('EXT:setup/Resources/Private/Language/locallang.xlf');
-        // Getting the 'override' values as set might be set in User TSconfig
-        $this->overrideConf = $this->getBackendUser()->getTSConfig()['setup.']['override.'] ?? null;
-        // Getting the disabled fields might be set in User TSconfig (eg setup.fields.password.disabled=1)
-        $this->tsFieldConf = $this->getBackendUser()->getTSConfig()['setup.']['fields.'] ?? null;
-        // id password is disabled, disable repeat of password too (password2)
-        if ($this->tsFieldConf['password.']['disabled'] ?? false) {
-            $this->tsFieldConf['password2.']['disabled'] = 1;
-            $this->tsFieldConf['passwordCurrent.']['disabled'] = 1;
-        }
+        trigger_error('SetupModuleController->getFormProtection() will be removed in TYPO3 v10.0.', E_USER_DEPRECATED);
+        return $this->formProtection;
     }
 
     /**
      * If settings are submitted to _POST[DATA], store them
      * NOTICE: This method is called before the \TYPO3\CMS\Backend\Template\ModuleTemplate
      * is included. See bottom of document.
-     *
-     * @param array $postData parsed body of the request
      */
-    protected function storeIncomingData(array $postData)
+    protected function storeIncomingData()
     {
         // First check if something is submitted in the data-array from POST vars
-        $d = $postData['data'] ?? null;
+        $d = GeneralUtility::_POST('data');
         $columns = $GLOBALS['TYPO3_USER_SETTINGS']['columns'];
         $backendUser = $this->getBackendUser();
         $beUserId = $backendUser->user['uid'];
         $storeRec = [];
         $fieldList = $this->getFieldsFromShowItem();
-        if (is_array($d) && $this->formProtection->validateToken((string)$postData['formToken'] ?? '', 'BE user setup', 'edit')) {
+        if (is_array($d) && $this->formProtection->validateToken((string)GeneralUtility::_POST('formToken'), 'BE user setup', 'edit')) {
             // UC hashed before applying changes
             $save_before = md5(serialize($backendUser->uc));
             // PUT SETTINGS into the ->uc array:
             // Reload left frame when switching BE language
-            if (isset($d['lang']) && $d['lang'] !== $backendUser->uc['lang']) {
+            if (isset($d['lang']) && $d['lang'] != $backendUser->uc['lang']) {
                 $this->languageUpdate = true;
             }
             // Reload pagetree if the title length is changed
@@ -208,11 +256,11 @@ class SetupModuleController
             } elseif ($d['save']) {
                 // Save all submitted values if they are no array (arrays are with table=be_users) and exists in $GLOBALS['TYPO3_USER_SETTINGS'][columns]
                 foreach ($columns as $field => $config) {
-                    if (!in_array($field, $fieldList, true)) {
+                    if (!in_array($field, $fieldList)) {
                         continue;
                     }
                     if ($config['table']) {
-                        if ($config['table'] === 'be_users' && !in_array($field, ['password', 'password2', 'passwordCurrent', 'email', 'realName', 'admin', 'avatar'], true)) {
+                        if ($config['table'] === 'be_users' && !in_array($field, ['password', 'password2', 'passwordCurrent', 'email', 'realName', 'admin', 'avatar'])) {
                             if (!isset($config['access']) || $this->checkAccess($config) && $backendUser->user[$field] !== $d['be_users'][$field]) {
                                 if ($config['type'] === 'check') {
                                     $fieldValue = isset($d['be_users'][$field]) ? 1 : 0;
@@ -250,10 +298,10 @@ class SetupModuleController
                 }
                 // Update the password:
                 if ($passwordIsConfirmed) {
-                    if ($backendUser->isAdmin()) {
+                    if ($this->isAdmin) {
                         $passwordOk = true;
                     } else {
-                        $currentPasswordHashed = $backendUser->user['password'];
+                        $currentPasswordHashed = $GLOBALS['BE_USER']->user['password'];
                         $passwordOk = false;
                         $saltFactory = GeneralUtility::makeInstance(PasswordHashFactory::class);
                         try {
@@ -305,6 +353,25 @@ class SetupModuleController
     }
 
     /**
+     * Initializes the module for display of the settings form.
+     */
+    protected function init()
+    {
+        $this->getLanguageService()->includeLLFile('EXT:setup/Resources/Private/Language/locallang.xlf');
+        $backendUser = $this->getBackendUser();
+        $this->isAdmin = $backendUser->isAdmin();
+        // Getting the 'override' values as set might be set in User TSconfig
+        $this->overrideConf = $backendUser->getTSConfig()['setup.']['override.'] ?? null;
+        // Getting the disabled fields might be set in User TSconfig (eg setup.fields.password.disabled=1)
+        $this->tsFieldConf = $backendUser->getTSConfig()['setup.']['fields.'] ?? null;
+        // id password is disabled, disable repeat of password too (password2)
+        if (isset($this->tsFieldConf['password.']) && $this->tsFieldConf['password.']['disabled']) {
+            $this->tsFieldConf['password2.']['disabled'] = 1;
+            $this->tsFieldConf['passwordCurrent.']['disabled'] = 1;
+        }
+    }
+
+    /**
      * Generate necessary JavaScript
      *
      * @return string
@@ -320,20 +387,10 @@ class SetupModuleController
     }
 
     /**
-     * Injects the request object, checks if data should be saved, and prepares a HTML page
-     *
-     * @param ServerRequestInterface $request the current request
-     * @return ResponseInterface the response with the content
+     * Generate the main settings form:
      */
-    public function mainAction(ServerRequestInterface $request): ResponseInterface
+    protected function main()
     {
-        $this->initialize();
-        if ($request->getMethod() === 'POST') {
-            $postData = $request->getParsedBody();
-            if (is_array($postData) && !empty($postData)) {
-                $this->storeIncomingData($postData);
-            }
-        }
         $uriBuilder = GeneralUtility::makeInstance(UriBuilder::class);
         $this->content .= '<form action="' . (string)$uriBuilder->buildUriFromRoute('user_setup') . '" method="post" id="SetupModuleController" name="usersetup" enctype="multipart/form-data">';
         if ($this->languageUpdate) {
@@ -349,18 +406,20 @@ class SetupModuleController
         if ($this->pagetreeNeedsRefresh) {
             BackendUtility::setUpdateSignal('updatePageTree');
         }
+        // Start page:
+        $this->moduleTemplate->getPageRenderer()->addJsFile('EXT:backend/Resources/Public/JavaScript/md5.js');
         // Use a wrapper div
         $this->content .= '<div id="user-setup-wrapper">';
         $this->content .= $this->moduleTemplate->header($this->getLanguageService()->getLL('UserSettings'));
         $this->addFlashMessages();
 
-        $formToken = $this->formProtection->generateToken('BE user setup', 'edit');
-
         // Render the menu items
         $menuItems = $this->renderUserSetup();
         $this->content .= $this->moduleTemplate->getDynamicTabMenu($menuItems, 'user-setup', 1, false, false);
+        $formToken = $this->formProtection->generateToken('BE user setup', 'edit');
         $this->content .= '<div>';
-        $this->content .= '<input type="hidden" name="formToken" value="' . htmlspecialchars($formToken) . '" />
+        $this->content .= '<input type="hidden" name="simUser" value="' . (int)$this->simUser . '" />
+            <input type="hidden" name="formToken" value="' . htmlspecialchars($formToken) . '" />
             <input type="hidden" value="1" name="data[save]" />
             <input type="hidden" name="data[setValuesToDefault]" value="0" id="setValuesToDefault" />';
         $this->content .= '</div>';
@@ -372,6 +431,20 @@ class SetupModuleController
         // Renders the module page
         $this->moduleTemplate->setContent($this->content);
         $this->content .= '</form>';
+    }
+
+    /**
+     * Injects the request object for the current request or subrequest
+     * Simply calls main() and init() and writes the content to the response
+     *
+     * @param ServerRequestInterface $request the current request
+     * @return ResponseInterface the response with the content
+     */
+    public function mainAction(ServerRequestInterface $request): ResponseInterface
+    {
+        $this->init();
+        $this->storeIncomingData();
+        $this->main();
         return new HtmlResponse($this->moduleTemplate->renderContent());
     }
 
@@ -567,16 +640,17 @@ class SetupModuleController
                     $iconFactory = GeneralUtility::makeInstance(IconFactory::class);
                     if ($avatarFileUid) {
                         $html .=
-                            '<a id="clear_button_' . htmlspecialchars($fieldName) . '" '
+                            '<button type="button" id="clear_button_' . htmlspecialchars($fieldName) . '" aria-label="' . htmlspecialchars($this->getLanguageService()->getLL('avatar.clear')) . '" '
                                 . 'onclick="clearExistingImage(); return false;" class="btn btn-default">'
                                 . $iconFactory->getIcon('actions-delete', Icon::SIZE_SMALL)
-                            . '</a>';
+                            . '</button>';
                     }
                     $html .=
-                        '<a id="add_button_' . htmlspecialchars($fieldName) . '" class="btn btn-default btn-add-avatar"'
+                        '<button type="button" id="add_button_' . htmlspecialchars($fieldName) . '" class="btn btn-default btn-add-avatar"'
+                            . ' aria-label="' . htmlspecialchars($this->getLanguageService()->getLL('avatar.openFileBrowser')) . '"'
                             . ' onclick="openFileBrowser();return false;">'
                             . $iconFactory->getIcon('actions-insert-record', Icon::SIZE_SMALL)
-                            . '</a></div>';
+                            . '</button></div>';
 
                     $this->addAvatarButtonJs($fieldName);
                     break;
@@ -652,24 +726,85 @@ class SetupModuleController
     public function renderStartModuleSelect()
     {
         // Load available backend modules
+        $backendUser = $this->getBackendUser();
+        $language = $this->getLanguageService();
         $loadModules = GeneralUtility::makeInstance(ModuleLoader::class);
         $loadModules->observeWorkspaces = true;
         $loadModules->load($GLOBALS['TBE_MODULES']);
-        $startModuleSelect = '<option value="">' . htmlspecialchars($this->getLanguageService()->getLL('startModule.firstInMenu')) . '</option>';
+        $startModuleSelect = '<option value="">' . htmlspecialchars($language->getLL('startModule.firstInMenu')) . '</option>';
         foreach ($loadModules->modules as $mainMod => $modData) {
             if (!empty($modData['sub']) && is_array($modData['sub'])) {
                 $modules = '';
                 foreach ($modData['sub'] as $subData) {
                     $modName = $subData['name'];
                     $modules .= '<option value="' . htmlspecialchars($modName) . '"';
-                    $modules .= $this->getBackendUser()->uc['startModule'] === $modName ? ' selected="selected"' : '';
-                    $modules .= '>' . htmlspecialchars($this->getLanguageService()->sL($loadModules->getLabelsForModule($modName)['title'])) . '</option>';
+                    $modules .= $backendUser->uc['startModule'] === $modName ? ' selected="selected"' : '';
+                    $modules .= '>' . htmlspecialchars($language->sL($loadModules->getLabelsForModule($modName)['title'])) . '</option>';
                 }
-                $groupLabel = htmlspecialchars($this->getLanguageService()->sL($loadModules->getLabelsForModule($mainMod)['title']));
+                $groupLabel = htmlspecialchars($language->sL($loadModules->getLabelsForModule($mainMod)['title']));
                 $startModuleSelect .= '<optgroup label="' . htmlspecialchars($groupLabel) . '">' . $modules . '</optgroup>';
             }
         }
         return '<select id="field_startModule" name="data[startModule]" class="form-control">' . $startModuleSelect . '</select>';
+    }
+
+    /**
+     * Will make the simulate-user selector if the logged in user is administrator.
+     * It will also set the GLOBAL(!) BE_USER to the simulated user selected if any (and set $this->OLD_BE_USER to logged in user)
+     *
+     * @deprecated since TYPO3 v9, will be removed in TYPO3 v10.0.
+     */
+    public function simulateUser()
+    {
+        trigger_error('SetupModuleController->simulateUser() will be removed in TYPO3 v10.0.', E_USER_DEPRECATED);
+        // If admin, allow simulation of another user
+        $this->simUser = 0;
+        $this->simulateSelector = '';
+        unset($this->OLD_BE_USER);
+        $currentBeUser = $this->getBackendUser();
+        if ($currentBeUser->isAdmin()) {
+            $this->simUser = (int)GeneralUtility::_GP('simUser');
+            $queryBuilder = GeneralUtility::makeInstance(ConnectionPool::class)->getQueryBuilderForTable('be_users');
+            $users = $queryBuilder
+                ->select('*')
+                ->from('be_users')
+                ->where(
+                    $queryBuilder->expr()->neq(
+                        'uid',
+                        $queryBuilder->createNamedParameter($currentBeUser->user['uid'], \PDO::PARAM_INT)
+                    ),
+                    $queryBuilder->expr()->notLike(
+                        'username',
+                        $queryBuilder->createNamedParameter(
+                            $queryBuilder->escapeLikeWildcards('_cli_') . '%',
+                            \PDO::PARAM_STR
+                        )
+                    )
+                )
+                ->orderBy('username')
+                ->execute()
+                ->fetchAll();
+            $opt = [];
+            foreach ($users as $rr) {
+                $label = $rr['username'] . ($rr['realName'] ? ' (' . $rr['realName'] . ')' : '');
+                $opt[] = '<option value="' . (int)$rr['uid'] . '"' . ($this->simUser === (int)$rr['uid'] ? ' selected="selected"' : '') . '>' . htmlspecialchars($label) . '</option>';
+            }
+            if (!empty($opt)) {
+                $uriBuilder = GeneralUtility::makeInstance(UriBuilder::class);
+                $this->simulateSelector = '<select id="field_simulate" class="form-control" name="simulateUser" onchange="window.location.href=' . GeneralUtility::quoteJSvalue((string)$uriBuilder->buildUriFromRoute('user_setup') . '&simUser=') . '+this.options[this.selectedIndex].value;"><option></option>' . implode('', $opt) . '</select>';
+            }
+        }
+        // This can only be set if the previous code was executed.
+        if ($this->simUser > 0) {
+            // Save old user...
+            $this->OLD_BE_USER = $currentBeUser;
+            // Unset current
+            // New backend user object
+            $currentBeUser = GeneralUtility::makeInstance(BackendUserAuthentication::class);
+            $currentBeUser->setBeUserByUid($this->simUser);
+            $currentBeUser->fetchGroupData();
+            $currentBeUser->backendSetUC();
+        }
     }
 
     /**
@@ -681,6 +816,7 @@ class SetupModuleController
     protected function checkAccess(array $config)
     {
         $access = $config['access'];
+
         if (isset($GLOBALS['TYPO3_CONF_VARS']['SC_OPTIONS']['setup']['accessLevelCheck'][$access])) {
             if (class_exists($access)) {
                 $accessObject = GeneralUtility::makeInstance($access);
@@ -690,7 +826,7 @@ class SetupModuleController
                 }
             }
         } elseif ($access === 'admin') {
-            return $this->getBackendUser()->isAdmin();
+            return $this->isAdmin;
         }
 
         return false;
@@ -736,7 +872,7 @@ class SetupModuleController
             // Setting comes from another extension
             $context = $strParts[0];
             $field = $strParts[1];
-        } elseif ($str !== 'language' && $str !== 'reset') {
+        } elseif ($str !== 'language' && $str !== 'simuser' && $str !== 'reset') {
             $field = 'option_' . $str;
         }
         return BackendUtility::wrapInHelp($context, $field, $label);
@@ -751,7 +887,7 @@ class SetupModuleController
     protected function getFieldsFromShowItem()
     {
         $allowedFields = GeneralUtility::trimExplode(',', $GLOBALS['TYPO3_USER_SETTINGS']['showitem'], true);
-        if ($this->getBackendUser()->isAdmin()) {
+        if ($this->isAdmin) {
             // Do not ask for current password if admin (unknown for other users and no security gain)
             $key = array_search('passwordCurrent', $allowedFields);
             if ($key !== false) {
@@ -886,7 +1022,7 @@ class SetupModuleController
             }
 
             // Check if user is allowed to use the image (only when not in simulation mode)
-            if ($file && !$file->getStorage()->checkFileActionPermission('read', $file)) {
+            if ($file && $this->simUser === 0 && !$file->getStorage()->checkFileActionPermission('read', $file)) {
                 $file = false;
             }
 
@@ -943,7 +1079,7 @@ class SetupModuleController
     /**
      * Returns the current BE user.
      *
-     * @return BackendUserAuthentication
+     * @return \TYPO3\CMS\Core\Authentication\BackendUserAuthentication
      */
     protected function getBackendUser()
     {
@@ -951,7 +1087,9 @@ class SetupModuleController
     }
 
     /**
-     * @return LanguageService
+     * Returns LanguageService
+     *
+     * @return \TYPO3\CMS\Core\Localization\LanguageService
      */
     protected function getLanguageService()
     {

@@ -10,4 +10,188 @@
  *
  * The TYPO3 project - inspiring people to share!
  */
-define(["require","exports","TYPO3/CMS/Backend/Enum/Severity","jquery","TYPO3/CMS/Backend/Modal","TYPO3/CMS/Backend/Hashing/Md5"],function(t,e,n,o,a,r){"use strict";class s{static getReturnUrl(){return encodeURIComponent(top.list_frame.document.location.pathname+top.list_frame.document.location.search)}static renameFile(t,e){top.TYPO3.Backend.ContentContainer.setUrl(top.TYPO3.settings.FileRename.moduleUrl+"&target="+encodeURIComponent(e)+"&returnUrl="+s.getReturnUrl())}static editFile(t,e){top.TYPO3.Backend.ContentContainer.setUrl(top.TYPO3.settings.FileEdit.moduleUrl+"&target="+encodeURIComponent(e)+"&returnUrl="+s.getReturnUrl())}static editFileStorage(t,e){top.TYPO3.Backend.ContentContainer.setUrl(top.TYPO3.settings.FormEngine.moduleUrl+"&edit[sys_file_storage]["+parseInt(e,10)+"]=edit&returnUrl="+s.getReturnUrl())}static openInfoPopUp(t,e){"sys_file_storage"===t?top.TYPO3.InfoWindow.showItem(t,e):top.TYPO3.InfoWindow.showItem("_FILE",e)}static uploadFile(t,e){top.TYPO3.Backend.ContentContainer.setUrl(top.TYPO3.settings.FileUpload.moduleUrl+"&target="+encodeURIComponent(e)+"&returnUrl="+s.getReturnUrl())}static createFile(t,e){top.TYPO3.Backend.ContentContainer.setUrl(top.TYPO3.settings.FileCreate.moduleUrl+"&target="+encodeURIComponent(e)+"&returnUrl="+s.getReturnUrl())}static deleteFile(t,e){const r=o(this),i=()=>{top.TYPO3.Backend.ContentContainer.setUrl(top.TYPO3.settings.FileCommit.moduleUrl+"&data[delete][0][data]="+encodeURIComponent(e)+"&data[delete][0][redirect]="+s.getReturnUrl())};r.data("title")?a.confirm(r.data("title"),r.data("message"),n.SeverityEnum.warning,[{text:o(this).data("button-close-text")||TYPO3.lang["button.cancel"]||"Cancel",active:!0,btnClass:"btn-default",name:"cancel"},{text:o(this).data("button-ok-text")||TYPO3.lang["button.delete"]||"Delete",btnClass:"btn-warning",name:"delete"}]).on("button.clicked",t=>{"delete"===t.currentTarget.name&&i(),a.dismiss()}):i()}static copyFile(t,e){const n=r.hash(e).substring(0,10);let a=TYPO3.settings.ajaxUrls.contextmenu_clipboard;a+="&CB[el][_FILE%7C"+n+"]="+encodeURIComponent(e)+"&CB[setCopyMode]=1",o.ajax(a).always(()=>{top.TYPO3.Backend.ContentContainer.refresh(!0)})}static copyReleaseFile(t,e){const n=r.hash(e).substring(0,10);let a=TYPO3.settings.ajaxUrls.contextmenu_clipboard;a+="&CB[el][_FILE%7C"+n+"]=0&CB[setCopyMode]=1",o.ajax(a).always(()=>{top.TYPO3.Backend.ContentContainer.refresh(!0)})}static cutFile(t,e){const n=r.hash(e).substring(0,10);let a=TYPO3.settings.ajaxUrls.contextmenu_clipboard;a+="&CB[el][_FILE%7C"+n+"]="+encodeURIComponent(e),o.ajax(a).always(()=>{top.TYPO3.Backend.ContentContainer.refresh(!0)})}static cutReleaseFile(t,e){const n=r.hash(e).substring(0,10);let a=TYPO3.settings.ajaxUrls.contextmenu_clipboard;a+="&CB[el][_FILE%7C"+n+"]=0",o.ajax(a).always(()=>{top.TYPO3.Backend.ContentContainer.refresh(!0)})}static pasteFileInto(t,e){const r=o(this),i=r.data("title"),l=()=>{top.TYPO3.Backend.ContentContainer.setUrl(top.TYPO3.settings.FileCommit.moduleUrl+"&CB[paste]=FILE|"+encodeURIComponent(e)+"&CB[pad]=normal&redirect="+s.getReturnUrl())};i?a.confirm(i,r.data("message"),n.SeverityEnum.warning,[{text:o(this).data("button-close-text")||TYPO3.lang["button.cancel"]||"Cancel",active:!0,btnClass:"btn-default",name:"cancel"},{text:o(this).data("button-ok-text")||TYPO3.lang["button.ok"]||"OK",btnClass:"btn-warning",name:"ok"}]).on("button.clicked",t=>{"ok"===t.target.name&&l(),a.dismiss()}):l()}static dropInto(t,e,n){const a=o(this).data("drop-target");top.TYPO3.Backend.ContentContainer.setUrl(top.TYPO3.settings.FileCommit.moduleUrl+"&file["+n+"][0][data]="+encodeURIComponent(e)+"&file["+n+"][0][target]="+encodeURIComponent(a)+"&redirect="+s.getReturnUrl())}static dropMoveInto(t,e){s.dropInto.bind(o(this))(t,e,"move")}static dropCopyInto(t,e){s.dropInto.bind(o(this))(t,e,"copy")}}return s});
+
+/**
+ * Module: TYPO3/CMS/Filelist/ContextMenuActions
+ *
+ * JavaScript to handle filelist actions from context menu
+ * @exports TYPO3/CMS/Filelist/ContextMenuActions
+ */
+define(['jquery', 'TYPO3/CMS/Backend/Modal', 'TYPO3/CMS/Backend/Severity'], function($, Modal, Severity) {
+  'use strict';
+
+  /**
+   * @exports TYPO3/CMS/Filelist/ContextMenuActions
+   */
+  var ContextMenuActions = {};
+  ContextMenuActions.getReturnUrl = function() {
+    return top.rawurlencode(top.list_frame.document.location.pathname + top.list_frame.document.location.search);
+  };
+
+  ContextMenuActions.renameFile = function(table, uid) {
+    top.TYPO3.Backend.ContentContainer.setUrl(
+      top.TYPO3.settings.FileRename.moduleUrl + '&target=' + top.rawurlencode(uid) + '&returnUrl=' + ContextMenuActions.getReturnUrl()
+    );
+  };
+
+  ContextMenuActions.editFile = function(table, uid) {
+    top.TYPO3.Backend.ContentContainer.setUrl(
+      top.TYPO3.settings.FileEdit.moduleUrl + '&target=' + top.rawurlencode(uid) + '&returnUrl=' + ContextMenuActions.getReturnUrl()
+    );
+  };
+
+  ContextMenuActions.editFileStorage = function(table, uid) {
+    top.TYPO3.Backend.ContentContainer.setUrl(
+      top.TYPO3.settings.FormEngine.moduleUrl + '&edit[sys_file_storage][' + parseInt(uid, 10) + ']=edit&returnUrl=' + ContextMenuActions.getReturnUrl()
+    );
+  };
+
+  ContextMenuActions.openInfoPopUp = function(table, uid) {
+    if (table === 'sys_file_storage') {
+      top.TYPO3.InfoWindow.showItem(table, uid);
+    } else {
+      //files and folders
+      top.TYPO3.InfoWindow.showItem('_FILE', uid);
+    }
+  };
+
+  ContextMenuActions.uploadFile = function(table, uid) {
+    top.TYPO3.Backend.ContentContainer.setUrl(
+      top.TYPO3.settings.FileUpload.moduleUrl + '&target=' + top.rawurlencode(uid) + '&returnUrl=' + ContextMenuActions.getReturnUrl()
+    );
+  };
+
+  ContextMenuActions.createFile = function(table, uid) {
+    top.TYPO3.Backend.ContentContainer.setUrl(
+      top.TYPO3.settings.FileCreate.moduleUrl + '&target=' + top.rawurlencode(uid) + '&returnUrl=' + ContextMenuActions.getReturnUrl()
+    );
+  };
+
+  ContextMenuActions.deleteFile = function(table, uid) {
+    var $anchorElement = $(this);
+    var performDelete = function() {
+      top.TYPO3.Backend.ContentContainer.setUrl(
+        top.TYPO3.settings.FileCommit.moduleUrl + '&data[delete][0][data]=' + top.rawurlencode(uid) + '&data[delete][0][redirect]=' + ContextMenuActions.getReturnUrl()
+      );
+    };
+    if (!$anchorElement.data('title')) {
+      performDelete();
+      return;
+    }
+
+    var $modal = Modal.confirm(
+      $anchorElement.data('title'),
+      $anchorElement.data('message'),
+      Severity.warning, [
+        {
+          text: $(this).data('button-close-text') || TYPO3.lang['button.cancel'] || 'Cancel',
+          active: true,
+          btnClass: 'btn-default',
+          name: 'cancel'
+        },
+        {
+          text: $(this).data('button-ok-text') || TYPO3.lang['button.delete'] || 'Delete',
+          btnClass: 'btn-warning',
+          name: 'delete'
+        }
+      ]);
+
+    $modal.on('button.clicked', function(e) {
+      if (e.target.name === 'delete') {
+        performDelete();
+      }
+      Modal.dismiss();
+    });
+  };
+
+  ContextMenuActions.copyFile = function(table, uid) {
+    var shortMD5 = top.MD5(uid).substring(0, 10);
+    var url = TYPO3.settings.ajaxUrls['contextmenu_clipboard'];
+    url += '&CB[el][_FILE%7C' + shortMD5 + ']=' + top.rawurlencode(uid) + '&CB[setCopyMode]=1';
+    $.ajax(url).always(function() {
+      top.TYPO3.Backend.ContentContainer.refresh(true);
+    });
+  };
+
+  ContextMenuActions.copyReleaseFile = function(table, uid) {
+    var shortMD5 = top.MD5(uid).substring(0, 10);
+    var url = TYPO3.settings.ajaxUrls['contextmenu_clipboard'];
+    url += '&CB[el][_FILE%7C' + shortMD5 + ']=0&CB[setCopyMode]=1';
+    $.ajax(url).always(function() {
+      top.TYPO3.Backend.ContentContainer.refresh(true);
+    });
+  };
+
+  ContextMenuActions.cutFile = function(table, uid) {
+    var shortMD5 = top.MD5(uid).substring(0, 10);
+    var url = TYPO3.settings.ajaxUrls['contextmenu_clipboard'];
+    url += '&CB[el][_FILE%7C' + shortMD5 + ']=' + top.rawurlencode(uid);
+    $.ajax(url).always(function() {
+      top.TYPO3.Backend.ContentContainer.refresh(true);
+    });
+  };
+
+  ContextMenuActions.cutReleaseFile = function(table, uid) {
+    var shortMD5 = top.MD5(uid).substring(0, 10);
+    var url = TYPO3.settings.ajaxUrls['contextmenu_clipboard'];
+    url += '&CB[el][_FILE%7C' + shortMD5 + ']=0';
+    $.ajax(url).always(function() {
+      top.TYPO3.Backend.ContentContainer.refresh(true);
+    });
+  };
+
+  ContextMenuActions.pasteFileInto = function(table, uid) {
+    var $anchorElement = $(this);
+    var title = $anchorElement.data('title');
+    var performPaste = function() {
+      top.TYPO3.Backend.ContentContainer.setUrl(
+        top.TYPO3.settings.FileCommit.moduleUrl + '&CB[paste]=FILE|' + top.rawurlencode(uid) + '&CB[pad]=normal&redirect=' + ContextMenuActions.getReturnUrl()
+      );
+    };
+    if (!$anchorElement.data('title')) {
+      performPaste();
+      return;
+    }
+    var $modal = Modal.confirm(
+      $anchorElement.data('title'),
+      $anchorElement.data('message'),
+      Severity.warning, [
+        {
+          text: $(this).data('button-close-text') || TYPO3.lang['button.cancel'] || 'Cancel',
+          active: true,
+          btnClass: 'btn-default',
+          name: 'cancel'
+        },
+        {
+          text: $(this).data('button-ok-text') || TYPO3.lang['button.ok'] || 'OK',
+          btnClass: 'btn-warning',
+          name: 'ok'
+        }
+      ]);
+
+    $modal.on('button.clicked', function(e) {
+      if (e.target.name === 'ok') {
+        performPaste();
+      }
+      Modal.dismiss();
+    });
+  };
+
+
+  ContextMenuActions.dropInto = function(table, uid, mode) {
+    var target = $(this).data('drop-target');
+    top.TYPO3.Backend.ContentContainer.setUrl(
+      top.TYPO3.settings.FileCommit.moduleUrl
+      + '&file[' + mode + '][0][data]=' + top.rawurlencode(uid)
+      + '&file[' + mode + '][0][target]=' + top.rawurlencode(target)
+      + '&redirect=' + ContextMenuActions.getReturnUrl()
+    );
+  };
+  ContextMenuActions.dropMoveInto = function(table, uid) {
+    ContextMenuActions.dropInto.bind($(this))(table, uid, 'move');
+  };
+  ContextMenuActions.dropCopyInto = function(table, uid) {
+    ContextMenuActions.dropInto.bind($(this))(table, uid, 'copy');
+  };
+  return ContextMenuActions;
+});

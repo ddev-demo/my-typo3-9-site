@@ -15,6 +15,7 @@ namespace TYPO3\CMS\Backend\Tree\View;
  */
 
 use TYPO3\CMS\Core\Resource\Folder;
+use TYPO3\CMS\Core\Utility\GeneralUtility;
 use TYPO3\CMS\Core\Utility\HttpUtility;
 use TYPO3\CMS\Recordlist\Tree\View\LinkParameterProviderInterface;
 
@@ -66,7 +67,8 @@ class ElementBrowserFolderTreeView extends FolderTreeView
             $parameters = HttpUtility::buildQueryString(
                 $this->linkParameterProvider->getUrlParameters(['identifier' => $folderObject->getCombinedIdentifier()])
             );
-            $theFolderIcon = '<a href="' . htmlspecialchars($this->getThisScript() . $parameters) . '">' . $icon . '</a>';
+            $aOnClick = 'return jumpToUrl(' . GeneralUtility::quoteJSvalue($this->getThisScript() . $parameters) . ');';
+            $theFolderIcon = '<a href="#" onclick="' . htmlspecialchars($aOnClick) . '">' . $icon . '</a>';
         }
 
         return $theFolderIcon;
@@ -85,7 +87,20 @@ class ElementBrowserFolderTreeView extends FolderTreeView
         $parameters = HttpUtility::buildQueryString(
             $this->linkParameterProvider->getUrlParameters(['identifier' => $folderObject->getCombinedIdentifier()])
         );
-        return '<a href="' . htmlspecialchars($this->getThisScript() . $parameters) . '">' . $title . '</a>';
+        return '<a href="#" onclick="return jumpToUrl(' . htmlspecialchars(GeneralUtility::quoteJSvalue($this->getThisScript() . $parameters)) . ');">' . $title . '</a>';
+    }
+
+    /**
+     * Returns TRUE if the input "record" contains a folder which can be linked.
+     *
+     * @param Folder $folderObject Object with information about the folder element. Contains keys like title, uid, path, _title
+     * @return bool TRUE
+     * @deprecated since TYPO3 v9, will be removed in TYPO3 v10.0
+     */
+    public function ext_isLinkable(Folder $folderObject)
+    {
+        trigger_error('This method is obsolete and will be removed in TYPO3 v10.0.', E_USER_DEPRECATED);
+        return true;
     }
 
     /**
@@ -117,8 +132,8 @@ class ElementBrowserFolderTreeView extends FolderTreeView
         $name = $bMark ? ' name=' . $bMark : '';
         $urlParameters = $this->linkParameterProvider->getUrlParameters([]);
         $urlParameters['PM'] = $cmd;
-        $url = $this->getThisScript() . HttpUtility::buildQueryString($urlParameters) . $anchor;
-        return '<a href="' . htmlspecialchars($url) . '"' . htmlspecialchars($name) . '>' . $icon . '</a>';
+        $aOnClick = 'return jumpToUrl(' . GeneralUtility::quoteJSvalue($this->getThisScript() . HttpUtility::buildQueryString($urlParameters)) . ',' . GeneralUtility::quoteJSvalue($anchor) . ');';
+        return '<a href="#"' . htmlspecialchars($name) . ' onclick="' . htmlspecialchars($aOnClick) . '">' . $icon . '</a>';
     }
 
     /**

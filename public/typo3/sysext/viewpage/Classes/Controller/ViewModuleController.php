@@ -21,9 +21,9 @@ use TYPO3\CMS\Backend\Template\Components\ButtonBar;
 use TYPO3\CMS\Backend\Template\ModuleTemplate;
 use TYPO3\CMS\Backend\Utility\BackendUtility;
 use TYPO3\CMS\Core\Authentication\BackendUserAuthentication;
-use TYPO3\CMS\Core\Context\LanguageAspectFactory;
-use TYPO3\CMS\Core\Domain\Repository\PageRepository;
-use TYPO3\CMS\Core\Exception\SiteNotFoundException;
+use TYPO3\CMS\Core\Database\ConnectionPool;
+use TYPO3\CMS\Core\Database\Query\Restriction\DeletedRestriction;
+use TYPO3\CMS\Core\Database\Query\Restriction\HiddenRestriction;
 use TYPO3\CMS\Core\Http\HtmlResponse;
 use TYPO3\CMS\Core\Imaging\Icon;
 use TYPO3\CMS\Core\Imaging\IconFactory;
@@ -31,14 +31,10 @@ use TYPO3\CMS\Core\Localization\LanguageService;
 use TYPO3\CMS\Core\Messaging\FlashMessage;
 use TYPO3\CMS\Core\Messaging\FlashMessageService;
 use TYPO3\CMS\Core\Page\PageRenderer;
-use TYPO3\CMS\Core\Routing\InvalidRouteArgumentsException;
-use TYPO3\CMS\Core\Site\Entity\NullSite;
-use TYPO3\CMS\Core\Site\Entity\Site;
-use TYPO3\CMS\Core\Site\SiteFinder;
-use TYPO3\CMS\Core\Type\Bitmask\Permission;
 use TYPO3\CMS\Core\Utility\GeneralUtility;
 use TYPO3\CMS\Extbase\Mvc\View\ViewInterface;
 use TYPO3\CMS\Fluid\View\StandaloneView;
+use TYPO3\CMS\Frontend\Page\PageRepository;
 
 /**
  * Controller for viewing the frontend
@@ -174,7 +170,14 @@ class ViewModuleController
             $defaultFlashMessageQueue->enqueue($flashMessage);
         } else {
             $languageId = $this->getCurrentLanguage($pageId, $request->getParsedBody()['language'] ?? $request->getQueryParams()['language'] ?? null);
-            $targetUrl = $this->getTargetUrl($pageId, $languageId);
+            $targetUrl = BackendUtility::getPreviewUrl(
+                $pageId,
+                '',
+                null,
+                '',
+                '',
+                $this->getTypeParameterIfSet($pageId) . '&L=' . $languageId
+            );
             $this->registerDocHeader($pageId, $languageId, $targetUrl);
 
             $iconFactory = GeneralUtility::makeInstance(IconFactory::class);
@@ -208,71 +211,6 @@ class ViewModuleController
     }
 
     /**
-     * Determine the url to view
-     *
-     * @param int $pageId
-     * @param int $languageId
-     * @return string
-     */
-    protected function getTargetUrl(int $pageId, int $languageId): string
-    {
-        $permissionClause = $this->getBackendUser()->getPagePermsClause(Permission::PAGE_SHOW);
-        $pageRecord = BackendUtility::readPageAccess($pageId, $permissionClause);
-        if ($pageRecord) {
-            $this->moduleTemplate->getDocHeaderComponent()->setMetaInformation($pageRecord);
-            $rootLine = BackendUtility::BEgetRootLine($pageId);
-            // Mount point overlay: Set new target page id and mp parameter
-            $pageRepository = GeneralUtility::makeInstance(PageRepository::class);
-            $additionalGetVars = $this->getAdminCommand($pageId);
-            $siteFinder = GeneralUtility::makeInstance(SiteFinder::class);
-            try {
-                $site = $siteFinder->getSiteByPageId($pageId, $rootLine);
-            } catch (SiteNotFoundException $e) {
-                $site = new NullSite();
-            }
-            $finalPageIdToShow = $pageId;
-            $mountPointInformation = $pageRepository->getMountPointInfo($pageId);
-            if ($mountPointInformation && $mountPointInformation['overlay']) {
-                // New page id
-                $finalPageIdToShow = $mountPointInformation['mount_pid'];
-                $additionalGetVars .= '&MP=' . $mountPointInformation['MPvar'];
-            }
-            $additionalGetVars .= $this->getTypeParameterIfSet($finalPageIdToShow);
-            if ($site instanceof Site) {
-                $additionalQueryParams = [];
-                parse_str($additionalGetVars, $additionalQueryParams);
-                $additionalQueryParams['_language'] = $site->getLanguageById($languageId);
-                try {
-                    $uri = (string)$site->getRouter()->generateUri($finalPageIdToShow, $additionalQueryParams);
-                } catch (InvalidRouteArgumentsException $e) {
-                    return '#';
-                }
-            } else {
-                $uri = BackendUtility::getPreviewUrl($finalPageIdToShow, '', $rootLine, '', '', $additionalGetVars);
-            }
-            return $uri;
-        }
-        return '#';
-    }
-
-    /**
-     * Get admin command
-     *
-     * @param int $pageId
-     * @return string
-     */
-    protected function getAdminCommand(int $pageId): string
-    {
-        // The page will show only if there is a valid page and if this page may be viewed by the user
-        $pageinfo = BackendUtility::readPageAccess($pageId, $this->getBackendUser()->getPagePermsClause(Permission::PAGE_SHOW));
-        $addCommand = '';
-        if (is_array($pageinfo)) {
-            $addCommand = '&ADMCMD_editIcons=1' . BackendUtility::ADMCMD_previewCmds($pageinfo);
-        }
-        return $addCommand;
-    }
-
-    /**
      * With page TS config it is possible to force a specific type id via mod.web_view.type
      * for a page id or a page tree.
      * The method checks if a type is set for the given id and returns the additional GET string.
@@ -288,6 +226,18 @@ class ViewModuleController
             $typeParameter = '&type=' . $typeId;
         }
         return $typeParameter;
+    }
+
+    /**
+     * Get domain name for requested page id
+     *
+     * @param int $pageId
+     * @return string|null Domain name from first sys_domains-Record or from TCEMAIN.previewDomain, NULL if neither is configured
+     */
+    protected function getDomainName(int $pageId)
+    {
+        $previewDomainConfig = BackendUtility::getPagesTSconfig($pageId)['TCEMAIN.']['previewDomain'] ?? '';
+        return $previewDomainConfig ?: BackendUtility::firstDomainRecord(BackendUtility::BEgetRootLine($pageId));
     }
 
     /**
@@ -341,27 +291,48 @@ class ViewModuleController
      */
     protected function getPreviewLanguages(int $pageId): array
     {
-        $languages = [];
+        $localizationParentField = $GLOBALS['TCA']['pages']['ctrl']['transOrigPointerField'];
+        $languageField = $GLOBALS['TCA']['pages']['ctrl']['languageField'];
         $modSharedTSconfig = BackendUtility::getPagesTSconfig($pageId)['mod.']['SHARED.'] ?? [];
         if ($modSharedTSconfig['view.']['disableLanguageSelector'] === '1') {
-            return $languages;
+            return [];
+        }
+        $languages = [
+            0 => isset($modSharedTSconfig['defaultLanguageLabel'])
+                    ? $modSharedTSconfig['defaultLanguageLabel'] . ' (' . $this->getLanguageService()->sL('LLL:EXT:core/Resources/Private/Language/locallang_mod_web_list.xlf:defaultLanguage') . ')'
+                    : $this->getLanguageService()->sL('LLL:EXT:core/Resources/Private/Language/locallang_mod_web_list.xlf:defaultLanguage')
+        ];
+        $queryBuilder = GeneralUtility::makeInstance(ConnectionPool::class)->getQueryBuilderForTable('sys_language');
+        $queryBuilder->getRestrictions()
+            ->removeAll()
+            ->add(GeneralUtility::makeInstance(DeletedRestriction::class));
+
+        if (!$this->getBackendUser()->isAdmin()) {
+            $queryBuilder->getRestrictions()->add(GeneralUtility::makeInstance(HiddenRestriction::class));
         }
 
-        try {
-            $pageRepository = GeneralUtility::makeInstance(PageRepository::class);
-            $site = GeneralUtility::makeInstance(SiteFinder::class)->getSiteByPageId($pageId);
-            $siteLanguages = $site->getAvailableLanguages($this->getBackendUser(), false, $pageId);
+        $result = $queryBuilder->select('sys_language.uid', 'sys_language.title')
+            ->from('sys_language')
+            ->join(
+                'sys_language',
+                'pages',
+                'o',
+                $queryBuilder->expr()->eq('o.' . $languageField, $queryBuilder->quoteIdentifier('sys_language.uid'))
+            )
+            ->where(
+                $queryBuilder->expr()->eq(
+                    'o.' . $localizationParentField,
+                    $queryBuilder->createNamedParameter($pageId, \PDO::PARAM_INT)
+                )
+            )
+            ->groupBy('sys_language.uid', 'sys_language.title', 'sys_language.sorting')
+            ->orderBy('sys_language.sorting')
+            ->execute();
 
-            foreach ($siteLanguages as $siteLanguage) {
-                $languageAspectToTest = LanguageAspectFactory::createFromSiteLanguage($siteLanguage);
-                $page = $pageRepository->getPageOverlay($pageRepository->getPage($pageId), $siteLanguage->getLanguageId());
-
-                if ($pageRepository->isPageSuitableForLanguage($page, $languageAspectToTest)) {
-                    $languages[$siteLanguage->getLanguageId()] = $siteLanguage->getTitle();
-                }
+        while ($row = $result->fetch()) {
+            if ($this->getBackendUser()->checkLanguageAccess($row['uid'])) {
+                $languages[$row['uid']] = $row['title'];
             }
-        } catch (SiteNotFoundException $e) {
-            // do nothing
         }
         return $languages;
     }

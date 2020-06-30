@@ -20,6 +20,7 @@ use TYPO3\CMS\Backend\Routing\UriBuilder;
 use TYPO3\CMS\Backend\Template\DocumentTemplate;
 use TYPO3\CMS\Backend\Utility\BackendUtility;
 use TYPO3\CMS\Core\Authentication\BackendUserAuthentication;
+use TYPO3\CMS\Core\Compatibility\PublicMethodDeprecationTrait;
 use TYPO3\CMS\Core\Http\HtmlResponse;
 use TYPO3\CMS\Core\Localization\LanguageService;
 use TYPO3\CMS\Core\Service\DependencyOrderingService;
@@ -33,6 +34,16 @@ use TYPO3\CMS\Recordlist\LinkHandler\LinkHandlerInterface;
  */
 abstract class AbstractLinkBrowserController
 {
+    use PublicMethodDeprecationTrait;
+
+    /**
+     * @var array
+     */
+    protected $deprecatedPublicMethods = [
+        'renderLinkAttributeFields' => 'Using AbstractLinkBrowserController::renderLinkAttributeFields() is deprecated and will not be possible anymore in TYPO3 v10.0.',
+        'getDisplayedLinkHandlerId' => 'Using AbstractLinkBrowzerController::getDisplayedLinkHandlerId() is deprecated and will not be possible anymore in TYPO3 v10.0.',
+    ];
+
     /**
      * @var DocumentTemplate
      */

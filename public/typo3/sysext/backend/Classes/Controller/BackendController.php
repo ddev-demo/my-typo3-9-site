@@ -18,10 +18,13 @@ use Psr\Http\Message\ResponseInterface;
 use TYPO3\CMS\Backend\Domain\Repository\Module\BackendModuleRepository;
 use TYPO3\CMS\Backend\Module\ModuleLoader;
 use TYPO3\CMS\Backend\Routing\UriBuilder;
-use TYPO3\CMS\Backend\Template\DocumentTemplate;
 use TYPO3\CMS\Backend\Toolbar\ToolbarItemInterface;
 use TYPO3\CMS\Backend\Utility\BackendUtility;
+use TYPO3\CMS\Core\Compatibility\PublicMethodDeprecationTrait;
 use TYPO3\CMS\Core\Configuration\ExtensionConfiguration;
+use TYPO3\CMS\Core\Database\ConnectionPool;
+use TYPO3\CMS\Core\Database\Query\Restriction\BackendWorkspaceRestriction;
+use TYPO3\CMS\Core\Database\Query\Restriction\DeletedRestriction;
 use TYPO3\CMS\Core\Http\HtmlResponse;
 use TYPO3\CMS\Core\Http\JsonResponse;
 use TYPO3\CMS\Core\Imaging\IconFactory;
@@ -38,6 +41,15 @@ use TYPO3\CMS\Fluid\View\StandaloneView;
  */
 class BackendController
 {
+    use PublicMethodDeprecationTrait;
+
+    /**
+     * @var array
+     */
+    private $deprecatedPublicMethods = [
+        'render' => 'Using BackendController::render() is deprecated and will not be possible anymore in TYPO3 v10.0.',
+    ];
+
     /**
      * @var string
      */
@@ -47,6 +59,21 @@ class BackendController
      * @var string
      */
     protected $css = '';
+
+    /**
+     * @var array
+     */
+    protected $cssFiles = [];
+
+    /**
+     * @var string
+     */
+    protected $js = '';
+
+    /**
+     * @var array
+     */
+    protected $jsFiles = [];
 
     /**
      * @var array
@@ -69,12 +96,12 @@ class BackendController
     protected $partialPath = 'EXT:backend/Resources/Private/Partials/';
 
     /**
-     * @var BackendModuleRepository
+     * @var \TYPO3\CMS\Backend\Domain\Repository\Module\BackendModuleRepository
      */
     protected $backendModuleRepository;
 
     /**
-     * @var ModuleLoader Object for loading backend modules
+     * @var \TYPO3\CMS\Backend\Module\ModuleLoader Object for loading backend modules
      */
     protected $moduleLoader;
 
@@ -105,8 +132,11 @@ class BackendController
         $this->moduleLoader->load($GLOBALS['TBE_MODULES']);
         $this->pageRenderer = GeneralUtility::makeInstance(PageRenderer::class);
         // Add default BE javascript
-        $this->pageRenderer->addJsFile('EXT:backend/Resources/Public/JavaScript/md5.js');
-        $this->pageRenderer->addJsFile('EXT:backend/Resources/Public/JavaScript/backend.js');
+        $this->jsFiles = [
+            'md5' => 'EXT:backend/Resources/Public/JavaScript/md5.js',
+            'evalfield' => 'EXT:backend/Resources/Public/JavaScript/jsfunc.evalfield.js',
+            'backend' => 'EXT:backend/Resources/Public/JavaScript/backend.js',
+        ];
         $this->pageRenderer->loadRequireJsModule('TYPO3/CMS/Backend/LoginRefresh', 'function(LoginRefresh) {
 			LoginRefresh.setIntervalTime(' . MathUtility::forceIntegerInRange((int)$GLOBALS['TYPO3_CONF_VARS']['BE']['sessionTimeout'] - 60, 60) . ');
 			LoginRefresh.setLoginFramesetUrl(' . GeneralUtility::quoteJSvalue((string)$uriBuilder->buildUriFromRoute('login_frameset')) . ');
@@ -114,14 +144,14 @@ class BackendController
 			LoginRefresh.initialize();
 		}');
 
-        // load BroadcastService
-        $this->pageRenderer->loadRequireJsModule('TYPO3/CMS/Backend/BroadcastService', 'function(service) { service.listen(); }');
-
         // load module menu
         $this->pageRenderer->loadRequireJsModule('TYPO3/CMS/Backend/ModuleMenu');
 
         // load Toolbar class
         $this->pageRenderer->loadRequireJsModule('TYPO3/CMS/Backend/Toolbar');
+
+        // load Utility class
+        $this->pageRenderer->loadRequireJsModule('TYPO3/CMS/Backend/Utility');
 
         // load Notification functionality
         $this->pageRenderer->loadRequireJsModule('TYPO3/CMS/Backend/Notification');
@@ -136,6 +166,7 @@ class BackendController
         $this->pageRenderer->loadRequireJsModule('TYPO3/CMS/Backend/ContextMenu');
 
         // load the storage API and fill the UC into the PersistentStorage, so no additional AJAX call is needed
+        $this->pageRenderer->loadRequireJsModule('TYPO3/CMS/Backend/Storage');
         $this->pageRenderer->loadRequireJsModule('TYPO3/CMS/Backend/Storage/Persistent', 'function(PersistentStorage) {
             PersistentStorage.load(' . json_encode($this->getBackendUser()->uc) . ');
         }');
@@ -156,8 +187,9 @@ class BackendController
         $this->pageRenderer->addInlineSetting('NewRecord', 'moduleUrl', (string)$uriBuilder->buildUriFromRoute('db_new'));
         $this->pageRenderer->addInlineSetting('FormEngine', 'moduleUrl', (string)$uriBuilder->buildUriFromRoute('record_edit'));
         $this->pageRenderer->addInlineSetting('RecordCommit', 'moduleUrl', (string)$uriBuilder->buildUriFromRoute('tce_db'));
-        $this->pageRenderer->addInlineSetting('FileCommit', 'moduleUrl', (string)$uriBuilder->buildUriFromRoute('tce_file'));
         $this->pageRenderer->addInlineSetting('WebLayout', 'moduleUrl', (string)$uriBuilder->buildUriFromRoute('web_layout'));
+
+        $this->css = '';
 
         $this->initializeToolbarItems();
         $this->executeHook('constructPostProcess');
@@ -198,11 +230,21 @@ class BackendController
     }
 
     /**
-     * Main function generating the BE scaffolding
+     * Injects the request object for the current request or subrequest
+     * As this controller goes only through the render() method, it is rather simple for now
      *
      * @return ResponseInterface the response with the content
      */
     public function mainAction(): ResponseInterface
+    {
+        $this->render();
+        return new HtmlResponse($this->content);
+    }
+
+    /**
+     * Main function generating the BE scaffolding
+     */
+    protected function render()
     {
         $this->executeHook('renderPreProcess');
 
@@ -213,18 +255,31 @@ class BackendController
         $view->assign('moduleMenu', $this->generateModuleMenu());
         $view->assign('topbar', $this->renderTopbar());
 
+        /******************************************************
+         * Now put the complete backend document together
+         ******************************************************/
+        foreach ($this->cssFiles as $cssFileName => $cssFile) {
+            $this->pageRenderer->addCssFile($cssFile);
+            // Load additional css files to overwrite existing core styles
+            if (!empty($GLOBALS['TBE_STYLES']['stylesheets'][$cssFileName])) {
+                $this->pageRenderer->addCssFile($GLOBALS['TBE_STYLES']['stylesheets'][$cssFileName]);
+            }
+        }
         if (!empty($this->css)) {
             $this->pageRenderer->addCssInlineBlock('BackendInlineCSS', $this->css);
         }
+        foreach ($this->jsFiles as $jsFile) {
+            $this->pageRenderer->addJsFile($jsFile);
+        }
         $this->generateJavascript();
+        $this->pageRenderer->addJsInlineCode('BackendInlineJavascript', $this->js, false);
 
         // Set document title:
         $title = $GLOBALS['TYPO3_CONF_VARS']['SYS']['sitename'] ? $GLOBALS['TYPO3_CONF_VARS']['SYS']['sitename'] . ' [TYPO3 CMS ' . TYPO3_version . ']' : 'TYPO3 CMS ' . TYPO3_version;
         // Renders the module page
-        $this->content = GeneralUtility::makeInstance(DocumentTemplate::class)->render($title, $view->render());
+        $this->content = $this->getDocumentTemplate()->render($title, $view->render());
         $hookConfiguration = ['content' => &$this->content];
         $this->executeHook('renderPostProcess', $hookConfiguration);
-        return new HtmlResponse($this->content);
     }
 
     /**
@@ -240,7 +295,7 @@ class BackendController
         $extConf = GeneralUtility::makeInstance(ExtensionConfiguration::class)->get('backend');
         $logoPath = '';
         if (!empty($extConf['backendLogo'])) {
-            $customBackendLogo = GeneralUtility::getFileAbsFileName($extConf['backendLogo']);
+            $customBackendLogo = GeneralUtility::getFileAbsFileName(ltrim($extConf['backendLogo'], '/'));
             if (!empty($customBackendLogo)) {
                 $logoPath = $customBackendLogo;
             }
@@ -361,38 +416,34 @@ class BackendController
             'inWorkspace' => $beUser->workspace !== 0,
             'showRefreshLoginPopup' => (bool)($GLOBALS['TYPO3_CONF_VARS']['BE']['showRefreshLoginPopup'] ?? false)
         ];
+        $this->js .= '
+	TYPO3.configuration = ' . json_encode($t3Configuration) . ';
+	/**
+	 * Frameset Module object
+	 *
+	 * Used in main modules with a frameset for submodules to keep the ID between modules
+	 * Typically that is set by something like this in a Web>* sub module:
+	 *		if (top.fsMod) top.fsMod.recentIds["web"] = "\'.(int)$this->id.\'";
+	 * 		if (top.fsMod) top.fsMod.recentIds["file"] = "...(file reference/string)...";
+	 */
+	var fsMod = {
+		recentIds: [],					// used by frameset modules to track the most recent used id for list frame.
+		navFrameHighlightedID: [],		// used by navigation frames to track which row id was highlighted last time
+		currentBank: "0"
+	};
 
-        $this->pageRenderer->addJsInlineCode(
-            'BackendConfiguration',
-            '
-        TYPO3.configuration = ' . json_encode($t3Configuration) . ';
-        /**
-         * Frameset Module object
-         *
-         * Used in main modules with a frameset for submodules to keep the ID between modules
-         * Typically that is set by something like this in a Web>* sub module:
-         *		if (top.fsMod) top.fsMod.recentIds["web"] = "\'.(int)$this->id.\'";
-         * 		if (top.fsMod) top.fsMod.recentIds["file"] = "...(file reference/string)...";
-         */
-        var fsMod = {
-            recentIds: [],					// used by frameset modules to track the most recent used id for list frame.
-            navFrameHighlightedID: [],		// used by navigation frames to track which row id was highlighted last time
-            currentBank: "0"
-        };
-    
-        top.goToModule = function(modName, cMR_flag, addGetVars) {
-            TYPO3.ModuleMenu.App.showModule(modName, addGetVars);
-        }
-        ' . $this->setStartupModule()
-          . $this->handlePageEditing(),
-            false
-        );
+	top.goToModule = function(modName, cMR_flag, addGetVars) {
+		TYPO3.ModuleMenu.App.showModule(modName, addGetVars);
+	}
+	' . $this->setStartupModule();
+        // Check editing of page:
+        $this->handlePageEditing();
     }
 
     /**
      * Checking if the "&edit" variable was sent so we can open it for editing the page.
      */
-    protected function handlePageEditing(): string
+    protected function handlePageEditing()
     {
         $beUser = $this->getBackendUser();
         $userTsConfig = $this->getBackendUser()->getTSConfig();
@@ -401,25 +452,50 @@ class BackendController
         if ($editId) {
             // Looking up the page to edit, checking permissions:
             $where = ' AND (' . $beUser->getPagePermsClause(Permission::PAGE_EDIT) . ' OR ' . $beUser->getPagePermsClause(Permission::CONTENT_EDIT) . ')';
-            $editRecord = null;
             if (MathUtility::canBeInterpretedAsInteger($editId)) {
                 $editRecord = BackendUtility::getRecordWSOL('pages', $editId, '*', $where);
+            } else {
+                $queryBuilder = GeneralUtility::makeInstance(ConnectionPool::class)->getQueryBuilderForTable('pages');
+                $queryBuilder->getRestrictions()
+                    ->removeAll()
+                    ->add(GeneralUtility::makeInstance(DeletedRestriction::class))
+                    ->add(GeneralUtility::makeInstance(BackendWorkspaceRestriction::class));
+
+                $editRecord = $queryBuilder->select('*')
+                    ->from('pages')
+                    ->where(
+                        $queryBuilder->expr()->eq(
+                            'alias',
+                            $queryBuilder->createNamedParameter($editId, \PDO::PARAM_STR)
+                        ),
+                        $queryBuilder->expr()->orX(
+                            $beUser->getPagePermsClause(Permission::PAGE_EDIT),
+                            $beUser->getPagePermsClause(Permission::CONTENT_EDIT)
+                        )
+                    )
+                    ->setMaxResults(1)
+                    ->execute()
+                    ->fetch();
+
+                if ($editRecord !== false) {
+                    BackendUtility::workspaceOL('pages', $editRecord);
+                }
             }
             // If the page was accessible, then let the user edit it.
-            if (is_array($editRecord) && $beUser->isInWebMount($editRecord['uid'])) {
+            if (is_array($editRecord) && $beUser->isInWebMount($editRecord)) {
+                // Setting JS code to open editing:
+                $this->js .= '
+		// Load page to edit:
+	window.setTimeout("top.loadEditId(' . (int)$editRecord['uid'] . ');", 500);
+			';
                 // Checking page edit parameter:
                 if (!($userTsConfig['options.']['bookmark_onEditId_dontSetPageTree'] ?? false)) {
                     $bookmarkKeepExpanded = (bool)($userTsConfig['options.']['bookmark_onEditId_keepExistingExpanded'] ?? false);
                     // Expanding page tree:
                     BackendUtility::openPageTree((int)$editRecord['pid'], !$bookmarkKeepExpanded);
                 }
-                // Setting JS code to open editing:
-                return '
-		// Load page to edit:
-	window.setTimeout("top.loadEditId(' . (int)$editRecord['uid'] . ');", 500);
-			';
-            }
-            return '
+            } else {
+                $this->js .= '
             // Warning about page editing:
             require(["TYPO3/CMS/Backend/Modal", "TYPO3/CMS/Backend/Severity"], function(Modal, Severity) {
                 Modal.show("", ' . GeneralUtility::quoteJSvalue(sprintf($this->getLanguageService()->getLL('noEditPage'), $editId)) . ', Severity.notice, [{
@@ -432,8 +508,8 @@ class BackendController
                     }
                 }])
             });';
+            }
         }
-        return '';
     }
 
     /**
@@ -589,5 +665,15 @@ class BackendController
     protected function getBackendUser()
     {
         return $GLOBALS['BE_USER'];
+    }
+
+    /**
+     * Returns an instance of DocumentTemplate
+     *
+     * @return \TYPO3\CMS\Backend\Template\DocumentTemplate
+     */
+    protected function getDocumentTemplate()
+    {
+        return $GLOBALS['TBE_TEMPLATE'];
     }
 }

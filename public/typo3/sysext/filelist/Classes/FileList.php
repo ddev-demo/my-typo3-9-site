@@ -30,12 +30,14 @@ use TYPO3\CMS\Core\Resource\File;
 use TYPO3\CMS\Core\Resource\Folder;
 use TYPO3\CMS\Core\Resource\FolderInterface;
 use TYPO3\CMS\Core\Resource\InaccessibleFolder;
+use TYPO3\CMS\Core\Resource\ProcessedFile;
 use TYPO3\CMS\Core\Resource\ResourceFactory;
 use TYPO3\CMS\Core\Resource\Utility\ListUtility;
 use TYPO3\CMS\Core\Type\Bitmask\JsConfirmation;
 use TYPO3\CMS\Core\Utility\GeneralUtility;
 use TYPO3\CMS\Core\Utility\MathUtility;
 use TYPO3\CMS\Filelist\Configuration\ThumbnailConfiguration;
+use TYPO3\CMS\Filelist\Controller\FileListController;
 
 /**
  * Class for rendering of File>Filelist
@@ -262,14 +264,22 @@ class FileList
     protected $id = 0;
 
     /**
+     * @var FileListController
+     * @deprecated since TYPO3 v9, will be removed in TYPO3 v10.0.
+     */
+    protected $fileListController;
+
+    /**
      * @var ThumbnailConfiguration
      */
     protected $thumbnailConfiguration;
 
     /**
      * Construct
+     *
+     * @param FileListController $fileListController @deprecated since TYPO3 v9, will be removed in TYPO3 v10.0
      */
-    public function __construct()
+    public function __construct(FileListController $fileListController = null)
     {
         $backendUser = $this->getBackendUser();
         if (isset($backendUser->uc['titleLen']) && $backendUser->uc['titleLen'] > 0) {
@@ -278,6 +288,7 @@ class FileList
         $this->iconFactory = GeneralUtility::makeInstance(IconFactory::class);
         $this->getTranslateTools();
         $this->determineScriptUrl();
+        $this->fileListController = $fileListController;
         $this->thumbnailConfiguration = GeneralUtility::makeInstance(ThumbnailConfiguration::class);
         $this->iLimit = MathUtility::forceIntegerInRange(
             $backendUser->getTSConfig()['options.']['file_list.']['filesPerPage'] ?? $this->iLimit,
@@ -500,12 +511,8 @@ class FileList
                         }
                     }
                     if ($this->clipObj->current !== 'normal' && $iOut) {
-                        if ($this->folderObject->checkActionPermission('copy') && $this->folderObject->checkActionPermission('write') && $this->folderObject->checkActionPermission('move')) {
-                            $cells[] = $this->linkClipboardHeaderIcon('<span title="' . htmlspecialchars($this->getLanguageService()->getLL('clip_selectMarked')) . '">' . $this->iconFactory->getIcon('actions-edit-copy', Icon::SIZE_SMALL)->render() . '</span>', $table, 'setCB');
-                        }
-                        if ($this->folderObject->checkActionPermission('delete')) {
-                            $cells[] = $this->linkClipboardHeaderIcon('<span title="' . htmlspecialchars($this->getLanguageService()->getLL('clip_deleteMarked')) . '">' . $this->iconFactory->getIcon('actions-edit-delete', Icon::SIZE_SMALL)->render(), $table, 'delete', $this->getLanguageService()->getLL('clip_deleteMarkedWarning'));
-                        }
+                        $cells[] = $this->linkClipboardHeaderIcon('<span title="' . htmlspecialchars($this->getLanguageService()->getLL('clip_selectMarked')) . '">' . $this->iconFactory->getIcon('actions-edit-copy', Icon::SIZE_SMALL)->render() . '</span>', $table, 'setCB');
+                        $cells[] = $this->linkClipboardHeaderIcon('<span title="' . htmlspecialchars($this->getLanguageService()->getLL('clip_deleteMarked')) . '">' . $this->iconFactory->getIcon('actions-edit-delete', Icon::SIZE_SMALL)->render(), $table, 'delete', $this->getLanguageService()->getLL('clip_deleteMarkedWarning'));
                         $onClick = 'checkOffCB(' . GeneralUtility::quoteJSvalue(implode(',', $this->CBnames)) . ', this); return false;';
                         $cells[] = '<a class="btn btn-default" rel="" href="#" onclick="' . htmlspecialchars($onClick) . '" title="' . htmlspecialchars($this->getLanguageService()->getLL('clip_markRecords')) . '">' . $this->iconFactory->getIcon('actions-document-select', Icon::SIZE_SMALL)->render() . '</a>';
                     }
@@ -966,7 +973,7 @@ class FileList
     {
         try {
             if ($fileObject instanceof File && $fileObject->isIndexed() && $fileObject->checkActionPermission('editMeta') && $this->getBackendUser()->check('tables_modify', 'sys_file_metadata')) {
-                $metaData = $fileObject->getMetaData()->get();
+                $metaData = $fileObject->_getMetaData();
                 $urlParameters = [
                     'edit' => [
                         'sys_file_metadata' => [
@@ -1047,7 +1054,7 @@ class FileList
                         $theData[$field] = '' . (!$fileObject->checkActionPermission('read') ? ' ' : '<strong class="text-danger">' . htmlspecialchars($this->getLanguageService()->getLL('read')) . '</strong>') . (!$fileObject->checkActionPermission('write') ? '' : '<strong class="text-danger">' . htmlspecialchars($this->getLanguageService()->getLL('write')) . '</strong>');
                         break;
                     case 'fileext':
-                        $theData[$field] = strtoupper($ext);
+                        $theData[$field] = htmlspecialchars(strtoupper($ext));
                         break;
                     case 'tstamp':
                         $theData[$field] = BackendUtility::date($fileObject->getModificationTime());
@@ -1060,7 +1067,7 @@ class FileList
                         break;
                     case '_LOCALIZATION_':
                         if (!empty($systemLanguages) && $fileObject->isIndexed() && $fileObject->checkActionPermission('editMeta') && $this->getBackendUser()->check('tables_modify', 'sys_file_metadata')) {
-                            $metaDataRecord = $fileObject->getMetaData()->get();
+                            $metaDataRecord = $fileObject->_getMetaData();
                             $translations = $this->getTranslationsForMetaData($metaDataRecord);
                             $languageCode = '';
 
@@ -1119,13 +1126,20 @@ class FileList
                                 . '</span>';
                         // Thumbnails?
                         } elseif ($this->thumbs && ($this->isImage($ext) || $this->isMediaFile($ext))) {
-                            $imageUri = BackendUtility::getThumbnailUrl($fileObject->getUid(), [
-                                'width' => $this->thumbnailConfiguration->getWidth(),
-                                'height' => $this->thumbnailConfiguration->getHeight()
-                            ]);
-                            $theData[$field] .= '<br /><img src="' . htmlspecialchars($imageUri) . '" ' .
-                                'width="' . $this->thumbnailConfiguration->getWidth() . '" ' .
-                                'title="' . htmlspecialchars($fileName) . '" alt="" />';
+                            $processedFile = $fileObject->process(
+                                ProcessedFile::CONTEXT_IMAGEPREVIEW,
+                                [
+                                    'width' => $this->thumbnailConfiguration->getWidth(),
+                                    'height' => $this->thumbnailConfiguration->getHeight()
+                                ]
+                            );
+                            if ($processedFile) {
+                                $thumbUrl = $processedFile->getPublicUrl(true);
+                                $theData[$field] .= '<br /><img src="' . htmlspecialchars($thumbUrl) . '" ' .
+                                    'width="' . $processedFile->getProperty('width') . '" ' .
+                                    'height="' . $processedFile->getProperty('height') . '" ' .
+                                    'title="' . htmlspecialchars($fileName) . '" alt="" />';
+                            }
                         }
                         break;
                     default:
@@ -1317,13 +1331,14 @@ class FileList
     {
         $cells = [];
         $fullIdentifier = $fileOrFolderObject->getCombinedIdentifier();
+        $md5 = GeneralUtility::shortMD5($fullIdentifier);
         /** @var \TYPO3\CMS\Backend\Routing\UriBuilder $uriBuilder */
         $uriBuilder = GeneralUtility::makeInstance(\TYPO3\CMS\Backend\Routing\UriBuilder::class);
 
         // Edit file content (if editable)
         if ($fileOrFolderObject instanceof File && $fileOrFolderObject->checkActionPermission('write') && GeneralUtility::inList($GLOBALS['TYPO3_CONF_VARS']['SYS']['textfile_ext'], $fileOrFolderObject->getExtension())) {
             $url = (string)$uriBuilder->buildUriFromRoute('file_edit', ['target' => $fullIdentifier]);
-            $editOnClick = 'top.list_frame.location.href=' . GeneralUtility::quoteJSvalue($url) . '+\'&returnUrl=\'+encodeURIComponent(top.list_frame.document.location.pathname+top.list_frame.document.location.search);return false;';
+            $editOnClick = 'top.list_frame.location.href=' . GeneralUtility::quoteJSvalue($url) . '+\'&returnUrl=\'+top.rawurlencode(top.list_frame.document.location.pathname+top.list_frame.document.location.search);return false;';
             $cells['edit'] = '<a href="#" class="btn btn-default" onclick="' . htmlspecialchars($editOnClick) . '" title="' . $this->getLanguageService()->sL('LLL:EXT:core/Resources/Private/Language/locallang_core.xlf:cm.editcontent') . '">'
                 . $this->iconFactory->getIcon('actions-page-open', Icon::SIZE_SMALL)->render()
                 . '</a>';
@@ -1333,7 +1348,7 @@ class FileList
 
         // Edit metadata of file
         if ($fileOrFolderObject instanceof File && $fileOrFolderObject->checkActionPermission('editMeta') && $this->getBackendUser()->check('tables_modify', 'sys_file_metadata')) {
-            $metaData = $fileOrFolderObject->getMetaData()->get();
+            $metaData = $fileOrFolderObject->_getMetaData();
             $urlParameters = [
                 'edit' => [
                     'sys_file_metadata' => [
@@ -1351,7 +1366,8 @@ class FileList
         if ($fileOrFolderObject instanceof File) {
             $fileUrl = $fileOrFolderObject->getPublicUrl(true);
             if ($fileUrl) {
-                $cells['view'] = '<a href="' . htmlspecialchars($fileUrl) . '" target="_blank" class="btn btn-default" title="' . $this->getLanguageService()->sL('LLL:EXT:core/Resources/Private/Language/locallang_core.xlf:cm.view') . '">' . $this->iconFactory->getIcon('actions-document-view', Icon::SIZE_SMALL)->render() . '</a>';
+                $aOnClick = 'return top.openUrlInWindow(' . GeneralUtility::quoteJSvalue($fileUrl) . ', \'WebFile\');';
+                $cells['view'] = '<a href="#" class="btn btn-default" onclick="' . htmlspecialchars($aOnClick) . '" title="' . $this->getLanguageService()->sL('LLL:EXT:core/Resources/Private/Language/locallang_core.xlf:cm.view') . '">' . $this->iconFactory->getIcon('actions-document-view', Icon::SIZE_SMALL)->render() . '</a>';
             } else {
                 $cells['view'] = $this->spaceIcon;
             }
@@ -1362,14 +1378,14 @@ class FileList
         // replace file
         if ($fileOrFolderObject instanceof File && $fileOrFolderObject->checkActionPermission('replace')) {
             $url = (string)$uriBuilder->buildUriFromRoute('file_replace', ['target' => $fullIdentifier, 'uid' => $fileOrFolderObject->getUid()]);
-            $replaceOnClick = 'top.list_frame.location.href = ' . GeneralUtility::quoteJSvalue($url) . '+\'&returnUrl=\'+encodeURIComponent(top.list_frame.document.location.pathname+top.list_frame.document.location.search);return false;';
+            $replaceOnClick = 'top.list_frame.location.href = ' . GeneralUtility::quoteJSvalue($url) . '+\'&returnUrl=\'+top.rawurlencode(top.list_frame.document.location.pathname+top.list_frame.document.location.search);return false;';
             $cells['replace'] = '<a href="#" class="btn btn-default" onclick="' . $replaceOnClick . '"  title="' . $this->getLanguageService()->sL('LLL:EXT:core/Resources/Private/Language/locallang_core.xlf:cm.replace') . '">' . $this->iconFactory->getIcon('actions-edit-replace', Icon::SIZE_SMALL)->render() . '</a>';
         }
 
         // rename the file
         if ($fileOrFolderObject->checkActionPermission('rename')) {
             $url = (string)$uriBuilder->buildUriFromRoute('file_rename', ['target' => $fullIdentifier]);
-            $renameOnClick = 'top.list_frame.location.href = ' . GeneralUtility::quoteJSvalue($url) . '+\'&returnUrl=\'+encodeURIComponent(top.list_frame.document.location.pathname+top.list_frame.document.location.search);return false;';
+            $renameOnClick = 'top.list_frame.location.href = ' . GeneralUtility::quoteJSvalue($url) . '+\'&returnUrl=\'+top.rawurlencode(top.list_frame.document.location.pathname+top.list_frame.document.location.search);return false;';
             $cells['rename'] = '<a href="#" class="btn btn-default" onclick="' . htmlspecialchars($renameOnClick) . '"  title="' . $this->getLanguageService()->sL('LLL:EXT:core/Resources/Private/Language/locallang_core.xlf:cm.rename') . '">' . $this->iconFactory->getIcon('actions-edit-rename', Icon::SIZE_SMALL)->render() . '</a>';
         } else {
             $cells['rename'] = $this->spaceIcon;
@@ -1379,7 +1395,7 @@ class FileList
         if ($fileOrFolderObject->getStorage()->checkUserActionPermission('add', 'File') && $fileOrFolderObject->checkActionPermission('write')) {
             if ($fileOrFolderObject instanceof Folder) {
                 $url = (string)$uriBuilder->buildUriFromRoute('file_upload', ['target' => $fullIdentifier]);
-                $uploadOnClick = 'top.list_frame.location.href = ' . GeneralUtility::quoteJSvalue($url) . '+\'&returnUrl=\'+encodeURIComponent(top.list_frame.document.location.pathname+top.list_frame.document.location.search);return false;';
+                $uploadOnClick = 'top.list_frame.location.href = ' . GeneralUtility::quoteJSvalue($url) . '+\'&returnUrl=\'+top.rawurlencode(top.list_frame.document.location.pathname+top.list_frame.document.location.search);return false;';
                 $cells['upload'] = '<a href="#" class="btn btn-default" onclick="' . htmlspecialchars($uploadOnClick) . '"  title="' . htmlspecialchars($this->getLanguageService()->sL('LLL:EXT:core/Resources/Private/Language/locallang_core.xlf:cm.upload')) . '">' . $this->iconFactory->getIcon('actions-edit-upload', Icon::SIZE_SMALL)->render() . '</a>';
             }
         }

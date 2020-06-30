@@ -27,22 +27,13 @@ use TYPO3\CMS\Frontend\Authentication\FrontendUserAuthentication;
 
 /**
  * This middleware authenticates a Frontend User (fe_users).
+ * A valid $GLOBALS['TSFE'] object is needed for the time being, being fully backwards-compatible.
  */
 class FrontendUserAuthenticator implements MiddlewareInterface
 {
     /**
-     * @var Context
-     */
-    protected $context;
-
-    public function __construct(Context $context)
-    {
-        $this->context = $context;
-    }
-
-    /**
-     * Creates a frontend user authentication object, tries to authenticate a user and stores
-     * it in the current request as attribute.
+     * Creates a frontend user authentication object, tries to authenticate a user
+     * and stores the object in $GLOBALS['TSFE']->fe_user.
      *
      * @param ServerRequestInterface $request
      * @param RequestHandlerInterface $handler
@@ -68,18 +59,24 @@ class FrontendUserAuthenticator implements MiddlewareInterface
         $frontendUser->start();
         $frontendUser->unpack_uc();
 
-        // Register the frontend user as aspect and within the session
-        $this->setFrontendUserAspect($frontendUser);
-        $request = $request->withAttribute('frontend.user', $frontendUser);
+        // Keep the backwards-compatibility for TYPO3 v9, to have the fe_user within the global TSFE object
+        $GLOBALS['TSFE']->fe_user = $frontendUser;
 
-        $response = $handler->handle($request);
-
-        // Store session data for fe_users if it still exists
-        if ($frontendUser instanceof FrontendUserAuthentication) {
-            $frontendUser->storeSessionData();
+        // Call hook for possible manipulation of frontend user object
+        // This hook is kept for compatibility reasons, however, it should be fairly simple to add a custom middleware
+        // for this purpose
+        if (!empty($GLOBALS['TYPO3_CONF_VARS']['SC_OPTIONS']['tslib/class.tslib_fe.php']['initFEuser'])) {
+            trigger_error('The "initFEuser" hook will be removed in TYPO3 v10.0 in favor of PSR-15. Use a middleware instead.', E_USER_DEPRECATED);
+            $_params = ['pObj' => &$GLOBALS['TSFE']];
+            foreach ($GLOBALS['TYPO3_CONF_VARS']['SC_OPTIONS']['tslib/class.tslib_fe.php']['initFEuser'] as $_funcRef) {
+                GeneralUtility::callUserFunction($_funcRef, $_params, $GLOBALS['TSFE']);
+            }
         }
 
-        return $response;
+        // Register the frontend user as aspect
+        $this->setFrontendUserAspect(GeneralUtility::makeInstance(Context::class), $frontendUser);
+
+        return $handler->handle($request);
     }
 
     /**
@@ -99,7 +96,7 @@ class FrontendUserAuthenticator implements MiddlewareInterface
     ): ServerRequestInterface {
         list($sessionId, $hash) = explode('-', $frontendSessionKey);
         // If the session key hash check is OK, set the cookie
-        if (md5($sessionId . '/' . $GLOBALS['TYPO3_CONF_VARS']['SYS']['encryptionKey']) === (string)$hash) {
+        if (hash_equals(md5($sessionId . '/' . $GLOBALS['TYPO3_CONF_VARS']['SYS']['encryptionKey']), (string)$hash)) {
             $cookieName = FrontendUserAuthentication::getCookieName();
 
             // keep the global cookie overwriting for now, as long as FrontendUserAuthentication does not
@@ -113,6 +110,8 @@ class FrontendUserAuthenticator implements MiddlewareInterface
             $cookieParams = $request->getCookieParams();
             $cookieParams[$cookieName] = $sessionId;
             $request = $request->withCookieParams($cookieParams);
+            // @deprecated: we override the current request because it was enriched by cookie information here.
+            $GLOBALS['TYPO3_REQUEST'] = $request;
             $frontendUser->forceSetCookie = true;
             $frontendUser->dontSetCookie = false;
         }
@@ -122,10 +121,11 @@ class FrontendUserAuthenticator implements MiddlewareInterface
     /**
      * Register the frontend user as aspect
      *
+     * @param Context $context
      * @param AbstractUserAuthentication $user
      */
-    protected function setFrontendUserAspect(AbstractUserAuthentication $user)
+    protected function setFrontendUserAspect(Context $context, AbstractUserAuthentication $user)
     {
-        $this->context->setAspect('frontend.user', GeneralUtility::makeInstance(UserAspect::class, $user));
+        $context->setAspect('frontend.user', GeneralUtility::makeInstance(UserAspect::class, $user));
     }
 }

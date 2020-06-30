@@ -6,7 +6,6 @@
  **/
 
 function MD5(string) {
-  console.warn('md5.js is deprecated. Consider using TYPO3/CMS/Backend/Hashing/Md5 instead');
 
   function RotateLeft(lValue, iShiftBits) {
     return (lValue << iShiftBits) | (lValue >>> (32 - iShiftBits));

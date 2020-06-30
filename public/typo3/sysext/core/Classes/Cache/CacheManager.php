@@ -16,6 +16,7 @@ namespace TYPO3\CMS\Core\Cache;
 
 use TYPO3\CMS\Core\Cache\Backend\BackendInterface;
 use TYPO3\CMS\Core\Cache\Backend\NullBackend;
+use TYPO3\CMS\Core\Cache\Backend\TransientMemoryBackend;
 use TYPO3\CMS\Core\Cache\Backend\Typo3DatabaseBackend;
 use TYPO3\CMS\Core\Cache\Exception\DuplicateIdentifierException;
 use TYPO3\CMS\Core\Cache\Exception\InvalidBackendException;
@@ -67,6 +68,16 @@ class CacheManager implements SingletonInterface
     protected $disableCaching = false;
 
     /**
+     * Used by Bootstrap to define whether the configuration has been set finally.
+     * Controls whether a deprecation warning is logged in getCache().
+     * This property will be removed in TYPO3 v10.0.
+     *
+     * @var bool
+     * @internal
+     */
+    protected $limbo = false;
+
+    /**
      * @param bool $disableCaching
      */
     public function __construct(bool $disableCaching = false)
@@ -95,11 +106,6 @@ class CacheManager implements SingletonInterface
             if (!is_array($configuration)) {
                 throw new \InvalidArgumentException('The cache configuration for cache "' . $identifier . '" was not an array as expected.', 1231259656);
             }
-            // Fallback layer, will be removed in TYPO3 v11.0.
-            if (strpos($identifier, 'cache_') === 0) {
-                trigger_error('Accessing a cache with the "cache_" prefix as in "' . $identifier . '" is not necessary anymore, and should be called without the cache prefix.', E_USER_DEPRECATED);
-                $identifier = substr($identifier, 6);
-            }
             $this->cacheConfigurations[$identifier] = $configuration;
         }
     }
@@ -108,19 +114,15 @@ class CacheManager implements SingletonInterface
      * Registers a cache so it can be retrieved at a later point.
      *
      * @param FrontendInterface $cache The cache frontend to be registered
-     * @param array $groups Cache groups to be associated to the cache
      * @throws DuplicateIdentifierException if a cache with the given identifier has already been registered.
      */
-    public function registerCache(FrontendInterface $cache, array $groups = [])
+    public function registerCache(FrontendInterface $cache)
     {
         $identifier = $cache->getIdentifier();
         if (isset($this->caches[$identifier])) {
             throw new DuplicateIdentifierException('A cache with identifier "' . $identifier . '" has already been registered.', 1203698223);
         }
         $this->caches[$identifier] = $cache;
-        foreach ($groups as $groupIdentifier) {
-            $this->cacheGroups[$groupIdentifier][] = $identifier;
-        }
     }
 
     /**
@@ -132,11 +134,6 @@ class CacheManager implements SingletonInterface
      */
     public function getCache($identifier)
     {
-        // Fallback layer, will be removed in TYPO3 v11.0.
-        if (strpos($identifier, 'cache_') === 0) {
-            trigger_error('Accessing a cache with the "cache_" prefix as in "' . $identifier . '" is not necessary anymore, and should be called without the cache prefix.', E_USER_DEPRECATED);
-            $identifier = substr($identifier, 6);
-        }
         if ($this->hasCache($identifier) === false) {
             throw new NoSuchCacheException('A cache with identifier "' . $identifier . '" does not exist.', 1203699034);
         }
@@ -154,11 +151,6 @@ class CacheManager implements SingletonInterface
      */
     public function hasCache($identifier)
     {
-        // Fallback layer, will be removed in TYPO3 v11.0.
-        if (strpos($identifier, 'cache_') === 0) {
-            trigger_error('Accessing a cache with the "cache_" prefix as in "' . $identifier . '" is not necessary anymore, and should be called without the cache prefix.', E_USER_DEPRECATED);
-            $identifier = substr($identifier, 6);
-        }
         return isset($this->caches[$identifier]) || isset($this->cacheConfigurations[$identifier]);
     }
 
@@ -289,6 +281,10 @@ class CacheManager implements SingletonInterface
      */
     protected function createCache($identifier)
     {
+        // @deprecated will be removed with TYPO3 v10.0
+        if ($this->limbo) {
+            trigger_error('Usage of ' . self::class . '->createCache(\'' . $identifier . '\') in ext_localconf.php will not be supported in TYPO3 v10.0.', E_USER_DEPRECATED);
+        }
         if (isset($this->cacheConfigurations[$identifier]['frontend'])) {
             $frontend = $this->cacheConfigurations[$identifier]['frontend'];
         } else {
@@ -305,7 +301,7 @@ class CacheManager implements SingletonInterface
             $backendOptions = $this->defaultCacheConfiguration['options'];
         }
 
-        if ($this->disableCaching) {
+        if ($this->disableCaching && $backend !== TransientMemoryBackend::class) {
             $backend = NullBackend::class;
             $backendOptions = [];
         }
@@ -344,5 +340,19 @@ class CacheManager implements SingletonInterface
         }
 
         $this->registerCache($frontendInstance);
+    }
+
+    /**
+     * Sets the limbo state
+     *
+     * If limbo is enable, then getCache() will log a deprecation warning.
+     * This method will be removed in TYPO3 v10.0.
+     *
+     * @param bool $limbo
+     * @internal
+     */
+    public function setLimbo(bool $limbo)
+    {
+        $this->limbo = $limbo;
     }
 }

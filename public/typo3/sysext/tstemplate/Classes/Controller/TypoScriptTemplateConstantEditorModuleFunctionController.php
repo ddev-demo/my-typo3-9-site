@@ -14,8 +14,9 @@ namespace TYPO3\CMS\Tstemplate\Controller;
  * The TYPO3 project - inspiring people to share!
  */
 
-use Psr\Http\Message\ServerRequestInterface;
 use TYPO3\CMS\Backend\Utility\BackendUtility;
+use TYPO3\CMS\Core\Compatibility\PublicMethodDeprecationTrait;
+use TYPO3\CMS\Core\Compatibility\PublicPropertyDeprecationTrait;
 use TYPO3\CMS\Core\DataHandling\DataHandler;
 use TYPO3\CMS\Core\Localization\LanguageService;
 use TYPO3\CMS\Core\Page\PageRenderer;
@@ -30,6 +31,26 @@ use TYPO3\CMS\Fluid\View\StandaloneView;
  */
 class TypoScriptTemplateConstantEditorModuleFunctionController
 {
+    use PublicPropertyDeprecationTrait;
+    use PublicMethodDeprecationTrait;
+
+    /**
+     * @var array
+     */
+    private $deprecatedPublicProperties = [
+        'pObj' => 'Using TypoScriptTemplateConstantEditorModuleFunctionController::$pObj is deprecated and will not be possible anymore in TYPO3 v10.0.',
+        'function_key' => 'Using TypoScriptTemplateConstantEditorModuleFunctionController::$function_key is deprecated, property will be removed in TYPO3 v10.0.',
+        'extClassConf' => 'Using TypoScriptTemplateConstantEditorModuleFunctionController::$extClassConf is deprecated, property will be removed in TYPO3 v10.0.',
+        'localLangFile' => 'Using TypoScriptTemplateConstantEditorModuleFunctionController::$localLangFile is deprecated, property will be removed in TYPO3 v10.0.',
+    ];
+
+    /**
+     * @var array
+     */
+    private $deprecatedPublicMethods = [
+        'initialize_editor' => 'Using TypoScriptTemplateConstantEditorModuleFunctionController::initialize_editor() is deprecated and will not be possible anymore in TYPO3 v10.0.',
+        'handleExternalFunctionValue' => 'Using TypoScriptTemplateConstantEditorModuleFunctionController::handleExternalFunctionValue() is deprecated, method will be removed in TYPO3 v10.0.',
+    ];
 
     /**
      * @var TypoScriptTemplateModuleController
@@ -58,21 +79,48 @@ class TypoScriptTemplateConstantEditorModuleFunctionController
     protected $id;
 
     /**
-     * @var ServerRequestInterface
+     * Can be hardcoded to the name of a locallang.xlf file (from the same directory as the class file) to use/load
+     * and is included / added to $GLOBALS['LOCAL_LANG']
+     *
+     * @see init()
+     * @var string
+     * @deprecated since TYPO3 v9, will be removed in TYPO3 v10.0.
      */
-    protected $request;
+    protected $localLangFile = '';
+
+    /**
+     * Contains module configuration parts from TBE_MODULES_EXT if found
+     *
+     * @see handleExternalFunctionValue()
+     * @var array
+     * @deprecated since TYPO3 v9, will be removed in TYPO3 v10.0.
+     */
+    protected $extClassConf;
+
+    /**
+     * If this value is set it points to a key in the TBE_MODULES_EXT array (not on the top level..) where another classname/filepath/title can be defined for sub-subfunctions.
+     * This is a little hard to explain, so see it in action; it used in the extension 'func_wizards' in order to provide yet a layer of interfacing with the backend module.
+     * The extension 'func_wizards' has this description: 'Adds the 'Wizards' item to the function menu in Web>Func. This is just a framework for wizard extensions.' - so as you can see it is designed to allow further connectivity - 'level 2'
+     *
+     * @var string
+     * @deprecated since TYPO3 v9, will be removed in TYPO3 v10.0.
+     */
+    protected $function_key = '';
 
     /**
      * Init, called from parent object
      *
      * @param TypoScriptTemplateModuleController $pObj A reference to the parent (calling) object
-     * @param ServerRequestInterface $request
      */
-    public function init($pObj, ServerRequestInterface $request)
+    public function init($pObj)
     {
         $this->pObj = $pObj;
-        $this->request = $request;
-        $this->id = (int)($request->getParsedBody()['id'] ?? $request->getQueryParams()['id'] ?? 0);
+        // Local lang:
+        if (!empty($this->localLangFile)) {
+            // @deprecated since TYPO3 v9, will be removed in TYPO3 v10.0.
+            $this->getLanguageService()->includeLLFile($this->localLangFile);
+        }
+        $this->id = (int)GeneralUtility::_GP('id');
     }
 
     /**
@@ -121,7 +169,7 @@ class TypoScriptTemplateConstantEditorModuleFunctionController
         // Create extension template
         $this->pObj->createTemplate($this->id);
         // Checking for more than one template an if, set a menu...
-        $manyTemplatesMenu = $this->pObj->templateMenu($this->request);
+        $manyTemplatesMenu = $this->pObj->templateMenu();
         $template_uid = 0;
         if ($manyTemplatesMenu) {
             $template_uid = $this->pObj->MOD_SETTINGS['templatesOnPage'];
@@ -138,13 +186,13 @@ class TypoScriptTemplateConstantEditorModuleFunctionController
 
             $saveId = $this->templateRow['_ORIG_uid'] ?: $this->templateRow['uid'];
             // Update template ?
-            if ($this->request->getParsedBody()['_savedok'] ?? false) {
+            if (GeneralUtility::_POST('_savedok')) {
                 $this->templateService->changed = 0;
-                $this->templateService->ext_procesInput($this->request->getParsedBody(), [], $this->constants, $this->templateRow);
+                $this->templateService->ext_procesInput(GeneralUtility::_POST(), [], $this->constants, $this->templateRow);
                 if ($this->templateService->changed) {
                     // Set the data to be saved
                     $recData = [];
-                    $recData['sys_template'][$saveId]['constants'] = implode($this->templateService->raw, LF);
+                    $recData['sys_template'][$saveId]['constants'] = implode(LF, $this->templateService->raw);
                     // Create new  tce-object
                     $tce = GeneralUtility::makeInstance(DataHandler::class);
                     $tce->start($recData, []);
@@ -158,7 +206,7 @@ class TypoScriptTemplateConstantEditorModuleFunctionController
             }
             // Resetting the menu (start). I wonder if this in any way is a violation of the menu-system. Haven't checked. But need to do it here, because the menu is dependent on the categories available.
             $this->pObj->MOD_MENU['constant_editor_cat'] = $this->templateService->ext_getCategoryLabelArray();
-            $this->pObj->MOD_SETTINGS = BackendUtility::getModuleData($this->pObj->MOD_MENU, $this->request->getParsedBody()['SET'] ?? $this->request->getQueryParams()['SET'] ?? [], 'web_ts');
+            $this->pObj->MOD_SETTINGS = BackendUtility::getModuleData($this->pObj->MOD_MENU, GeneralUtility::_GP('SET'), 'web_ts');
             // Resetting the menu (stop)
             $assigns['title'] = $this->pObj->linkWrapTemplateTitle($this->templateRow['title'], 'constants');
             if (!empty($this->pObj->MOD_MENU['constant_editor_cat'])) {
@@ -186,6 +234,21 @@ class TypoScriptTemplateConstantEditorModuleFunctionController
             $theOutput = $this->pObj->noTemplate(1);
         }
         return $theOutput;
+    }
+
+    /**
+     * If $this->function_key is set (which means there are two levels of object connectivity) then
+     * $this->extClassConf is loaded with the TBE_MODULES_EXT configuration for that sub-sub-module
+     *
+     * @deprecated since TYPO3 v9, will be removed in TYPO3 v10.0.
+     */
+    protected function handleExternalFunctionValue()
+    {
+        // Must clean first to make sure the correct key is set...
+        $this->pObj->MOD_SETTINGS = BackendUtility::getModuleData($this->pObj->MOD_MENU, GeneralUtility::_GP('SET'), 'web_ts');
+        if ($this->function_key) {
+            $this->extClassConf = $this->pObj->getExternalItemConfig('web_ts', $this->function_key, $this->pObj->MOD_SETTINGS[$this->function_key]);
+        }
     }
 
     /**

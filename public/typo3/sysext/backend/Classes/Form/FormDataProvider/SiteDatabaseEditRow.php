@@ -97,6 +97,14 @@ class SiteDatabaseEditRow implements FormDataProviderInterface
     {
         $site = $siteFinder->getSiteByRootPageId($rootPageId);
         // load config as it is stored on disk (without replacements)
-        return $this->siteConfiguration->load($site->getIdentifier());
+        $configuration = $this->siteConfiguration->load($site->getIdentifier());
+        if (isset($configuration['site'])) {
+            trigger_error(
+                'Site configuration with key \'site\' has been deprecated, remove indentation level and site key.',
+                E_USER_DEPRECATED
+            );
+            $configuration = $configuration['site'];
+        }
+        return $configuration;
     }
 }

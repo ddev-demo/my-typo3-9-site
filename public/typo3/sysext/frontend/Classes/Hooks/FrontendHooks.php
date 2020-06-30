@@ -34,9 +34,7 @@ class FrontendHooks
      */
     public function displayPreviewInfoMessage($params, TypoScriptFrontendController $controller)
     {
-        $isInPreviewMode = $controller->getContext()->hasAspect('frontend.preview')
-            && $controller->getContext()->getPropertyFromAspect('frontend.preview', 'isPreview');
-        if (!$isInPreviewMode || $controller->doWorkspacePreview() || ($controller->config['config']['disablePreviewNotification'] ?? false)) {
+        if (!$controller->fePreview || $controller->doWorkspacePreview() || ($controller->config['config']['disablePreviewNotification'] ?? false)) {
             return;
         }
         if ($controller->config['config']['message_preview']) {

@@ -14,8 +14,9 @@ namespace TYPO3\CMS\Tstemplate\Controller;
  * The TYPO3 project - inspiring people to share!
  */
 
-use Psr\Http\Message\ServerRequestInterface;
 use TYPO3\CMS\Backend\Utility\BackendUtility;
+use TYPO3\CMS\Core\Compatibility\PublicMethodDeprecationTrait;
+use TYPO3\CMS\Core\Compatibility\PublicPropertyDeprecationTrait;
 use TYPO3\CMS\Core\Localization\LanguageService;
 use TYPO3\CMS\Core\TypoScript\ExtendedTemplateService;
 use TYPO3\CMS\Core\Utility\GeneralUtility;
@@ -28,6 +29,27 @@ use TYPO3\CMS\Fluid\View\StandaloneView;
  */
 class TemplateAnalyzerModuleFunctionController
 {
+    use PublicPropertyDeprecationTrait;
+    use PublicMethodDeprecationTrait;
+
+    /**
+     * @var array
+     */
+    private $deprecatedPublicProperties = [
+        'pObj' => 'Using TemplateAnalyzerModuleFunctionController::$pObj is deprecated and will not be possible anymore in TYPO3 v10.0.',
+        'function_key' => 'Using TemplateAnalyzerModuleFunctionController::$function_key is deprecated, property will be removed in TYPO3 v10.0.',
+        'extClassConf' => 'Using TemplateAnalyzerModuleFunctionController::$extClassConf is deprecated, property will be removed in TYPO3 v10.0.',
+        'localLangFile' => 'Using TemplateAnalyzerModuleFunctionController::$localLangFile is deprecated, property will be removed in TYPO3 v10.0.',
+    ];
+
+    /**
+     * @var array
+     */
+    private $deprecatedPublicMethods = [
+        'initialize_editor' => 'Using TemplateAnalyzerModuleFunctionController::initialize_editor() is deprecated and will not be possible anymore in TYPO3 v10.0.',
+        'modMenu' => 'Using TemplateAnalyzerModuleFunctionController::modMenu() is deprecated and will not be possible anymore in TYPO3 v10.0.',
+        'handleExternalFunctionValue' => 'Using TemplateAnalyzerModuleFunctionController::handleExternalFunctionValue() is deprecated, method will be removed in TYPO3 v10.0.',
+    ];
 
     /**
      * @var TypoScriptTemplateModuleController
@@ -56,26 +78,52 @@ class TemplateAnalyzerModuleFunctionController
     protected $id;
 
     /**
-     * @var ServerRequestInterface
+     * Can be hardcoded to the name of a locallang.xlf file (from the same directory as the class file) to use/load
+     * and is included / added to $GLOBALS['LOCAL_LANG']
+     *
+     * @see init()
+     * @var string
+     * @deprecated since TYPO3 v9, will be removed in TYPO3 v10.0.
      */
-    protected $request;
+    protected $localLangFile = '';
+
+    /**
+     * Contains module configuration parts from TBE_MODULES_EXT if found
+     *
+     * @see handleExternalFunctionValue()
+     * @var array
+     * @deprecated since TYPO3 v9, will be removed in TYPO3 v10.0.
+     */
+    protected $extClassConf;
+
+    /**
+     * If this value is set it points to a key in the TBE_MODULES_EXT array (not on the top level..) where another classname/filepath/title can be defined for sub-subfunctions.
+     * This is a little hard to explain, so see it in action; it used in the extension 'func_wizards' in order to provide yet a layer of interfacing with the backend module.
+     * The extension 'func_wizards' has this description: 'Adds the 'Wizards' item to the function menu in Web>Func. This is just a framework for wizard extensions.' - so as you can see it is designed to allow further connectivity - 'level 2'
+     *
+     * @var string
+     * @deprecated since TYPO3 v9, will be removed in TYPO3 v10.0.
+     */
+    protected $function_key = '';
 
     /**
      * Init, called from parent object
      *
      * @param TypoScriptTemplateModuleController $pObj
-     * @param ServerRequestInterface $request
      */
-    public function init($pObj, ServerRequestInterface $request)
+    public function init($pObj)
     {
         $this->pObj = $pObj;
-        $this->request = $request;
-
+        // Local lang:
+        if (!empty($this->localLangFile)) {
+            // @deprecated since TYPO3 v9, will be removed in TYPO3 v10.0.
+            $this->getLanguageService()->includeLLFile($this->localLangFile);
+        }
         // Setting MOD_MENU items as we need them for logging:
         $this->pObj->MOD_MENU = array_merge($this->pObj->MOD_MENU, $this->modMenu());
         $this->localLanguageFilePath = 'EXT:tstemplate/Resources/Private/Language/locallang_analyzer.xlf';
         $this->pObj->modMenu_setDefaultList .= ',ts_analyzer_checkLinenum,ts_analyzer_checkSyntax';
-        $this->id = (int)($request->getParsedBody()['id'] ?? $request->getQueryParams()['id'] ?? 0);
+        $this->id = (int)GeneralUtility::_GP('id');
     }
 
     /**
@@ -131,7 +179,7 @@ class TemplateAnalyzerModuleFunctionController
 
         $assigns = [];
         $template_uid = 0;
-        $assigns['manyTemplatesMenu'] = $this->pObj->templateMenu($this->request);
+        $assigns['manyTemplatesMenu'] = $this->pObj->templateMenu();
         $assigns['LLPrefix'] = 'LLL:' . $this->localLanguageFilePath . ':';
         if ($assigns['manyTemplatesMenu']) {
             $template_uid = $this->pObj->MOD_SETTINGS['templatesOnPage'];
@@ -148,12 +196,12 @@ class TemplateAnalyzerModuleFunctionController
         $this->templateService->clearList_setup_temp = array_flip($this->templateService->clearList_setup);
         $pointer = count($this->templateService->hierarchyInfo);
         $hierarchyInfo = $this->templateService->ext_process_hierarchyInfo([], $pointer);
-        $assigns['hierarchy'] = implode(array_reverse($this->templateService->ext_getTemplateHierarchyArr(
+        $assigns['hierarchy'] = implode('', array_reverse($this->templateService->ext_getTemplateHierarchyArr(
             $hierarchyInfo,
             '',
             [],
             1
-        )), '');
+        )));
 
         $urlParameters = [
             'id' => $this->id,
@@ -163,7 +211,7 @@ class TemplateAnalyzerModuleFunctionController
         $uriBuilder = GeneralUtility::makeInstance(\TYPO3\CMS\Backend\Routing\UriBuilder::class);
         $assigns['moduleLink'] = (string)$uriBuilder->buildUriFromRoute('web_ts', $urlParameters);
 
-        $assigns['template'] = $template = ($this->request->getQueryParams()['template'] ?? null);
+        $assigns['template'] = $template = GeneralUtility::_GET('template');
         $addParams = $template ? '&template=' . $template : '';
         $assigns['checkboxes'] = [
             'ts_analyzer_checkLinenum' => [
@@ -256,6 +304,21 @@ class TemplateAnalyzerModuleFunctionController
         $view->assignMultiple($assigns);
 
         return $view->render();
+    }
+
+    /**
+     * If $this->function_key is set (which means there are two levels of object connectivity) then
+     * $this->extClassConf is loaded with the TBE_MODULES_EXT configuration for that sub-sub-module
+     *
+     * @deprecated since TYPO3 v9, will be removed in TYPO3 v10.0.
+     */
+    protected function handleExternalFunctionValue()
+    {
+        // Must clean first to make sure the correct key is set...
+        $this->pObj->MOD_SETTINGS = BackendUtility::getModuleData($this->pObj->MOD_MENU, GeneralUtility::_GP('SET'), 'web_ts');
+        if ($this->function_key) {
+            $this->extClassConf = $this->pObj->getExternalItemConfig('web_ts', $this->function_key, $this->pObj->MOD_SETTINGS[$this->function_key]);
+        }
     }
 
     /**

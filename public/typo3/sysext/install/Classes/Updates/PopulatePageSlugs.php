@@ -27,6 +27,7 @@ use TYPO3\CMS\Core\Utility\GeneralUtility;
  * Does not take "deleted" pages into account, but respects workspace records.
  *
  * This is how it works:
+ * - Check if a page has pages.alias filled.
  * - Check if realurl v1 (tx_realurl_pathcache) or v2 (tx_realurl_pathdata) has a page path, use that instead.
  * - If not -> generate the slug.
  *
@@ -118,6 +119,8 @@ class PopulatePageSlugs implements UpgradeWizardInterface
                     $queryBuilder->expr()->isNull($this->fieldName)
                 )
             )
+            // Ensure that fields with alias are managed first
+            ->orderBy('alias', 'desc')
             // Ensure that live workspace records are handled first
             ->addOrderBy('t3ver_wsid', 'asc')
             // Ensure that all pages are run through "per parent page" field, and in the correct sorting values
@@ -130,10 +133,11 @@ class PopulatePageSlugs implements UpgradeWizardInterface
         if ($this->checkIfTableExists('tx_realurl_pathdata')) {
             $suggestedSlugs = $this->getSuggestedSlugs('tx_realurl_pathdata');
         } elseif ($this->checkIfTableExists('tx_realurl_pathcache')) {
-            $suggestedSlugs = $this->getSuggestedSlugs('tx_realurl_pathcache');
+            $suggestedSlugs = $this->getSuggestedSlugs('tx_realurl_pathcache', 'cache_id');
         }
 
         $fieldConfig = $GLOBALS['TCA'][$this->table]['columns'][$this->fieldName]['config'];
+        $fieldConfig['generatorOptions']['fields'] = ['tx_realurl_pathsegment,title'];
         $evalInfo = !empty($fieldConfig['eval']) ? GeneralUtility::trimExplode(',', $fieldConfig['eval'], true) : [];
         $hasToBeUniqueInSite = in_array('uniqueInSite', $evalInfo, true);
         $hasToBeUniqueInPid = in_array('uniqueInPid', $evalInfo, true);
@@ -145,15 +149,13 @@ class PopulatePageSlugs implements UpgradeWizardInterface
             $pageIdInDefaultLanguage = $languageId > 0 ? (int)$record['l10n_parent'] : $recordId;
             $slug = $suggestedSlugs[$pageIdInDefaultLanguage][$languageId] ?? '';
 
-            // see if an alias field was used, then let's build a slug out of that. This field does not exist in v10
-            // anymore, so this will only be necessary in edge-cases when upgrading from earlier versions with aliases
+            // see if an alias field was used, then let's build a slug out of that.
             if (!empty($record['alias'])) {
                 $slug = $slugHelper->sanitize('/' . $record['alias']);
             }
 
             if (empty($slug)) {
-                // Resolve the live "pid"
-                if ($record['t3ver_oid'] > 0) {
+                if ($pid === -1) {
                     $queryBuilder = $connection->createQueryBuilder();
                     $queryBuilder->getRestrictions()->removeAll()->add(GeneralUtility::makeInstance(DeletedRestriction::class));
                     $liveVersion = $queryBuilder
@@ -214,9 +216,10 @@ class PopulatePageSlugs implements UpgradeWizardInterface
      * Resolve prepared realurl "pagepath" for pages
      *
      * @param string $tableName
+     * @param string $identityField
      * @return array with pageID (default language) and language ID as two-dimensional array containing the page path
      */
-    protected function getSuggestedSlugs(string $tableName): array
+    protected function getSuggestedSlugs(string $tableName, string $identityField = 'uid'): array
     {
         $context = GeneralUtility::makeInstance(Context::class);
         $currentTimestamp = $context->getPropertyFromAspect('date', 'timestamp');
@@ -232,6 +235,7 @@ class PopulatePageSlugs implements UpgradeWizardInterface
                     $queryBuilder->expr()->gt('expire', $queryBuilder->createNamedParameter($currentTimestamp))
                 )
             )
+            ->orderBy($identityField, 'DESC')
             ->execute();
         $suggestedSlugs = [];
         while ($row = $statement->fetch()) {

@@ -66,7 +66,7 @@ class UserFileInlineLabelService
                     }
                 }
 
-                $value = BackendUtility::getRecordTitlePrep(htmlspecialchars($fullTitle));
+                $value = BackendUtility::getRecordTitlePrep($fullTitle);
             } else {
                 if (isset($params['row'][$field])) {
                     $value = htmlspecialchars($params['row'][$field]);
@@ -78,7 +78,7 @@ class UserFileInlineLabelService
                 continue;
             }
             $labelText = LocalizationUtility::translate('LLL:EXT:core/Resources/Private/Language/locallang_tca.xlf:sys_file.' . $field, 'lang');
-            $title[] = '<dt>' . htmlspecialchars($labelText) . '</dt><dd>' . $value . '</dd>';
+            $title[] = '<dt>' . htmlspecialchars($labelText) . '</dt>' . '<dd>' . $value . '</dd>';
         }
         $params['title'] = '<dl>' . implode('', $title) . '</dl>';
     }

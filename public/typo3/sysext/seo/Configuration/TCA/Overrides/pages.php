@@ -46,17 +46,13 @@ $tca = [
             'label' => 'LLL:EXT:seo/Resources/Private/Language/locallang_tca.xlf:pages.palettes.canonical',
             'showitem' => 'canonical_link',
         ],
-        'sitemap' => [
-            'label' => 'LLL:EXT:seo/Resources/Private/Language/locallang_tca.xlf:pages.palettes.sitemap',
-            'showitem' => 'sitemap_changefreq, sitemap_priority',
-        ],
         'opengraph' => [
             'label' => 'LLL:EXT:seo/Resources/Private/Language/locallang_tca.xlf:pages.palettes.opengraph',
             'showitem' => 'og_title, --linebreak--, og_description, --linebreak--, og_image',
         ],
         'twittercards' => [
             'label' => 'LLL:EXT:seo/Resources/Private/Language/locallang_tca.xlf:pages.palettes.twittercards',
-            'showitem' => 'twitter_title, --linebreak--, twitter_description, --linebreak--, twitter_image, --linebreak--, twitter_card',
+            'showitem' => 'twitter_title, --linebreak--, twitter_description, --linebreak--, twitter_image',
         ],
     ],
     'columns' => [
@@ -75,7 +71,7 @@ $tca = [
             'exclude' => true,
             'l10n_mode' => 'exclude',
             'onChange' => 'reload',
-            'label' => 'LLL:EXT:seo/Resources/Private/Language/locallang_tca.xlf:pages.no_index',
+            'label' => 'LLL:EXT:seo/Resources/Private/Language/locallang_tca.xlf:pages.no_index_formlabel',
             'config' => [
                 'type' => 'check',
                 'renderType' => 'checkboxToggle',
@@ -91,7 +87,7 @@ $tca = [
         'no_follow' => [
             'exclude' => true,
             'l10n_mode' => 'exclude',
-            'label' => 'LLL:EXT:seo/Resources/Private/Language/locallang_tca.xlf:pages.no_follow',
+            'label' => 'LLL:EXT:seo/Resources/Private/Language/locallang_tca.xlf:pages.no_follow_formlabel',
             'config' => [
                 'type' => 'check',
                 'renderType' => 'checkboxToggle',
@@ -102,45 +98,6 @@ $tca = [
                         'invertStateDisplay' => true
                     ]
                 ]
-            ]
-        ],
-        'sitemap_changefreq' => [
-            'exclude' => true,
-            'label' => 'LLL:EXT:seo/Resources/Private/Language/locallang_tca.xlf:pages.sitemap_changefreq',
-            'config' => [
-                'type' => 'select',
-                'renderType' => 'selectSingle',
-                'items' => [
-                    ['LLL:EXT:seo/Resources/Private/Language/locallang_tca.xlf:pages.sitemap_changefreq.none', ''],
-                    ['LLL:EXT:seo/Resources/Private/Language/locallang_tca.xlf:pages.sitemap_changefreq.always', 'always'],
-                    ['LLL:EXT:seo/Resources/Private/Language/locallang_tca.xlf:pages.sitemap_changefreq.hourly', 'hourly'],
-                    ['LLL:EXT:seo/Resources/Private/Language/locallang_tca.xlf:pages.sitemap_changefreq.daily', 'daily'],
-                    ['LLL:EXT:seo/Resources/Private/Language/locallang_tca.xlf:pages.sitemap_changefreq.weekly', 'weekly'],
-                    ['LLL:EXT:seo/Resources/Private/Language/locallang_tca.xlf:pages.sitemap_changefreq.monthly', 'monthly'],
-                    ['LLL:EXT:seo/Resources/Private/Language/locallang_tca.xlf:pages.sitemap_changefreq.yearly', 'yearly'],
-                    ['LLL:EXT:seo/Resources/Private/Language/locallang_tca.xlf:pages.sitemap_changefreq.never', 'never'],
-                ],
-            ]
-        ],
-        'sitemap_priority' => [
-            'exclude' => true,
-            'label' => 'LLL:EXT:seo/Resources/Private/Language/locallang_tca.xlf:pages.sitemap_priority',
-            'config' => [
-                'type' => 'select',
-                'renderType' => 'selectSingle',
-                'items' => [
-                    ['0.0', '0.0'],
-                    ['0.1', '0.1'],
-                    ['0.2', '0.2'],
-                    ['0.3', '0.3'],
-                    ['0.4', '0.4'],
-                    ['0.5', '0.5'],
-                    ['0.6', '0.6'],
-                    ['0.7', '0.7'],
-                    ['0.8', '0.8'],
-                    ['0.9', '0.9'],
-                    ['1.0', '1.0'],
-                ],
             ]
         ],
         'canonical_link' => [
@@ -158,7 +115,7 @@ $tca = [
                         'options' => [
                             'title' => 'LLL:EXT:seo/Resources/Private/Language/locallang_tca.xlf:pages.canonical_link',
                             'blindLinkFields' => 'class,target,title',
-                            'blindLinkOptions' => 'mail,folder,file,telephone'
+                            'blindLinkOptions' => 'mail,folder,file'
                         ],
                     ],
                 ],
@@ -269,19 +226,6 @@ $tca = [
                 $GLOBALS['TYPO3_CONF_VARS']['GFX']['imagefile_ext']
             )
         ],
-        'twitter_card' => [
-            'exclude' => true,
-            'label' => 'LLL:EXT:seo/Resources/Private/Language/locallang_tca.xlf:pages.twitter_card',
-            'config' => [
-                'type' => 'select',
-                'renderType' => 'selectSingle',
-                'default' => 'summary',
-                'items' => [
-                    ['LLL:EXT:seo/Resources/Private/Language/locallang_tca.xlf:pages.twitter_card.summary', 'summary'],
-                    ['LLL:EXT:seo/Resources/Private/Language/locallang_tca.xlf:pages.twitter_card.summary_large_image', 'summary_large_image'],
-                ]
-            ]
-        ],
     ],
 ];
 
@@ -293,10 +237,9 @@ $GLOBALS['TCA']['pages'] = array_replace_recursive($GLOBALS['TCA']['pages'], $tc
         --palette--;;seo,
         --palette--;;robots,
         --palette--;;canonical,
-        --palette--;;sitemap,
     --div--;LLL:EXT:seo/Resources/Private/Language/locallang_tca.xlf:pages.tabs.socialmedia,
         --palette--;;opengraph,
         --palette--;;twittercards',
-    (string)\TYPO3\CMS\Core\Domain\Repository\PageRepository::DOKTYPE_DEFAULT,
+    (string)\TYPO3\CMS\Frontend\Page\PageRepository::DOKTYPE_DEFAULT,
     'after:title'
 );

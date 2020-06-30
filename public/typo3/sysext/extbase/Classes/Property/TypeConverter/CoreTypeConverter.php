@@ -1,6 +1,4 @@
 <?php
-declare(strict_types = 1);
-
 namespace TYPO3\CMS\Extbase\Property\TypeConverter;
 
 /*
@@ -26,7 +24,7 @@ use TYPO3\CMS\Extbase\Utility\TypeHandlingUtility;
 class CoreTypeConverter extends \TYPO3\CMS\Extbase\Property\TypeConverter\AbstractTypeConverter
 {
     /**
-     * @var string[]
+     * @var array<string>
      */
     protected $sourceTypes = ['string', 'integer', 'float', 'boolean', 'array'];
 
@@ -46,7 +44,7 @@ class CoreTypeConverter extends \TYPO3\CMS\Extbase\Property\TypeConverter\Abstra
      * @return bool
      * @internal only to be used within Extbase, not part of TYPO3 Core API.
      */
-    public function canConvertFrom($source, string $targetType): bool
+    public function canConvertFrom($source, $targetType)
     {
         return TypeHandlingUtility::isCoreType($targetType);
     }
@@ -61,7 +59,7 @@ class CoreTypeConverter extends \TYPO3\CMS\Extbase\Property\TypeConverter\Abstra
      * @return object the target type
      * @internal only to be used within Extbase, not part of TYPO3 Core API.
      */
-    public function convertFrom($source, string $targetType, array $convertedChildProperties = [], \TYPO3\CMS\Extbase\Property\PropertyMappingConfigurationInterface $configuration = null): object
+    public function convertFrom($source, $targetType, array $convertedChildProperties = [], \TYPO3\CMS\Extbase\Property\PropertyMappingConfigurationInterface $configuration = null)
     {
         try {
             return new $targetType($source);

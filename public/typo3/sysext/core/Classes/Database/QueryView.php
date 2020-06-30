@@ -17,6 +17,7 @@ namespace TYPO3\CMS\Core\Database;
 use Doctrine\DBAL\DBALException;
 use TYPO3\CMS\Backend\Utility\BackendUtility;
 use TYPO3\CMS\Core\Authentication\BackendUserAuthentication;
+use TYPO3\CMS\Core\Core\Environment;
 use TYPO3\CMS\Core\Database\Query\QueryHelper;
 use TYPO3\CMS\Core\Database\Query\Restriction\DeletedRestriction;
 use TYPO3\CMS\Core\Imaging\Icon;
@@ -169,7 +170,7 @@ class QueryView
         }
         $markup = [];
         $markup[] = '<div class="load-queries">';
-        $markup[] = '  <div class="form-inline">';
+        $markup[] = '  <div class="form-group form-inline">';
         $markup[] = '    <div class="form-group">';
         $markup[] = '      <select class="form-control" name="storeControl[STORE]" onChange="document.forms[0]'
             . '[\'storeControl[title]\'].value= this.options[this.selectedIndex].value!=0 '
@@ -195,7 +196,7 @@ class QueryView
         $storeArray = [
             '0' => '[New]'
         ];
-        $savedStoreArray = unserialize($this->settings['storeArray']);
+        $savedStoreArray = unserialize($this->settings['storeArray'], ['allowed_classes' => false]);
         if (is_array($savedStoreArray)) {
             $storeArray = array_merge($storeArray, $savedStoreArray);
         }
@@ -254,7 +255,7 @@ class QueryView
             }
             // Show query
             if ($saveArr['queryTable']) {
-                /** @var \TYPO3\CMS\Core\Database\QueryGenerator */
+                /** @var $queryGenerator \TYPO3\CMS\Core\Database\QueryGenerator */
                 $queryGenerator = GeneralUtility::makeInstance(QueryGenerator::class);
                 $queryGenerator->init('queryConfig', $saveArr['queryTable']);
                 $queryGenerator->makeSelectorTable($saveArr);
@@ -316,7 +317,7 @@ class QueryView
     public function procesStoreControl()
     {
         $storeArray = $this->initStoreArray();
-        $storeQueryConfigs = unserialize($this->settings['storeQueryConfigs']);
+        $storeQueryConfigs = unserialize($this->settings['storeQueryConfigs'], ['allowed_classes' => false]);
         $storeControl = GeneralUtility::_GP('storeControl');
         $storeIndex = (int)$storeControl['STORE'];
         $saveStoreArray = 0;
@@ -334,7 +335,7 @@ class QueryView
                 } elseif ($storeIndex < 0 && ExtensionManagementUtility::isLoaded('sys_action')) {
                     $actionRecord = BackendUtility::getRecord('sys_action', abs($storeIndex));
                     if (is_array($actionRecord)) {
-                        $dA = unserialize($actionRecord['t2_data']);
+                        $dA = unserialize($actionRecord['t2_data'], ['allowed_classes' => false]);
                         $dbSC = [];
                         if (is_array($dA['qC'])) {
                             $dbSC[0] = $dA['qC'];
@@ -814,6 +815,7 @@ class QueryView
                         }
                         break;
                     case 'group':
+                        $fields['type'] = 'files';
                         if ($fields['internal_type'] === 'db') {
                             $fields['type'] = 'relation';
                         }
@@ -869,6 +871,7 @@ class QueryView
             case 'boolean':
                 $out = $fieldValue ? 'True' : 'False';
                 break;
+            case 'files':
             default:
                 $out = htmlspecialchars($fieldValue);
         }
@@ -935,6 +938,25 @@ class QueryView
     {
         $fieldSetup = $conf;
         $out = '';
+        if ($fieldSetup['type'] === 'files') {
+            $d = dir(Environment::getPublicPath() . '/' . $fieldSetup['uploadfolder']);
+            while (false !== ($entry = $d->read())) {
+                if ($entry === '.' || $entry === '..') {
+                    continue;
+                }
+                $fileArray[] = $entry;
+            }
+            $d->close();
+            natcasesort($fileArray);
+            foreach ($fileArray as $fileName) {
+                if (GeneralUtility::inList($fieldValue, $fileName) || $fieldValue == $fileName) {
+                    if ($out !== '') {
+                        $out .= $splitString;
+                    }
+                    $out .= htmlspecialchars($fileName);
+                }
+            }
+        }
         if ($fieldSetup['type'] === 'multiple') {
             foreach ($fieldSetup['items'] as $key => $val) {
                 if (strpos($val[0], 'LLL:') === 0) {
@@ -981,7 +1003,7 @@ class QueryView
                     }
                 }
             }
-            if (strpos($fieldSetup['allowed'], ',') !== false) {
+            if (stristr($fieldSetup['allowed'], ',')) {
                 $from_table_Arr = explode(',', $fieldSetup['allowed']);
                 $useTablePrefix = 1;
                 if (!$fieldSetup['prepend_tname']) {
@@ -989,16 +1011,16 @@ class QueryView
                     $queryBuilder->getRestrictions()->removeAll()->add(GeneralUtility::makeInstance(DeletedRestriction::class));
                     $statement = $queryBuilder->select($fieldName)->from($table)->execute();
                     while ($row = $statement->fetch()) {
-                        if (strpos($row[$fieldName], ',') !== false) {
+                        if (stristr($row[$fieldName], ',')) {
                             $checkContent = explode(',', $row[$fieldName]);
                             foreach ($checkContent as $singleValue) {
-                                if (strpos($singleValue, '_') === false) {
+                                if (!stristr($singleValue, '_')) {
                                     $dontPrefixFirstTable = 1;
                                 }
                             }
                         } else {
                             $singleValue = $row[$fieldName];
-                            if ($singleValue !== '' && strpos($singleValue, '_') === false) {
+                            if ($singleValue !== '' && !stristr($singleValue, '_')) {
                                 $dontPrefixFirstTable = 1;
                             }
                         }

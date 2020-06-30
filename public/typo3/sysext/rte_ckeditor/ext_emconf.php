@@ -4,17 +4,19 @@ $EM_CONF[$_EXTKEY] = [
     'description' => 'Integration of CKEditor as Rich Text Editor.',
     'category' => 'be',
     'state' => 'stable',
+    'uploadfolder' => 0,
+    'createDirs' => '',
     'clearCacheOnLoad' => 0,
     'author' => 'TYPO3 Core Team',
     'author_email' => 'typo3cms@typo3.org',
-    'version' => '10.1.0',
+    'version' => '9.5.19',
     'constraints' => [
         'depends' => [
-            'typo3' => '10.1.0',
+            'typo3' => '9.5.19',
         ],
         'conflicts' => [],
         'suggests' => [
-            'setup' => '10.1.0',
+            'setup' => '9.5.19',
         ],
     ],
 ];

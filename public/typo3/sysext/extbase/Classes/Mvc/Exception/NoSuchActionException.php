@@ -1,6 +1,4 @@
 <?php
-declare(strict_types = 1);
-
 namespace TYPO3\CMS\Extbase\Mvc\Exception;
 
 /*
@@ -16,11 +14,9 @@ namespace TYPO3\CMS\Extbase\Mvc\Exception;
  * The TYPO3 project - inspiring people to share!
  */
 
-use TYPO3\CMS\Extbase\Mvc\Exception;
-
 /**
  * A "No Such Action" exception
  */
-class NoSuchActionException extends Exception
+class NoSuchActionException extends \TYPO3\CMS\Extbase\Mvc\Exception
 {
 }

@@ -1,6 +1,4 @@
 <?php
-declare(strict_types = 1);
-
 namespace TYPO3\CMS\Extbase\Utility;
 
 /*                                                                        *
@@ -42,7 +40,7 @@ class TypeHandlingUtility
      * @return array An array with information about the type
      * @throws \TYPO3\CMS\Extbase\Utility\Exception\InvalidTypeException
      */
-    public static function parseType(string $type): array
+    public static function parseType($type)
     {
         $matches = [];
         if (preg_match(self::PARSE_TYPE_PATTERN, $type, $matches)) {
@@ -70,7 +68,7 @@ class TypeHandlingUtility
      * @param string $type Data type to unify
      * @return string unified data type
      */
-    public static function normalizeType(string $type): string
+    public static function normalizeType($type)
     {
         switch ($type) {
             case 'int':
@@ -92,7 +90,7 @@ class TypeHandlingUtility
      * @param string $type
      * @return bool
      */
-    public static function isLiteral(string $type): bool
+    public static function isLiteral($type)
     {
         return preg_match(self::LITERAL_TYPE_PATTERN, $type) === 1;
     }
@@ -103,7 +101,7 @@ class TypeHandlingUtility
      * @param string $type
      * @return bool
      */
-    public static function isSimpleType(string $type): bool
+    public static function isSimpleType($type)
     {
         return in_array(self::normalizeType($type), ['array', 'string', 'float', 'integer', 'boolean'], true);
     }
@@ -114,7 +112,7 @@ class TypeHandlingUtility
      * @param string|object $type
      * @return bool
      */
-    public static function isCoreType($type): bool
+    public static function isCoreType($type)
     {
         return is_subclass_of($type, \TYPO3\CMS\Core\Type\TypeInterface::class);
     }
@@ -125,7 +123,7 @@ class TypeHandlingUtility
      * @param string $type
      * @return bool
      */
-    public static function isCollectionType(string $type): bool
+    public static function isCollectionType($type)
     {
         if (in_array($type, self::$collectionTypes, true)) {
             return true;
@@ -148,7 +146,7 @@ class TypeHandlingUtility
      * @param mixed $value
      * @return bool
      */
-    public static function isValidTypeForMultiValueComparison($value): bool
+    public static function isValidTypeForMultiValueComparison($value)
     {
         return is_array($value) || $value instanceof \Traversable;
     }
@@ -158,15 +156,9 @@ class TypeHandlingUtility
      *
      * @param string $hexadecimalData A hex encoded string of data
      * @return string A binary string decoded from the input
-     * @deprecated
      */
-    public static function hex2bin(string $hexadecimalData): string
+    public static function hex2bin($hexadecimalData)
     {
-        trigger_error(
-            'Method ' . __METHOD__ . ' will be removed in TYPO3 11.0, use native hex2bin instead.',
-            E_USER_DEPRECATED
-        );
-
         $binaryData = '';
         $length = strlen($hexadecimalData);
         for ($i = 0; $i < $length; $i += 2) {

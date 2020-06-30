@@ -1,6 +1,4 @@
 <?php
-declare(strict_types = 1);
-
 namespace TYPO3\CMS\Extbase\Property\TypeConverter;
 
 /*
@@ -24,7 +22,7 @@ namespace TYPO3\CMS\Extbase\Property\TypeConverter;
 class StaticFileCollectionConverter extends \TYPO3\CMS\Extbase\Property\TypeConverter\AbstractFileCollectionConverter
 {
     /**
-     * @var string[]
+     * @var array<string>
      */
     protected $sourceTypes = ['integer'];
 
@@ -42,7 +40,7 @@ class StaticFileCollectionConverter extends \TYPO3\CMS\Extbase\Property\TypeConv
      * @param int $source
      * @return \TYPO3\CMS\Core\Resource\Collection\StaticFileCollection
      */
-    protected function getObject($source): \TYPO3\CMS\Core\Resource\Collection\AbstractFileCollection
+    protected function getObject($source)
     {
         return $this->fileFactory->getCollectionObject($source);
     }

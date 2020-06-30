@@ -18,7 +18,6 @@ use TYPO3\CMS\Core\Imaging\Icon;
 use TYPO3\CMS\Core\Imaging\IconFactory;
 use TYPO3\CMS\Core\Package\PackageManager;
 use TYPO3\CMS\Core\Utility\GeneralUtility;
-use TYPO3\CMS\Extbase\Mvc\Web\Routing\UriBuilder;
 use TYPO3\CMS\Extbase\Utility\LocalizationUtility;
 use TYPO3\CMS\Fluid\ViewHelpers\Link\ActionViewHelper;
 
@@ -69,7 +68,6 @@ class ToggleExtensionInstallationStateViewHelper extends ActionViewHelper
             return '';
         }
 
-        /** @var UriBuilder $uriBuilder */
         $uriBuilder = $this->renderingContext->getControllerContext()->getUriBuilder();
         $action = 'toggleExtensionInstallationState';
         $uri = $uriBuilder->reset()->uriFor($action, [

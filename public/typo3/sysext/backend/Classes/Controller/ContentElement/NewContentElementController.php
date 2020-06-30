@@ -17,17 +17,20 @@ namespace TYPO3\CMS\Backend\Controller\ContentElement;
 
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
+use TYPO3\CMS\Backend\Template\DocumentTemplate;
 use TYPO3\CMS\Backend\Template\ModuleTemplate;
 use TYPO3\CMS\Backend\Tree\View\ContentCreationPagePositionMap;
 use TYPO3\CMS\Backend\Utility\BackendUtility;
 use TYPO3\CMS\Backend\View\BackendLayoutView;
 use TYPO3\CMS\Backend\Wizard\NewContentElementWizardHookInterface;
 use TYPO3\CMS\Core\Authentication\BackendUserAuthentication;
+use TYPO3\CMS\Core\Compatibility\PublicPropertyDeprecationTrait;
 use TYPO3\CMS\Core\Http\HtmlResponse;
 use TYPO3\CMS\Core\Imaging\Icon;
 use TYPO3\CMS\Core\Localization\LanguageService;
 use TYPO3\CMS\Core\Service\DependencyOrderingService;
 use TYPO3\CMS\Core\Type\Bitmask\Permission;
+use TYPO3\CMS\Core\Utility\ArrayUtility;
 use TYPO3\CMS\Core\Utility\GeneralUtility;
 use TYPO3\CMS\Core\Utility\HttpUtility;
 use TYPO3\CMS\Fluid\View\StandaloneView;
@@ -38,6 +41,24 @@ use TYPO3\CMS\Fluid\View\StandaloneView;
  */
 class NewContentElementController
 {
+    use PublicPropertyDeprecationTrait;
+
+    /**
+     * @var array
+     */
+    protected $deprecatedPublicProperties = [
+        'id' => 'Using $id of NewContentElementController from the outside is discouraged as this variable is used for internal storage.',
+        'sys_language' => 'Using $sys_language of NewContentElementController from the outside is discouraged as this variable is used for internal storage.',
+        'R_URI' => 'Using $R_URI of NewContentElementController from the outside is discouraged as this variable is used for internal storage.',
+        'colPos' => 'Using $colPos of NewContentElementController from the outside is discouraged as this variable is used for internal storage.',
+        'uid_pid' => 'Using $uid_pid of NewContentElementController from the outside is discouraged as this variable is used for internal storage.',
+        'modTSconfig' => 'Using $modTSconfig of NewContentElementController from the outside is discouraged as this variable is used for internal storage.',
+        'doc' => 'Using $doc of NewContentElementController from the outside is discouraged as this variable is used for internal storage.',
+        'content' => 'Using $content of NewContentElementController from the outside is discouraged as this variable is used for internal storage.',
+        'access' => 'Using $access of NewContentElementController from the outside is discouraged as this variable is used for internal storage.',
+        'config' => 'Using $config of NewContentElementController from the outside is discouraged as this variable is used for internal storage.',
+    ];
+
     /**
      * Page id
      *
@@ -77,6 +98,13 @@ class NewContentElementController
      * @var array
      */
     protected $modTSconfig = [];
+
+    /**
+     * Internal backend template object
+     *
+     * @var DocumentTemplate
+     */
+    protected $doc;
 
     /**
      * Used to accumulate the content of the module.
@@ -140,18 +168,32 @@ class NewContentElementController
         $GLOBALS['SOBE'] = $this;
         $this->view = $this->getFluidTemplateObject();
         $this->menuItemView = $this->getFluidTemplateObject('MenuItem.html');
+
+        // @deprecated since TYPO3 v9, will be obsolete in TYPO3 v10.0 with removal of init()
+        $request = $GLOBALS['TYPO3_REQUEST'];
+        // @deprecated since TYPO3 v9, will be moved out of __construct() in TYPO3 v10.0
+        $this->init($request);
     }
 
     /**
      * Constructor, initializing internal variables.
      *
-     * @param ServerRequestInterface $request
+     * @param ServerRequestInterface|null $request
      */
-    protected function init(ServerRequestInterface $request)
+    public function init(ServerRequestInterface $request = null)
     {
+        if ($request === null) {
+            // Method signature in TYPO3 v10.0: protected function init(ServerRequestInterface $request)
+            trigger_error('NewContentElementController->init() will be set to protected in TYPO3 v10.0. Do not call from other extension.', E_USER_DEPRECATED);
+            $request = $GLOBALS['TYPO3_REQUEST'];
+        }
+
         $lang = $this->getLanguageService();
         $lang->includeLLFile('EXT:core/Resources/Private/Language/locallang_misc.xlf');
+        $LOCAL_LANG_orig = $GLOBALS['LOCAL_LANG'];
         $lang->includeLLFile('EXT:backend/Resources/Private/Language/locallang_db_new_content_el.xlf');
+        ArrayUtility::mergeRecursiveWithOverrule($LOCAL_LANG_orig, $GLOBALS['LOCAL_LANG']);
+        $GLOBALS['LOCAL_LANG'] = $LOCAL_LANG_orig;
 
         $parsedBody = $request->getParsedBody();
         $queryParams = $request->getQueryParams();
@@ -167,6 +209,9 @@ class NewContentElementController
         $this->modTSconfig['properties'] = BackendUtility::getPagesTSconfig($this->id)['mod.']['wizards.']['newContentElement.'] ?? [];
         $config = BackendUtility::getPagesTSconfig($this->id);
         $this->config = $config['mod.']['wizards.']['newContentElement.'];
+        // Starting the document template object:
+        // We keep this here in case somebody relies on it in a hook or alike
+        $this->doc = GeneralUtility::makeInstance(DocumentTemplate::class);
         // Setting up the context sensitive menu:
         $this->moduleTemplate->getPageRenderer()->loadRequireJsModule('TYPO3/CMS/Backend/ContextMenu');
         // Getting the current page and receiving access information (used in main())
@@ -184,7 +229,6 @@ class NewContentElementController
      */
     public function mainAction(ServerRequestInterface $request): ResponseInterface
     {
-        $this->init($request);
         $this->prepareContent('window');
         $this->moduleTemplate->setContent($this->content);
         return new HtmlResponse($this->moduleTemplate->renderContent());
@@ -199,9 +243,78 @@ class NewContentElementController
      */
     public function wizardAction(ServerRequestInterface $request): ResponseInterface
     {
-        $this->init($request);
         $this->prepareContent('list_frame');
         return new HtmlResponse($this->content);
+    }
+
+    /**
+     * Creating the module output.
+     *
+     * @deprecated since TYPO3 v9, will be removed in TYPO3v10 without substitute
+     */
+    public function main()
+    {
+        trigger_error('NewContentElementController->main() will be replaced by protected method prepareContent() in TYPO3 v10.0. Do not call from other extension.', E_USER_DEPRECATED);
+        $this->prepareContent('window');
+    }
+
+    /**
+     * Returns the array of elements in the wizard display.
+     * For the plugin section there is support for adding elements there from a global variable.
+     *
+     * @return array
+     */
+    public function wizardArray()
+    {
+        trigger_error('NewContentElementController->wizardArray() will be replaced by protected method getWizards() in TYPO3 v10.0. Do not call from other extension.', E_USER_DEPRECATED);
+        return $this->getWizards();
+    }
+
+    /**
+     * @param mixed $wizardElements
+     * @return array
+     */
+    public function wizard_appendWizards($wizardElements)
+    {
+        trigger_error('NewContentElementController->wizard_appendWizards() will be replaced by protected method getAppendWizards() in TYPO3 v10.0. Do not call from other extension.', E_USER_DEPRECATED);
+        return $this->getAppendWizards($wizardElements);
+    }
+
+    /**
+     * @param string $groupKey Not used
+     * @param string $itemKey Not used
+     * @param array $itemConf
+     * @return array
+     */
+    public function wizard_getItem($groupKey, $itemKey, $itemConf)
+    {
+        trigger_error('NewContentElementController->wizard_getItem() will be replaced by protected method getWizardItem() in TYPO3 v10.0. Do not call from other extension.', E_USER_DEPRECATED);
+        return $this->getWizardItem($groupKey, $itemKey, $itemConf);
+    }
+
+    /**
+     * @param string $groupKey Not used
+     * @param array $wizardGroup
+     * @return array
+     */
+    public function wizard_getGroupHeader($groupKey, $wizardGroup)
+    {
+        trigger_error('NewContentElementController->wizard_getGroupHeader() will be replaced by protected method getWizardGroupHeader() in TYPO3 v10.0. Do not call from other extension.', E_USER_DEPRECATED);
+        return $this->getWizardGroupHeader($wizardGroup);
+    }
+
+    /**
+     * Checks the array for elements which might contain unallowed default values and will unset them!
+     * Looks for the "tt_content_defValues" key in each element and if found it will traverse that array as fieldname /
+     * value pairs and check.
+     * The values will be added to the "params" key of the array (which should probably be unset or empty by default).
+     *
+     * @param array $wizardItems Wizard items, passed by reference
+     */
+    public function removeInvalidElements(&$wizardItems)
+    {
+        trigger_error('NewContentElementController->removeInvalidElements() will be replaced by protected method removeInvalidWizardItems() in TYPO3 v10.0. Do not call from other extension.', E_USER_DEPRECATED);
+        $this->removeInvalidWizardItems($wizardItems);
     }
 
     /**
@@ -266,11 +379,14 @@ class NewContentElementController
             $cc = ($key = 0);
             $menuItems = [];
 
-            $this->view->assign('onClickEvent', $this->onClickEvent);
+            $this->view->assignMultiple([
+                'hasClickEvent' => $this->onClickEvent !== '',
+                'onClickEvent' => 'function goToalt_doc() { ' . $this->onClickEvent . '}',
+            ]);
 
             foreach ($wizardItems as $wizardKey => $wInfo) {
                 $wizardOnClick = '';
-                if ($wInfo['header']) {
+                if (isset($wInfo['header'])) {
                     $menuItems[] = [
                         'label' => $wInfo['header'] ?: '-',
                         'content' => ''
@@ -385,7 +501,7 @@ class NewContentElementController
                         foreach ($wizardElements as $itemKey => $itemConf) {
                             $itemKey = rtrim($itemKey, '.');
                             if ($showAll || in_array($itemKey, $showItems)) {
-                                $tmpItem = $this->getWizardItem($itemConf);
+                                $tmpItem = $this->getWizardItem($groupKey, $itemKey, $itemConf);
                                 if ($tmpItem) {
                                     $groupItems[$groupKey . '_' . $itemKey] = $tmpItem;
                                 }
@@ -434,10 +550,12 @@ class NewContentElementController
     }
 
     /**
+     * @param string $groupKey Not used
+     * @param string $itemKey Not used
      * @param array $itemConf
      * @return array
      */
-    protected function getWizardItem(array $itemConf): array
+    protected function getWizardItem(string $groupKey, string $itemKey, array $itemConf): array
     {
         $itemConf['title'] = $this->getLanguageService()->sL($itemConf['title']);
         $itemConf['description'] = $this->getLanguageService()->sL($itemConf['description']);
@@ -573,6 +691,7 @@ class NewContentElementController
     /**
      * @param string $filename
      * @return StandaloneView
+     * @throws \TYPO3\CMS\Extbase\Mvc\Exception\InvalidExtensionNameException
      */
     protected function getFluidTemplateObject(string $filename = 'Main.html'): StandaloneView
     {
@@ -581,5 +700,45 @@ class NewContentElementController
         $view->setTemplatePathAndFilename(GeneralUtility::getFileAbsFileName('EXT:backend/Resources/Private/Templates/NewContentElement/' . $filename));
         $view->getRequest()->setControllerExtensionName('Backend');
         return $view;
+    }
+
+    /**
+     * Provide information about the current page making use of the wizard
+     *
+     * @return array
+     */
+    public function getPageInfo(): array
+    {
+        return $this->pageInfo;
+    }
+
+    /**
+     * Provide information about the column position of the button that triggered the wizard
+     *
+     * @return int|null
+     */
+    public function getColPos(): ?int
+    {
+        return $this->colPos;
+    }
+
+    /**
+     * Provide information about the language used while triggering the wizard
+     *
+     * @return int
+     */
+    public function getSysLanguage(): int
+    {
+        return $this->sys_language;
+    }
+
+    /**
+     * Provide information about the element to position the new element after (uid) or into (pid)
+     *
+     * @return int
+     */
+    public function getUidPid(): int
+    {
+        return $this->uid_pid;
     }
 }

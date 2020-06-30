@@ -37,12 +37,16 @@ class Argon2iPasswordHash implements PasswordHashInterface
      * We raise that significantly by default. At the time of this writing, with the options
      * below, password_verify() needs about 130ms on an I7 6820 on 2 CPU's.
      *
+     * We are not raising the amount of threads used, as that might lead to problems on various
+     * systems - see #90612
+     *
+     * Note the default values are set again in 'setOptions' below if needed.
+     *
      * @var array
      */
     protected $options = [
         'memory_cost' => 65536,
-        'time_cost' => 16,
-        'threads' => 2
+        'time_cost' => 16
     ];
 
     /**
@@ -112,10 +116,14 @@ class Argon2iPasswordHash implements PasswordHashInterface
      * Creates a salted hash for a given plaintext password
      *
      * @param string $password Plaintext password to create a salted hash from
+     * @param string $salt Deprecated optional custom salt to use
      * @return string|null Salted hashed password
      */
-    public function getHashedPassword(string $password)
+    public function getHashedPassword(string $password, string $salt = null)
     {
+        if ($salt !== null) {
+            trigger_error(static::class . ': using a custom salt is deprecated in PHP password api and ignored.', E_USER_DEPRECATED);
+        }
         $hashedPassword = null;
         if ($password !== '') {
             $hashedPassword = password_hash($password, PASSWORD_ARGON2I, $this->options);
@@ -155,5 +163,66 @@ class Argon2iPasswordHash implements PasswordHashInterface
             $result = true;
         }
         return $result;
+    }
+
+    /**
+     * @return array
+     * @deprecated and will be removed in TYPO3 v10.0.
+     */
+    public function getOptions(): array
+    {
+        trigger_error('This method will be removed in TYPO3 v10.0.', E_USER_DEPRECATED);
+        return $this->options;
+    }
+
+    /**
+     * Set new memory_cost, time_cost, and thread values.
+     *
+     * @param array $options
+     * @deprecated and will be removed in TYPO3 v10.0.
+     */
+    public function setOptions(array $options): void
+    {
+        trigger_error('This method will be removed in TYPO3 v10.0.', E_USER_DEPRECATED);
+        $newOptions = [];
+
+        // Check options for validity, else use hard coded defaults
+        if (isset($options['memory_cost'])) {
+            if ((int)$options['memory_cost'] < PASSWORD_ARGON2_DEFAULT_MEMORY_COST) {
+                throw new \InvalidArgumentException(
+                    'memory_cost must not be lower than ' . PASSWORD_ARGON2_DEFAULT_MEMORY_COST,
+                    1526042080
+                );
+            }
+            $newOptions['memory_cost'] = (int)$options['memory_cost'];
+        } else {
+            $newOptions['memory_cost'] = 16384;
+        }
+
+        if (isset($options['time_cost'])) {
+            if ((int)$options['time_cost'] < PASSWORD_ARGON2_DEFAULT_TIME_COST) {
+                throw new \InvalidArgumentException(
+                    'time_cost must not be lower than ' . PASSWORD_ARGON2_DEFAULT_TIME_COST,
+                    1526042081
+                );
+            }
+            $newOptions['time_cost'] = (int)$options['time_cost'];
+        } else {
+            $newOptions['time_cost'] = 16;
+        }
+
+        if (isset($options['threads'])) {
+            if ((int)$options['threads'] < PASSWORD_ARGON2_DEFAULT_THREADS) {
+                throw new \InvalidArgumentException(
+                    'threads must not be lower than ' . PASSWORD_ARGON2_DEFAULT_THREADS,
+                    1526042082
+                );
+            }
+            $newOptions['threads'] = (int)$options['threads'];
+        } else {
+            $newOptions['threads'] = 2;
+        }
+
+        $this->options = $newOptions;
     }
 }

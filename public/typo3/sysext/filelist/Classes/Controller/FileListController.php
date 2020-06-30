@@ -14,13 +14,14 @@ namespace TYPO3\CMS\Filelist\Controller;
  * The TYPO3 project - inspiring people to share!
  */
 
-use Psr\Log\LoggerAwareInterface;
-use Psr\Log\LoggerAwareTrait;
 use TYPO3\CMS\Backend\Clipboard\Clipboard;
 use TYPO3\CMS\Backend\Template\Components\ButtonBar;
+use TYPO3\CMS\Backend\Template\DocumentTemplate;
 use TYPO3\CMS\Backend\Utility\BackendUtility;
 use TYPO3\CMS\Backend\View\BackendTemplateView;
 use TYPO3\CMS\Core\Authentication\BackendUserAuthentication;
+use TYPO3\CMS\Core\Compatibility\PublicMethodDeprecationTrait;
+use TYPO3\CMS\Core\Compatibility\PublicPropertyDeprecationTrait;
 use TYPO3\CMS\Core\Imaging\Icon;
 use TYPO3\CMS\Core\Imaging\IconFactory;
 use TYPO3\CMS\Core\Localization\LanguageService;
@@ -45,13 +46,34 @@ use TYPO3\CMS\Filelist\FileList;
  * Script Class for creating the list of files in the File > Filelist module
  * @internal this is a concrete TYPO3 controller implementation and solely used for EXT:filelist and not part of TYPO3's Core API.
  */
-class FileListController extends ActionController implements LoggerAwareInterface
+class FileListController extends ActionController
 {
-    use LoggerAwareTrait;
+    use PublicPropertyDeprecationTrait;
+    use PublicMethodDeprecationTrait;
 
-    public const UPLOAD_ACTION_REPLACE = 'replace';
-    public const UPLOAD_ACTION_RENAME = 'rename';
-    public const UPLOAD_ACTION_SKIP = 'cancel';
+    private $deprecatedPublicProperties = [
+        'MOD_MENU' => 'Using FileListController::$MOD_MENU is deprecated and will not be possible anymore in TYPO3 v10.0.',
+        'MOD_SETTINGS' => 'Using FileListController::$MOD_SETTINGS is deprecated and will not be possible anymore in TYPO3 v10.0.',
+        'doc' => 'Using FileListController::$doc is deprecated, property will be removed in TYPO3 v10.0.',
+        'id' => 'Using FileListController::$id is deprecated and will not be possible anymore in TYPO3 v10.0.',
+        'pointer' => 'Using FileListController::$pointer is deprecated and will not be possible anymore in TYPO3 v10.0.',
+        'table' => 'Using FileListController::$table is deprecated, , property will be removed in TYPO3 v10.0.',
+        'imagemode' => 'Using FileListController::$imagemode is deprecated and will not be possible anymore in TYPO3 v10.0.',
+        'cmd' => 'Using FileListController::$cmd is deprecated and will not be possible anymore in TYPO3 v10.0.',
+        'filelist' => 'Using FileListController::$filelist is deprecated and will not be possible anymore in TYPO3 v10.0.',
+    ];
+
+    /**
+     * @var array
+     */
+    private $deprecatedPublicMethods = [
+        'menuConfig' => 'Using FileListController::menuConfig() is deprecated and will not be possible anymore in TYPO3 v10.0.',
+        'initializeView' => 'Using FileListController::initializeView() is deprecated and will not be possible anymore in TYPO3 v10.0.',
+        'initializeIndexAction' => 'Using FileListController::initializeIndexAction() is deprecated and will not be possible anymore in TYPO3 v10.0.',
+        'indexAction' => 'Using FileListController::indexAction() is deprecated and will not be possible anymore in TYPO3 v10.0.',
+        'missingFolderAction' => 'Using FileListController::missingFolderAction() is deprecated and will not be possible anymore in TYPO3 v10.0.',
+        'searchAction' => 'Using FileListController::searchAction() is deprecated and will not be possible anymore in TYPO3 v10.0.',
+    ];
 
     /**
      * @var array
@@ -62,6 +84,14 @@ class FileListController extends ActionController implements LoggerAwareInterfac
      * @var array
      */
     protected $MOD_SETTINGS = [];
+
+    /**
+     * Document template object
+     *
+     * @var DocumentTemplate
+     * @deprecated since TYPO3 v9, will be removed in TYPO3 v10.0
+     */
+    protected $doc;
 
     /**
      * "id" -> the path to list.
@@ -86,6 +116,13 @@ class FileListController extends ActionController implements LoggerAwareInterfac
      * @var int
      */
     protected $pointer;
+
+    /**
+     * "Table"
+     * @var string
+     * @deprecated since TYPO3 v9, will be removed in TYPO3 v10.0
+     */
+    protected $table;
 
     /**
      * Thumbnail mode.
@@ -154,19 +191,21 @@ class FileListController extends ActionController implements LoggerAwareInterfac
      */
     public function initializeObject()
     {
+        $this->doc = GeneralUtility::makeInstance(DocumentTemplate::class);
         $this->getLanguageService()->includeLLFile('EXT:filelist/Resources/Private/Language/locallang_mod_file_list.xlf');
         $this->getLanguageService()->includeLLFile('EXT:core/Resources/Private/Language/locallang_misc.xlf');
 
         // Setting GPvars:
         $this->id = ($combinedIdentifier = GeneralUtility::_GP('id'));
         $this->pointer = GeneralUtility::_GP('pointer');
+        $this->table = GeneralUtility::_GP('table');
         $this->imagemode = GeneralUtility::_GP('imagemode');
         $this->cmd = GeneralUtility::_GP('cmd');
         $this->overwriteExistingFiles = DuplicationBehavior::cast(GeneralUtility::_GP('overwriteExistingFiles'));
 
         try {
             if ($combinedIdentifier) {
-                /** @var ResourceFactory $resourceFactory */
+                $this->getBackendUser()->evaluateUserSpecificFileFilterSettings();
                 $resourceFactory = GeneralUtility::makeInstance(ResourceFactory::class);
                 $storage = $resourceFactory->getStorageObjectFromCombinedIdentifier($combinedIdentifier);
                 $identifier = substr($combinedIdentifier, strpos($combinedIdentifier, ':') + 1);
@@ -294,6 +333,8 @@ class FileListController extends ActionController implements LoggerAwareInterfac
         $this->registerDocHeaderButtons();
     }
 
+    /**
+     */
     protected function initializeIndexAction()
     {
         // Apply predefined values for hidden checkboxes
@@ -328,6 +369,8 @@ class FileListController extends ActionController implements LoggerAwareInterfac
         }
     }
 
+    /**
+     */
     protected function indexAction()
     {
         $pageRenderer = $this->view->getModuleTemplate()->getPageRenderer();
@@ -336,7 +379,8 @@ class FileListController extends ActionController implements LoggerAwareInterfac
         // There there was access to this file path, continue, make the list
         if ($this->folderObject) {
             $userTsConfig = $this->getBackendUser()->getTSConfig();
-            $this->filelist = GeneralUtility::makeInstance(FileList::class);
+            // @deprecated since TYPO3 v9, will be removed in TYPO3 v10.0. Argument $this will be removed in TYPO3 v10.0.
+            $this->filelist = GeneralUtility::makeInstance(FileList::class, $this);
             $this->filelist->thumbs = $GLOBALS['TYPO3_CONF_VARS']['GFX']['thumbnails'] && $this->MOD_SETTINGS['displayThumbs'];
             // Create clipboard object and initialize that
             $this->filelist->clipObj = GeneralUtility::makeInstance(Clipboard::class);
@@ -362,8 +406,9 @@ class FileListController extends ActionController implements LoggerAwareInterfac
                 if (!empty($items)) {
                     // Make command array:
                     $FILE = [];
-                    foreach ($items as $v) {
-                        $FILE['delete'][] = ['data' => $v];
+                    foreach ($items as $clipboardIdentifier => $combinedIdentifier) {
+                        $FILE['delete'][] = ['data' => $combinedIdentifier];
+                        $this->filelist->clipObj->removeElement($clipboardIdentifier);
                     }
                     // Init file processing object for deleting and pass the cmd array.
                     /** @var ExtendedFileUtility $fileProcessor */
@@ -372,6 +417,9 @@ class FileListController extends ActionController implements LoggerAwareInterfac
                     $fileProcessor->setExistingFilesConflictMode($this->overwriteExistingFiles);
                     $fileProcessor->start($FILE);
                     $fileProcessor->processData();
+                    // Clean & Save clipboard state
+                    $this->filelist->clipObj->cleanCurrent();
+                    $this->filelist->clipObj->endClipboard();
                 }
             }
             // Start up filelisting object, include settings.
@@ -390,6 +438,10 @@ class FileListController extends ActionController implements LoggerAwareInterfac
             $this->view->getModuleTemplate()->addJavaScriptCode(
                 'FileListIndex',
                 'if (top.fsMod) top.fsMod.recentIds["file"] = "' . rawurlencode($this->id) . '";' . $this->filelist->CBfunctions() . '
+                function jumpToUrl(URL) {
+                    window.location.href = URL;
+                    return false;
+                }
                 '
             );
             $pageRenderer->loadRequireJsModule('TYPO3/CMS/Filelist/FileDelete');
@@ -462,35 +514,13 @@ class FileListController extends ActionController implements LoggerAwareInterfac
             $this->view->assign('folderIdentifier', $this->folderObject->getCombinedIdentifier());
             $this->view->assign('fileDenyPattern', $GLOBALS['TYPO3_CONF_VARS']['BE']['fileDenyPattern']);
             $this->view->assign('maxFileSize', GeneralUtility::getMaxUploadFileSize() * 1024);
-            $this->view->assign('defaultAction', $this->getDefaultAction());
         } else {
             $this->forward('missingFolder');
         }
     }
 
-    protected function getDefaultAction(): string
-    {
-        $defaultAction = $this->getBackendUser()->getTSConfig()
-            ['options.']['file_list.']['uploader.']['defaultAction'] ?? '';
-
-        if ($defaultAction === '') {
-            $defaultAction = self::UPLOAD_ACTION_SKIP;
-        }
-        if (!in_array($defaultAction, [
-            self::UPLOAD_ACTION_REPLACE,
-            self::UPLOAD_ACTION_RENAME,
-            self::UPLOAD_ACTION_SKIP
-        ], true)) {
-            $this->logger->warning(sprintf(
-                'TSConfig: options.file_list.uploader.defaultAction contains an invalid value ("%s"), fallback to default value: "%s"',
-                $defaultAction,
-                self::UPLOAD_ACTION_SKIP
-            ));
-            $defaultAction = self::UPLOAD_ACTION_SKIP;
-        }
-        return $defaultAction;
-    }
-
+    /**
+     */
     protected function missingFolderAction()
     {
         if ($this->errorMessage) {

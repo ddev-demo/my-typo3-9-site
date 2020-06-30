@@ -1,6 +1,4 @@
 <?php
-declare(strict_types = 1);
-
 namespace TYPO3\CMS\Extbase\Utility;
 
 /*
@@ -63,12 +61,12 @@ class LocalizationUtility
      * @param string|null $extensionName The name of the extension
      * @param array $arguments The arguments of the extension, being passed over to vsprintf
      * @param string $languageKey The language key or null for using the current language from the system
-     * @param string[] $alternativeLanguageKeys The alternative language keys if no translation was found.
+     * @param string[] $alternativeLanguageKeys The alternative language keys if no translation was found. If null and we are in the frontend, then the language_alt from TypoScript setup will be used
      * @return string|null The value from LOCAL_LANG or null if no translation was found.
      */
-    public static function translate(string $key, ?string $extensionName = null, array $arguments = null, string $languageKey = null, array $alternativeLanguageKeys = null): ?string
+    public static function translate($key, $extensionName = null, $arguments = null, string $languageKey = null, array $alternativeLanguageKeys = null)
     {
-        if ($key === '') {
+        if ((string)$key === '') {
             // Early return guard: returns null if the key was empty, because the key may be a dynamic value
             // (from for example Fluid). Returning null allows null coalescing to a default value when that happens.
             return null;
@@ -141,7 +139,7 @@ class LocalizationUtility
      * @param string[] $alternativeLanguageKeys
      * @param string $extensionName
      */
-    protected static function initializeLocalization(string $languageFilePath, string $languageKey, array $alternativeLanguageKeys, string $extensionName = null): void
+    protected static function initializeLocalization(string $languageFilePath, string $languageKey, array $alternativeLanguageKeys, string $extensionName = null)
     {
         $languageFactory = GeneralUtility::makeInstance(LocalizationFactory::class);
 
@@ -180,7 +178,8 @@ class LocalizationUtility
     }
 
     /**
-     * Sets the currently active language keys.
+     * Sets the currently active language/language_alt keys.
+     * Default values are "default" for language key and an empty array for language_alt key.
      *
      * @return array
      */
@@ -191,15 +190,25 @@ class LocalizationUtility
             'alternativeLanguageKeys' => [],
         ];
         if (TYPO3_MODE === 'FE') {
+            $tsfe = static::getTypoScriptFrontendController();
             $siteLanguage = self::getCurrentSiteLanguage();
 
-            // Get values from site language
-            $languageKeys['languageKey'] = $siteLanguage->getTypo3Language();
+            // Get values from site language, which takes precedence over TypoScript settings
+            if ($siteLanguage instanceof SiteLanguage) {
+                $languageKeys['languageKey'] = $siteLanguage->getTypo3Language();
+            } elseif (isset($tsfe->config['config']['language'])) {
+                $languageKeys['languageKey'] = $tsfe->config['config']['language'];
+                if (isset($tsfe->config['config']['language_alt'])) {
+                    $languageKeys['alternativeLanguageKeys'][] = $tsfe->config['config']['language_alt'];
+                }
+            }
 
-            $locales = GeneralUtility::makeInstance(Locales::class);
-            if (in_array($languageKeys['languageKey'], $locales->getLocales())) {
-                foreach ($locales->getLocaleDependencies($languageKeys['languageKey']) as $language) {
-                    $languageKeys['alternativeLanguageKeys'][] = $language;
+            if (empty($languageKeys['alternativeLanguageKeys'])) {
+                $locales = GeneralUtility::makeInstance(Locales::class);
+                if (in_array($languageKeys['languageKey'], $locales->getLocales())) {
+                    foreach ($locales->getLocaleDependencies($languageKeys['languageKey']) as $language) {
+                        $languageKeys['alternativeLanguageKeys'][] = $language;
+                    }
                 }
             }
         } elseif (!empty($GLOBALS['BE_USER']->uc['lang'])) {
@@ -218,7 +227,7 @@ class LocalizationUtility
      * @param string $extensionName
      * @param string $languageFilePath
      */
-    protected static function loadTypoScriptLabels(string $extensionName, string $languageFilePath): void
+    protected static function loadTypoScriptLabels($extensionName, $languageFilePath)
     {
         $configurationManager = static::getConfigurationManager();
         $frameworkConfiguration = $configurationManager->getConfiguration(ConfigurationManagerInterface::CONFIGURATION_TYPE_FRAMEWORK, $extensionName);
@@ -260,7 +269,7 @@ class LocalizationUtility
      * @param string $parentKey the name of the parent key in the recursion; is only needed for recursion.
      * @return array flattened array of labels.
      */
-    protected static function flattenTypoScriptLabelArray(array $labelValues, string $parentKey = ''): array
+    protected static function flattenTypoScriptLabelArray(array $labelValues, $parentKey = '')
     {
         $result = [];
         foreach ($labelValues as $key => $labelValue) {
@@ -286,7 +295,7 @@ class LocalizationUtility
      *
      * @return \TYPO3\CMS\Extbase\Configuration\ConfigurationManagerInterface
      */
-    protected static function getConfigurationManager(): ConfigurationManagerInterface
+    protected static function getConfigurationManager()
     {
         if (static::$configurationManager !== null) {
             return static::$configurationManager;
@@ -312,9 +321,17 @@ class LocalizationUtility
     }
 
     /**
+     * @return \TYPO3\CMS\Frontend\Controller\TypoScriptFrontendController
+     */
+    protected static function getTypoScriptFrontendController()
+    {
+        return $GLOBALS['TSFE'];
+    }
+
+    /**
      * @return \TYPO3\CMS\Core\Localization\LanguageService
      */
-    protected static function getLanguageService(): \TYPO3\CMS\Core\Localization\LanguageService
+    protected static function getLanguageService()
     {
         return $GLOBALS['LANG'];
     }

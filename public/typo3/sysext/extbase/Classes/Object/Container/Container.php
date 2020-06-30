@@ -1,6 +1,4 @@
 <?php
-declare(strict_types = 1);
-
 namespace TYPO3\CMS\Extbase\Object\Container;
 
 /*
@@ -16,12 +14,9 @@ namespace TYPO3\CMS\Extbase\Object\Container;
  * The TYPO3 project - inspiring people to share!
  */
 
-use Doctrine\Instantiator\InstantiatorInterface;
-use Psr\Container\ContainerInterface;
-use Psr\Log\LoggerAwareInterface;
-use Psr\Log\LoggerAwareTrait;
 use Psr\Log\LoggerInterface;
-use TYPO3\CMS\Core\SingletonInterface;
+use TYPO3\CMS\Core\Cache\CacheManager;
+use TYPO3\CMS\Core\Log\LogManager;
 use TYPO3\CMS\Core\Utility\GeneralUtility;
 use TYPO3\CMS\Extbase\Reflection\ClassSchema;
 use TYPO3\CMS\Extbase\Reflection\ReflectionService;
@@ -30,17 +25,10 @@ use TYPO3\CMS\Extbase\Reflection\ReflectionService;
  * Internal TYPO3 Dependency Injection container
  * @internal only to be used within Extbase, not part of TYPO3 Core API.
  */
-class Container implements SingletonInterface, LoggerAwareInterface
+class Container implements \TYPO3\CMS\Core\SingletonInterface
 {
-    use LoggerAwareTrait;
-
     const SCOPE_PROTOTYPE = 1;
     const SCOPE_SINGLETON = 2;
-
-    /**
-     * @var ContainerInterface
-     */
-    private $psrContainer;
 
     /**
      * registered alternative implementations of a class
@@ -51,7 +39,7 @@ class Container implements SingletonInterface, LoggerAwareInterface
     private $alternativeImplementation;
 
     /**
-     * @var InstantiatorInterface
+     * @var \Doctrine\Instantiator\InstantiatorInterface
      */
     protected $instantiator;
 
@@ -75,19 +63,11 @@ class Container implements SingletonInterface, LoggerAwareInterface
     private $reflectionService;
 
     /**
-     * @param ContainerInterface $psrContainer
-     */
-    public function __construct(ContainerInterface $psrContainer)
-    {
-        $this->psrContainer = $psrContainer;
-    }
-
-    /**
      * Internal method to create the class instantiator, extracted to be mockable
      *
-     * @return InstantiatorInterface
+     * @return \Doctrine\Instantiator\InstantiatorInterface
      */
-    protected function getInstantiator(): InstantiatorInterface
+    protected function getInstantiator()
     {
         if ($this->instantiator == null) {
             $this->instantiator = new \Doctrine\Instantiator\Instantiator();
@@ -104,7 +84,7 @@ class Container implements SingletonInterface, LoggerAwareInterface
      * @return object the built object
      * @internal
      */
-    public function getInstance(string $className, array $givenConstructorArguments = [])
+    public function getInstance($className, $givenConstructorArguments = [])
     {
         $this->prototypeObjectsWhichAreCurrentlyInstanciated = [];
         return $this->getInstanceInternal($className, ...$givenConstructorArguments);
@@ -116,7 +96,7 @@ class Container implements SingletonInterface, LoggerAwareInterface
      * @param string $className
      * @return object
      */
-    public function getEmptyObject(string $className): object
+    public function getEmptyObject($className)
     {
         $className = $this->getImplementationClassName($className);
         $classSchema = $this->getReflectionService()->getClassSchema($className);
@@ -135,18 +115,18 @@ class Container implements SingletonInterface, LoggerAwareInterface
      * @throws \TYPO3\CMS\Extbase\Object\Exception\CannotBuildObjectException
      * @return object the built object
      */
-    protected function getInstanceInternal(string $className, ...$givenConstructorArguments): object
+    protected function getInstanceInternal($className, ...$givenConstructorArguments)
     {
         $className = $this->getImplementationClassName($className);
-
-        if ($givenConstructorArguments === [] && $this->psrContainer->has($className)) {
-            $instance = $this->psrContainer->get($className);
-            if (!is_object($instance)) {
-                throw new \TYPO3\CMS\Extbase\Object\Exception('PSR-11 container returned non object for class name "' . $className . '".', 1562240407);
-            }
-            return $instance;
+        if ($className === \TYPO3\CMS\Extbase\Object\Container\Container::class) {
+            return $this;
         }
-
+        if ($className === \TYPO3\CMS\Core\Cache\CacheManager::class) {
+            return GeneralUtility::makeInstance(\TYPO3\CMS\Core\Cache\CacheManager::class);
+        }
+        if ($className === \TYPO3\CMS\Core\Package\PackageManager::class) {
+            return GeneralUtility::makeInstance(\TYPO3\CMS\Core\Package\PackageManager::class);
+        }
         $className = \TYPO3\CMS\Core\Core\ClassLoadingInformation::getClassNameForAlias($className);
         if (isset($this->singletonInstances[$className])) {
             if (!empty($givenConstructorArguments)) {
@@ -182,7 +162,7 @@ class Container implements SingletonInterface, LoggerAwareInterface
      * @throws \TYPO3\CMS\Extbase\Object\Exception
      * @return object the new instance
      */
-    protected function instanciateObject(ClassSchema $classSchema, ...$givenConstructorArguments): object
+    protected function instanciateObject(ClassSchema $classSchema, ...$givenConstructorArguments)
     {
         $className = $classSchema->getClassName();
         $classIsSingleton = $classSchema->isSingleton();
@@ -203,13 +183,13 @@ class Container implements SingletonInterface, LoggerAwareInterface
      * @param object $instance
      * @param ClassSchema $classSchema
      */
-    protected function injectDependencies(object $instance, ClassSchema $classSchema): void
+    protected function injectDependencies($instance, ClassSchema $classSchema)
     {
         if (!$classSchema->hasInjectMethods() && !$classSchema->hasInjectProperties()) {
             return;
         }
-        foreach ($classSchema->getInjectMethods() as $injectMethodName => $injectMethod) {
-            $instanceToInject = $this->getInstanceInternal($injectMethod->getFirstParameter()->getDependency());
+        foreach ($classSchema->getInjectMethods() as $injectMethodName => $classNameToInject) {
+            $instanceToInject = $this->getInstanceInternal($classNameToInject);
             if ($classSchema->isSingleton() && !$instanceToInject instanceof \TYPO3\CMS\Core\SingletonInterface) {
                 $this->getLogger()->notice('The singleton "' . $classSchema->getClassName() . '" needs a prototype in "' . $injectMethodName . '". This is often a bad code smell; often you rather want to inject a singleton.');
             }
@@ -217,15 +197,13 @@ class Container implements SingletonInterface, LoggerAwareInterface
                 $instance->{$injectMethodName}($instanceToInject);
             }
         }
-        foreach ($classSchema->getInjectProperties() as $injectPropertyName => $injectProperty) {
-            $classNameToInject = $injectProperty->getType();
-
+        foreach ($classSchema->getInjectProperties() as $injectPropertyName => $classNameToInject) {
             $instanceToInject = $this->getInstanceInternal($classNameToInject);
             if ($classSchema->isSingleton() && !$instanceToInject instanceof \TYPO3\CMS\Core\SingletonInterface) {
                 $this->getLogger()->notice('The singleton "' . $classSchema->getClassName() . '" needs a prototype in "' . $injectPropertyName . '". This is often a bad code smell; often you rather want to inject a singleton.');
             }
 
-            if ($classSchema->getProperty($injectPropertyName)->isPublic()) {
+            if ($classSchema->getProperty($injectPropertyName)['public']) {
                 $instance->{$injectPropertyName} = $instanceToInject;
             } else {
                 $propertyReflection = new \ReflectionProperty($instance, $injectPropertyName);
@@ -240,7 +218,7 @@ class Container implements SingletonInterface, LoggerAwareInterface
      *
      * @param object $instance
      */
-    protected function initializeObject(object $instance): void
+    protected function initializeObject($instance)
     {
         if (method_exists($instance, 'initializeObject') && is_callable([$instance, 'initializeObject'])) {
             $instance->initializeObject();
@@ -253,9 +231,8 @@ class Container implements SingletonInterface, LoggerAwareInterface
      *
      * @param string $className
      * @param string $alternativeClassName
-     * @todo deprecate in favor of core DI configuration (aliases/overrides)
      */
-    public function registerImplementation(string $className, string $alternativeClassName): void
+    public function registerImplementation($className, $alternativeClassName)
     {
         $this->alternativeImplementation[$className] = $alternativeClassName;
     }
@@ -269,46 +246,31 @@ class Container implements SingletonInterface, LoggerAwareInterface
      * @throws \InvalidArgumentException
      * @return array
      */
-    private function getConstructorArguments(string $className, ClassSchema $classSchema, array $givenConstructorArguments): array
+    private function getConstructorArguments($className, ClassSchema $classSchema, array $givenConstructorArguments)
     {
-        // @todo: drop the $className argument here.
-        // @todo: 1) we have that via the $classSchema object
-        // @todo: 2) if we drop the log message, the argument is superfluous
-        //
-        // @todo: -> private function getConstructorArguments(Method $constructor, array $givenConstructorArguments)
-
-        if (!$classSchema->hasConstructor()) {
-            // todo: this check needs to take place outside this method
-            // todo: Instead of passing a ClassSchema object in here, all we need is a Method object instead
-            return [];
-        }
-
-        $arguments = [];
-        foreach ($classSchema->getMethod('__construct')->getParameters() as $methodParameter) {
-            $index = $methodParameter->getPosition();
+        $parameters = [];
+        $constructorArgumentInformation = $classSchema->getConstructorArguments();
+        foreach ($constructorArgumentInformation as $constructorArgumentName => $argumentInformation) {
+            $index = $argumentInformation['position'];
 
             // Constructor argument given AND argument is a simple type OR instance of argument type
-            if (array_key_exists($index, $givenConstructorArguments) &&
-                ($methodParameter->getDependency() === null || is_a($givenConstructorArguments[$index], $methodParameter->getDependency()))
-            ) {
-                $argument = $givenConstructorArguments[$index];
+            if (array_key_exists($index, $givenConstructorArguments) && (!isset($argumentInformation['dependency']) || is_a($givenConstructorArguments[$index], $argumentInformation['dependency']))) {
+                $parameter = $givenConstructorArguments[$index];
             } else {
-                if ($methodParameter->getDependency() !== null && !$methodParameter->hasDefaultValue()) {
-                    $argument = $this->getInstanceInternal($methodParameter->getDependency());
-                    if ($classSchema->isSingleton() && !$argument instanceof \TYPO3\CMS\Core\SingletonInterface) {
+                if (isset($argumentInformation['dependency']) && $argumentInformation['hasDefaultValue'] === false) {
+                    $parameter = $this->getInstanceInternal($argumentInformation['dependency']);
+                    if ($classSchema->isSingleton() && !$parameter instanceof \TYPO3\CMS\Core\SingletonInterface) {
                         $this->getLogger()->notice('The singleton "' . $className . '" needs a prototype in the constructor. This is often a bad code smell; often you rather want to inject a singleton.');
-                        // todo: the whole injection is flawed anyway, why would we care about injecting prototypes? so, wayne?
-                        // todo: btw: if this is important, we can already detect this case in the class schema.
                     }
-                } elseif ($methodParameter->hasDefaultValue() === true) {
-                    $argument = $methodParameter->getDefaultValue();
+                } elseif ($argumentInformation['hasDefaultValue'] === true) {
+                    $parameter = $argumentInformation['defaultValue'];
                 } else {
                     throw new \InvalidArgumentException('not a correct info array of constructor dependencies was passed!', 1476107941);
                 }
             }
-            $arguments[] = $argument;
+            $parameters[] = $parameter;
         }
-        return $arguments;
+        return $parameters;
     }
 
     /**
@@ -318,7 +280,7 @@ class Container implements SingletonInterface, LoggerAwareInterface
      * @param string $className Base class name to evaluate
      * @return string Final class name to instantiate with "new [classname]
      */
-    public function getImplementationClassName(string $className): string
+    public function getImplementationClassName($className)
     {
         if (isset($this->alternativeImplementation[$className])) {
             $className = $this->alternativeImplementation[$className];
@@ -334,7 +296,7 @@ class Container implements SingletonInterface, LoggerAwareInterface
      *
      * @return bool
      */
-    public function isSingleton(string $className): bool
+    public function isSingleton($className)
     {
         return $this->getReflectionService()->getClassSchema($className)->isSingleton();
     }
@@ -344,7 +306,7 @@ class Container implements SingletonInterface, LoggerAwareInterface
      *
      * @return bool
      */
-    public function isPrototype(string $className): bool
+    public function isPrototype($className)
     {
         return !$this->isSingleton($className);
     }
@@ -352,9 +314,9 @@ class Container implements SingletonInterface, LoggerAwareInterface
     /**
      * @return LoggerInterface
      */
-    protected function getLogger(): LoggerInterface
+    protected function getLogger()
     {
-        return $this->logger;
+        return GeneralUtility::makeInstance(LogManager::class)->getLogger(static::class);
     }
 
     /**
@@ -367,6 +329,6 @@ class Container implements SingletonInterface, LoggerAwareInterface
      */
     protected function getReflectionService(): ReflectionService
     {
-        return $this->reflectionService ?? ($this->reflectionService = $this->psrContainer->get(ReflectionService::class));
+        return $this->reflectionService ?? ($this->reflectionService = GeneralUtility::makeInstance(ReflectionService::class, GeneralUtility::makeInstance(CacheManager::class)));
     }
 }

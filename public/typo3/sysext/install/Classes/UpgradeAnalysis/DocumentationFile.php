@@ -22,7 +22,6 @@ use TYPO3\CMS\Core\Registry;
 use TYPO3\CMS\Core\Utility\ExtensionManagementUtility;
 use TYPO3\CMS\Core\Utility\GeneralUtility;
 use TYPO3\CMS\Core\Utility\PathUtility;
-use TYPO3\CMS\Core\Utility\VersionNumberUtility;
 
 /**
  * Provide information about documentation files
@@ -76,14 +75,10 @@ class DocumentationFile
             throw new \InvalidArgumentException('the given path does not belong to the changelog dir. Aborting', 1537158043);
         }
 
-        $currentVersion = (int)explode('.', VersionNumberUtility::getNumericTypo3Version())[0];
-        $versions = range($currentVersion, $currentVersion - 2);
-        $pattern = '(master|' . implode('\.*|', $versions) . '\.*)';
         $finder = new Finder();
         $finder
             ->depth(0)
-            ->sortByName(true)
-            ->name($pattern)
+            ->sortByName()
             ->in($path);
 
         $directories = [];
@@ -131,6 +126,7 @@ class DocumentationFile
         $entry['version'] = PathUtility::basename(PathUtility::dirname($file));
         $entry['headline'] = $headline;
         $entry['filepath'] = $file;
+        $entry['filename'] = pathinfo($file)['filename'];
         $entry['tags'] = $this->extractTags($lines);
         $entry['class'] = 'default';
         foreach ($entry['tags'] as $key => $tag) {
@@ -144,6 +140,17 @@ class DocumentationFile
         $entry['content'] = file_get_contents($file);
         $entry['parsedContent'] = $this->parseContent($entry['content']);
         $entry['file_hash'] = md5($entry['content']);
+        if ($entry['version'] !== '') {
+            $entry['url']['documentation'] = sprintf(
+                'https://docs.typo3.org/c/typo3/cms-core/master/en-us/Changelog/%s/%s.html',
+                $entry['version'],
+                $entry['filename']
+            );
+        }
+        $issueId = $this->parseIssueId($entry['filename']);
+        if ($issueId) {
+            $entry['url']['issue'] = sprintf('https://forge.typo3.org/issues/%s', $issueId);
+        }
 
         return [md5($file) => $entry];
     }
@@ -333,6 +340,16 @@ class DocumentationFile
     }
 
     /**
+     * @param string $filename
+     *
+     * @return string|null
+     */
+    protected function parseIssueId(string $filename): ?string
+    {
+        return GeneralUtility::trimExplode('-', $filename)[1] ?? null;
+    }
+
+    /**
      * @return Finder
      */
     protected function getDocumentFinder(): Finder
@@ -340,6 +357,7 @@ class DocumentationFile
         $finder = new Finder();
         $finder
             ->depth(0)
+            ->sortByName()
             ->name('/^(Feature|Breaking|Deprecation|Important)\-\d+.+\.rst$/i');
 
         return $finder;

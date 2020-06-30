@@ -22,6 +22,7 @@ use TYPO3\CMS\Core\Utility\GeneralUtility;
 use TYPO3\CMS\Core\Utility\PathUtility;
 use TYPO3\CMS\Core\Utility\StringUtility;
 use TYPO3\CMS\Install\FolderStructure\DefaultFactory;
+use TYPO3\CMS\Install\Service\Exception\RemoteFetchException;
 
 /**
  * Core update service.
@@ -125,6 +126,33 @@ class CoreUpdateService
     }
 
     /**
+     * Wrapper method for CoreVersionService
+     *
+     * @deprecated since TYPO3 v9 and will be removed in TYPO3 v10.0 - use REST api directly (see https://get.typo3.org/v1/api/doc)
+     * @return bool TRUE on success
+     */
+    public function updateVersionMatrix()
+    {
+        trigger_error(
+            'The method updateVersionMatrix() is deprecated since TYPO3 v9 and will be removed in TYPO3 v10.0, use the REST api directly (see https://get.typo3.org/v1/api/doc).',
+            E_USER_DEPRECATED
+        );
+        $success = true;
+        try {
+            $this->coreVersionService->getYoungestPatchRelease();
+        } catch (RemoteFetchException $e) {
+            $success = false;
+            $this->messages->enqueue(new FlashMessage(
+                'Current version specification could not be fetched from https://get.typo3.org.'
+                    . ' This is probably a network issue, please fix it.',
+                'Version information could not be fetched from get.typo3.org',
+                FlashMessage::ERROR
+            ));
+        }
+        return $success;
+    }
+
+    /**
      * Check if an update is possible at all
      *
      * @param string $version The target version number
@@ -172,6 +200,19 @@ class CoreUpdateService
                     FlashMessage::ERROR
                 ));
             } else {
+                // Check symlink creation
+                $link = Environment::getPublicPath() . '/' . StringUtility::getUniqueId('install-core-update-test-');
+                @symlink($file, $link);
+                if (!is_link($link)) {
+                    $success = false;
+                    $this->messages->enqueue(new FlashMessage(
+                        'Could not create a symbolic link in path "' . Environment::getPublicPath() . '/"!',
+                        'Automatic TYPO3 CMS core update not possible: No symlink creation possible',
+                        FlashMessage::ERROR
+                    ));
+                } else {
+                    unlink($link);
+                }
                 unlink($file);
             }
 

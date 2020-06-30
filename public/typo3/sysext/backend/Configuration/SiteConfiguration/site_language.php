@@ -199,6 +199,7 @@ return [
                     ['eh', 'eh', 'flags-eh'],
                     ['en-us-gb', 'en-us-gb', 'flags-en-us-gb'],
                     ['england', 'england', 'flags-gb-eng'],
+                    ['gb-eng', 'gb-eng', 'flags-gb-eng'],
                     ['er', 'er', 'flags-er'],
                     ['es', 'es', 'flags-es'],
                     ['et', 'et', 'flags-et'],
@@ -276,6 +277,7 @@ return [
                     ['mf', 'mf', 'flags-mf'],
                     ['mg', 'mg', 'flags-mg'],
                     ['mh', 'mh', 'flags-mh'],
+                    ['mi', 'mi', 'flags-mi'],
                     ['mk', 'mk', 'flags-mk'],
                     ['ml', 'ml', 'flags-ml'],
                     ['mm', 'mm', 'flags-mm'],
@@ -400,7 +402,6 @@ return [
         'fallbackType' => [
             'label' => 'LLL:EXT:backend/Resources/Private/Language/locallang_siteconfiguration_tca.xlf:site_language.fallbackType',
             'displayCond' => 'FIELD:languageId:>:0',
-            'onChange' => 'reload',
             'config' => [
                 'type' => 'select',
                 'renderType' => 'selectSingle',

@@ -1,10 +1,6 @@
 <?php
 namespace TYPO3\CMS\Extbase\Mvc;
 
-use Psr\Container\ContainerInterface;
-use TYPO3\CMS\Extbase\Object\ObjectManagerInterface;
-use TYPO3\CMS\Extbase\SignalSlot\Dispatcher as SignalSlotDispatcher;
-
 /*
  * This file is part of the TYPO3 CMS project.
  *
@@ -26,17 +22,12 @@ use TYPO3\CMS\Extbase\SignalSlot\Dispatcher as SignalSlotDispatcher;
 class Dispatcher implements \TYPO3\CMS\Core\SingletonInterface
 {
     /**
-     * @var ObjectManagerInterface A reference to the object manager
+     * @var \TYPO3\CMS\Extbase\Object\ObjectManagerInterface A reference to the object manager
      */
     protected $objectManager;
 
     /**
-     * @var ContainerInterface
-     */
-    private $container;
-
-    /**
-     * @var SignalSlotDispatcher
+     * @var \TYPO3\CMS\Extbase\SignalSlot\Dispatcher
      */
     protected $signalSlotDispatcher;
 
@@ -46,20 +37,21 @@ class Dispatcher implements \TYPO3\CMS\Core\SingletonInterface
     protected $settings = [];
 
     /**
+     * @param \TYPO3\CMS\Extbase\SignalSlot\Dispatcher $signalSlotDispatcher
+     */
+    public function injectSignalSlotDispatcher(\TYPO3\CMS\Extbase\SignalSlot\Dispatcher $signalSlotDispatcher)
+    {
+        $this->signalSlotDispatcher = $signalSlotDispatcher;
+    }
+
+    /**
      * Constructs the global dispatcher
      *
-     * @param ObjectManagerInterface $objectManager A reference to the object manager
-     * @param ContainerInterface $container
-     * @param SignalSlotDispatcher $signalSlotDispatcher
+     * @param \TYPO3\CMS\Extbase\Object\ObjectManagerInterface $objectManager A reference to the object manager
      */
-    public function __construct(
-        ObjectManagerInterface $objectManager,
-        ContainerInterface $container,
-        SignalSlotDispatcher $signalSlotDispatcher
-    ) {
+    public function __construct(\TYPO3\CMS\Extbase\Object\ObjectManagerInterface $objectManager)
+    {
         $this->objectManager = $objectManager;
-        $this->container = $container;
-        $this->signalSlotDispatcher = $signalSlotDispatcher;
     }
 
     /**
@@ -107,11 +99,7 @@ class Dispatcher implements \TYPO3\CMS\Core\SingletonInterface
     protected function resolveController(\TYPO3\CMS\Extbase\Mvc\RequestInterface $request)
     {
         $controllerObjectName = $request->getControllerObjectName();
-        if ($this->container->has($controllerObjectName)) {
-            $controller = $this->container->get($controllerObjectName);
-        } else {
-            $controller = $this->objectManager->get($controllerObjectName);
-        }
+        $controller = $this->objectManager->get($controllerObjectName);
         if (!$controller instanceof \TYPO3\CMS\Extbase\Mvc\Controller\ControllerInterface) {
             throw new \TYPO3\CMS\Extbase\Mvc\Exception\InvalidControllerException(
                 'Invalid controller "' . $request->getControllerObjectName() . '". The controller must implement the TYPO3\\CMS\\Extbase\\Mvc\\Controller\\ControllerInterface.',

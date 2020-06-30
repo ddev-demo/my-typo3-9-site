@@ -36,21 +36,15 @@ use TYPO3\CMS\Core\Utility\GeneralUtility;
  * a different middleware later-on might unset the BE_USER as he/she is not allowed to preview a certain
  * page due to rights management. As this can only happen once the page ID is resolved, this will happen
  * after the routing middleware.
+ *
+ * Currently, this middleware depends on the availability of $GLOBALS['TSFE'], however, this is solely
+ * due to backwards-compatibility and will be disabled in the future.
  */
 class BackendUserAuthenticator implements MiddlewareInterface
 {
     /**
-     * @var Context
-     */
-    protected $context;
-
-    public function __construct(Context $context)
-    {
-        $this->context = $context;
-    }
-
-    /**
-     * Creates a backend user authentication object, tries to authenticate a user
+     * Creates a frontend user authentication object, tries to authenticate a user
+     * and stores the object in $GLOBALS['TSFE']->fe_user.
      *
      * @param ServerRequestInterface $request
      * @param RequestHandlerInterface $handler
@@ -58,6 +52,15 @@ class BackendUserAuthenticator implements MiddlewareInterface
      */
     public function process(ServerRequestInterface $request, RequestHandlerInterface $handler): ResponseInterface
     {
+        // PRE BE_USER HOOK
+        if (!empty($GLOBALS['TYPO3_CONF_VARS']['SC_OPTIONS']['tslib/index_ts.php']['preBeUser'])) {
+            trigger_error('The "preBeUser" hook will be removed in TYPO3 v10.0 in favor of PSR-15. Use a middleware instead.', E_USER_DEPRECATED);
+            foreach ($GLOBALS['TYPO3_CONF_VARS']['SC_OPTIONS']['tslib/index_ts.php']['preBeUser'] as $_funcRef) {
+                $_params = [];
+                GeneralUtility::callUserFunction($_funcRef, $_params, $GLOBALS['TSFE']);
+            }
+        }
+
         // Initializing a possible logged-in Backend User
         // If the backend cookie is set,
         // we proceed and check if a backend user is logged in.
@@ -65,7 +68,20 @@ class BackendUserAuthenticator implements MiddlewareInterface
         if (isset($request->getCookieParams()[BackendUserAuthentication::getCookieName()])) {
             $backendUserObject = $this->initializeBackendUser($request);
         }
+
         $GLOBALS['BE_USER'] = $backendUserObject;
+
+        // POST BE_USER HOOK
+        if (!empty($GLOBALS['TYPO3_CONF_VARS']['SC_OPTIONS']['tslib/index_ts.php']['postBeUser'])) {
+            $_params = [
+                'BE_USER' => &$GLOBALS['BE_USER']
+            ];
+            trigger_error('The "postBeUser" hook will be removed in TYPO3 v10.0 in favor of PSR-15. Use a middleware instead.', E_USER_DEPRECATED);
+            foreach ($GLOBALS['TYPO3_CONF_VARS']['SC_OPTIONS']['tslib/index_ts.php']['postBeUser'] as $_funcRef) {
+                GeneralUtility::callUserFunction($_funcRef, $_params, $GLOBALS['TSFE']);
+            }
+        }
+
         // Load specific dependencies which are necessary for a valid Backend User
         // like $GLOBALS['LANG'] for labels in the language of the BE User, the router, and ext_tables.php for all modules
         // So things like Frontend Editing and Admin Panel can use this for generating links to the TYPO3 Backend.
@@ -73,7 +89,7 @@ class BackendUserAuthenticator implements MiddlewareInterface
             Bootstrap::initializeLanguageObject();
             Bootstrap::initializeBackendRouter();
             Bootstrap::loadExtTables();
-            $this->setBackendUserAspect($GLOBALS['BE_USER']);
+            $this->setBackendUserAspect(GeneralUtility::makeInstance(Context::class), $GLOBALS['BE_USER']);
         }
 
         return $handler->handle($request);
@@ -126,11 +142,12 @@ class BackendUserAuthenticator implements MiddlewareInterface
     /**
      * Register the backend user as aspect
      *
+     * @param Context $context
      * @param BackendUserAuthentication|null $user
      */
-    protected function setBackendUserAspect(BackendUserAuthentication $user)
+    protected function setBackendUserAspect(Context $context, BackendUserAuthentication $user)
     {
-        $this->context->setAspect('backend.user', GeneralUtility::makeInstance(UserAspect::class, $user));
-        $this->context->setAspect('workspace', GeneralUtility::makeInstance(WorkspaceAspect::class, $user->workspace));
+        $context->setAspect('backend.user', GeneralUtility::makeInstance(UserAspect::class, $user));
+        $context->setAspect('workspace', GeneralUtility::makeInstance(WorkspaceAspect::class, $user->workspace));
     }
 }

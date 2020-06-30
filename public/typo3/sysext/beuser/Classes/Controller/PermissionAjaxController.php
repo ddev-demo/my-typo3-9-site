@@ -305,4 +305,12 @@ class PermissionAjaxController
     {
         return $GLOBALS['LANG'];
     }
+
+    /**
+     * @return \TYPO3\CMS\Core\Authentication\BackendUserAuthentication
+     */
+    protected function getBackendUser()
+    {
+        return $GLOBALS['BE_USER'];
+    }
 }

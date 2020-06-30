@@ -23,10 +23,17 @@ return [
             ]
         ],
         /** internal: do not use or reference this middleware in your own code, as this will be possibly be removed */
+        'typo3/cms-frontend/preprocessing' => [
+            'target' => \TYPO3\CMS\Frontend\Middleware\PreprocessRequestHook::class,
+            'after' => [
+                'typo3/cms-core/normalized-params-attribute',
+            ]
+        ],
+        /** internal: do not use or reference this middleware in your own code, as this will be possibly be removed */
         'typo3/cms-frontend/eid' => [
             'target' => \TYPO3\CMS\Frontend\Middleware\EidHandler::class,
             'after' => [
-                'typo3/cms-core/normalized-params-attribute',
+                'typo3/cms-frontend/preprocessing'
             ]
         ],
         'typo3/cms-frontend/maintenance-mode' => [
@@ -43,14 +50,51 @@ return [
                 'typo3/cms-frontend/maintenance-mode'
             ]
         ],
+        /** internal: do not use or reference this middleware in your own code, as this will be possibly be removed */
+        'typo3/cms-frontend/tsfe' => [
+            'target' => \TYPO3\CMS\Frontend\Middleware\TypoScriptFrontendInitialization::class,
+            'after' => [
+                'typo3/cms-frontend/eid',
+            ]
+        ],
+        /** internal: do not use or reference this middleware in your own code, as this will be possibly be removed */
+        'typo3/cms-frontend/output-compression' => [
+            'target' => \TYPO3\CMS\Frontend\Middleware\OutputCompression::class,
+            'after' => [
+                'typo3/cms-frontend/tsfe',
+            ]
+        ],
+        'typo3/cms-frontend/authentication' => [
+            'target' => \TYPO3\CMS\Frontend\Middleware\FrontendUserAuthenticator::class,
+            'after' => [
+                'typo3/cms-frontend/tsfe',
+            ]
+        ],
+        'typo3/cms-frontend/backend-user-authentication' => [
+            'target' => \TYPO3\CMS\Frontend\Middleware\BackendUserAuthenticator::class,
+            'after' => [
+                'typo3/cms-frontend/tsfe',
+            ]
+        ],
+        'typo3/cms-frontend/preview-simulator' => [
+            'target' => \TYPO3\CMS\Frontend\Middleware\PreviewSimulator::class,
+            'after' => [
+                'typo3/cms-frontend/backend-user-authentication',
+                'typo3/cms-frontend/authentication',
+            ],
+            'before' => [
+                'typo3/cms-frontend/page-resolver'
+            ]
+        ],
         'typo3/cms-frontend/site' => [
             'target' => \TYPO3\CMS\Frontend\Middleware\SiteResolver::class,
             'after' => [
                 'typo3/cms-core/normalized-params-attribute',
-            ],
-            'before' => [
+                'typo3/cms-frontend/tsfe',
                 'typo3/cms-frontend/authentication',
                 'typo3/cms-frontend/backend-user-authentication',
+            ],
+            'before' => [
                 'typo3/cms-frontend/page-resolver'
             ]
         ],
@@ -72,31 +116,13 @@ return [
                 'typo3/cms-frontend/page-resolver'
             ]
         ],
-        'typo3/cms-frontend/backend-user-authentication' => [
-            'target' => \TYPO3\CMS\Frontend\Middleware\BackendUserAuthenticator::class,
-            'before' => [
-                'typo3/cms-frontend/authentication',
-            ]
-        ],
-        'typo3/cms-frontend/authentication' => [
-            'target' => \TYPO3\CMS\Frontend\Middleware\FrontendUserAuthenticator::class,
-            'before' => [
-                'typo3/cms-frontend/tsfe',
-            ],
-            'after' => [
-                'typo3/cms-frontend/maintenance-mode',
-                'typo3/cms-frontend/site'
-            ]
-        ],
         'typo3/cms-frontend/page-resolver' => [
             'target' => \TYPO3\CMS\Frontend\Middleware\PageResolver::class,
             'after' => [
-                'typo3/cms-frontend/site',
+                'typo3/cms-frontend/tsfe',
                 'typo3/cms-frontend/authentication',
                 'typo3/cms-frontend/backend-user-authentication',
-            ],
-            'before' => [
-                'typo3/cms-frontend/tsfe',
+                'typo3/cms-frontend/site',
             ]
         ],
         'typo3/cms-frontend/page-argument-validator' => [
@@ -105,29 +131,14 @@ return [
                 'typo3/cms-frontend/page-resolver',
             ],
             'before' => [
-                'typo3/cms-frontend/tsfe',
-            ]
-        ],
-        /** internal: do not use or reference this middleware in your own code, as this will be possibly be removed */
-        'typo3/cms-frontend/tsfe' => [
-            'target' => \TYPO3\CMS\Frontend\Middleware\TypoScriptFrontendInitialization::class,
-            'after' => [
-                'typo3/cms-frontend/eid',
-                'typo3/cms-frontend/page-argument-validator',
-            ]
-        ],
-        /** internal: do not use or reference this middleware in your own code, as this will be possibly be removed */
-        'typo3/cms-frontend/output-compression' => [
-            'target' => \TYPO3\CMS\Frontend\Middleware\OutputCompression::class,
-            'after' => [
-                'typo3/cms-frontend/tsfe',
+                'typo3/cms-frontend/prepare-tsfe-rendering',
             ]
         ],
         /** internal: do not use or reference this middleware in your own code, as this will be possibly be removed */
         'typo3/cms-frontend/prepare-tsfe-rendering' => [
             'target' => \TYPO3\CMS\Frontend\Middleware\PrepareTypoScriptFrontendRendering::class,
             'after' => [
-                'typo3/cms-frontend/tsfe',
+                'typo3/cms-frontend/page-argument-validator',
             ]
         ],
         /** internal: do not use or reference this middleware in your own code, as this will be possibly be removed */

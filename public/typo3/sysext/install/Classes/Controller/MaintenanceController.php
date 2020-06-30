@@ -96,12 +96,6 @@ class MaintenanceController extends AbstractController
                 'success' => true,
                 'stats' => (new Typo3tempFileService())->getDirectoryStatistics(),
                 'html' => $view->render(),
-                'buttons' => [
-                    [
-                        'btnClass' => 'btn-default t3js-clearTypo3temp-stats',
-                        'text' => 'Scan again',
-                    ],
-                ],
             ]
         );
     }
@@ -184,15 +178,6 @@ class MaintenanceController extends AbstractController
         return new JsonResponse([
             'success' => true,
             'html' => $view->render(),
-            'buttons' => [
-                [
-                    'btnClass' => 'btn-default t3js-databaseAnalyzer-analyze',
-                    'text' => 'Run database compare again',
-                ], [
-                    'btnClass' => 'btn-warning t3js-databaseAnalyzer-execute',
-                    'text' => 'Apply selected changes',
-                ],
-            ],
         ]);
     }
 
@@ -204,11 +189,11 @@ class MaintenanceController extends AbstractController
      */
     public function databaseAnalyzerAnalyzeAction(ServerRequestInterface $request): ResponseInterface
     {
-        $container = $this->loadExtLocalconfDatabaseAndExtTables();
+        $this->loadExtLocalconfDatabaseAndExtTables();
         $messageQueue = new FlashMessageQueue('install');
         $suggestions = [];
         try {
-            $sqlReader = $container->get(SqlReader::class);
+            $sqlReader = GeneralUtility::makeInstance(SqlReader::class);
             $sqlStatements = $sqlReader->getCreateTableStatementArray($sqlReader->getTablesDefinitionString());
             $schemaMigrationService = GeneralUtility::makeInstance(SchemaMigrator::class);
             $addCreateChange = $schemaMigrationService->getUpdateSuggestions($sqlStatements);
@@ -360,7 +345,7 @@ class MaintenanceController extends AbstractController
      */
     public function databaseAnalyzerExecuteAction(ServerRequestInterface $request): ResponseInterface
     {
-        $container = $this->loadExtLocalconfDatabaseAndExtTables();
+        $this->loadExtLocalconfDatabaseAndExtTables();
         $messageQueue = new FlashMessageQueue('install');
         $selectedHashes = $request->getParsedBody()['install']['hashes'] ?? [];
         if (empty($selectedHashes)) {
@@ -370,7 +355,7 @@ class MaintenanceController extends AbstractController
                 FlashMessage::WARNING
             ));
         } else {
-            $sqlReader = $container->get(SqlReader::class);
+            $sqlReader = GeneralUtility::makeInstance(SqlReader::class);
             $sqlStatements = $sqlReader->getCreateTableStatementArray($sqlReader->getTablesDefinitionString());
             $schemaMigrationService = GeneralUtility::makeInstance(SchemaMigrator::class);
             $statementHashesToPerform = array_flip($selectedHashes);
@@ -411,12 +396,6 @@ class MaintenanceController extends AbstractController
             'success' => true,
             'stats' => (new ClearTableService())->getTableStatistics(),
             'html' => $view->render(),
-            'buttons' => [
-                [
-                    'btnClass' => 'btn-default t3js-clearTables-stats',
-                    'text' => 'Scan again',
-                ],
-            ],
         ]);
     }
 
@@ -461,12 +440,6 @@ class MaintenanceController extends AbstractController
         return new JsonResponse([
             'success' => true,
             'html' => $view->render(),
-            'buttons' => [
-                [
-                    'btnClass' => 'btn-default t3js-createAdmin-create',
-                    'text' => 'Create administrator user',
-                ],
-            ],
         ]);
     }
 
@@ -481,7 +454,6 @@ class MaintenanceController extends AbstractController
         $username = preg_replace('/\\s/i', '', $request->getParsedBody()['install']['userName']);
         $password = $request->getParsedBody()['install']['userPassword'];
         $passwordCheck = $request->getParsedBody()['install']['userPasswordCheck'];
-        $email = $request->getParsedBody()['install']['userEmail'] ?? '';
         $isSystemMaintainer = ((bool)$request->getParsedBody()['install']['userSystemMaintainer'] == '1') ? true : false;
 
         $messages = new FlashMessageQueue('install');
@@ -528,9 +500,6 @@ class MaintenanceController extends AbstractController
                     'tstamp' => $GLOBALS['EXEC_TIME'],
                     'crdate' => $GLOBALS['EXEC_TIME']
                 ];
-                if (GeneralUtility::validEmail($email)) {
-                    $adminUserFields['email'] = $email;
-                }
                 $connectionPool->getConnectionForTable('be_users')->insert('be_users', $adminUserFields);
 
                 if ($isSystemMaintainer) {

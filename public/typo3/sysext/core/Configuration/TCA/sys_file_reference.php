@@ -39,12 +39,21 @@ return [
         'showRecordFieldList' => 'hidden,uid_local,uid_foreign,tablenames,fieldname,sorting_foreign,table_local,title,description'
     ],
     'columns' => [
+        't3ver_label' => [
+            'label' => 'LLL:EXT:core/Resources/Private/Language/locallang_general.xlf:LGL.versionLabel',
+            'config' => [
+                'type' => 'input',
+                'size' => 30,
+                'max' => 30
+            ]
+        ],
         'sys_language_uid' => [
             'label' => 'LLL:EXT:core/Resources/Private/Language/locallang_general.xlf:LGL.language',
             'config' => [
                 'type' => 'select',
                 'renderType' => 'selectSingle',
                 'foreign_table' => 'sys_language',
+                'foreign_table_where' => 'ORDER BY sys_language.title',
                 'items' => [
                     ['LLL:EXT:core/Resources/Private/Language/locallang_general.xlf:LGL.allLanguages', -1],
                     ['LLL:EXT:core/Resources/Private/Language/locallang_general.xlf:LGL.default_value', 0]

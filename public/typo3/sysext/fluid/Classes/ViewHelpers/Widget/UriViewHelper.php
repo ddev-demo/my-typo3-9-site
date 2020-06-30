@@ -14,7 +14,6 @@ namespace TYPO3\CMS\Fluid\ViewHelpers\Widget;
  * The TYPO3 project - inspiring people to share!
  */
 
-use TYPO3\CMS\Extbase\Mvc\Web\Routing\UriBuilder;
 use TYPO3Fluid\Fluid\Core\Rendering\RenderingContextInterface;
 use TYPO3Fluid\Fluid\Core\ViewHelper\AbstractViewHelper;
 use TYPO3Fluid\Fluid\Core\ViewHelper\Traits\CompileWithRenderStatic;
@@ -42,8 +41,7 @@ class UriViewHelper extends AbstractViewHelper
      */
     public function initializeArguments()
     {
-        // @deprecated
-        $this->registerArgument('useCacheHash', 'bool', 'Deprecated: True whether the cache hash should be appended to the URL', false, null);
+        $this->registerArgument('useCacheHash', 'bool', 'True whether the cache hash should be appended to the URL', false, false);
         $this->registerArgument('addQueryStringMethod', 'string', 'Method to be used for query string');
         $this->registerArgument('action', 'string', 'Target action');
         $this->registerArgument('arguments', 'array', 'Arguments', false, []);
@@ -101,7 +99,6 @@ class UriViewHelper extends AbstractViewHelper
     protected static function getWidgetUri(RenderingContextInterface $renderingContext, array $arguments)
     {
         $controllerContext = $renderingContext->getControllerContext();
-        /** @var UriBuilder $uriBuilder */
         $uriBuilder = $controllerContext->getUriBuilder();
         $argumentPrefix = $controllerContext->getRequest()->getArgumentPrefix();
         $parameters = $arguments['arguments'] ?? [];
@@ -111,22 +108,14 @@ class UriViewHelper extends AbstractViewHelper
         if (($arguments['format'] ?? '') !== '') {
             $parameters['format'] = $arguments['format'];
         }
-        if (isset($arguments['useCacheHash'])) {
-            trigger_error('Using the argument "useCacheHash" in <f:widget.uri> ViewHelper has no effect anymore. Remove the argument in your fluid template, as it will result in a fatal error.', E_USER_DEPRECATED);
-        }
-        $uriBuilder->reset()
+        return $uriBuilder->reset()
             ->setArguments([$argumentPrefix => $parameters])
             ->setSection($arguments['section'])
+            ->setUseCacheHash($arguments['useCacheHash'])
             ->setAddQueryString(true)
+            ->setAddQueryStringMethod($arguments['addQueryStringMethod'])
             ->setArgumentsToBeExcludedFromQueryString([$argumentPrefix, 'cHash'])
             ->setFormat($arguments['format'])
-        ;
-
-        $addQueryStringMethod = $arguments['addQueryStringMethod'] ?? null;
-        if (is_string($addQueryStringMethod)) {
-            $uriBuilder->setAddQueryStringMethod($addQueryStringMethod);
-        }
-
-        return $uriBuilder->build();
+            ->build();
     }
 }

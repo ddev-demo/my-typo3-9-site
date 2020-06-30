@@ -1,6 +1,4 @@
 <?php
-declare(strict_types = 1);
-
 namespace TYPO3\CMS\Extbase\Property\TypeConverter;
 
 /*
@@ -22,7 +20,7 @@ namespace TYPO3\CMS\Extbase\Property\TypeConverter;
 class StringConverter extends \TYPO3\CMS\Extbase\Property\TypeConverter\AbstractTypeConverter
 {
     /**
-     * @var string[]
+     * @var array<string>
      */
     protected $sourceTypes = ['string', 'integer'];
 
@@ -46,7 +44,7 @@ class StringConverter extends \TYPO3\CMS\Extbase\Property\TypeConverter\Abstract
      * @param \TYPO3\CMS\Extbase\Property\PropertyMappingConfigurationInterface $configuration
      * @return string
      */
-    public function convertFrom($source, string $targetType, array $convertedChildProperties = [], \TYPO3\CMS\Extbase\Property\PropertyMappingConfigurationInterface $configuration = null): string
+    public function convertFrom($source, $targetType, array $convertedChildProperties = [], \TYPO3\CMS\Extbase\Property\PropertyMappingConfigurationInterface $configuration = null)
     {
         return (string)$source;
     }

@@ -71,11 +71,6 @@ class LanguageService
     protected $languageFileCache = [];
 
     /**
-     * @var string[][]
-     */
-    protected $labels = [];
-
-    /**
      * LanguageService constructor.
      */
     public function __construct()
@@ -95,9 +90,10 @@ class LanguageService
     public function init($languageKey)
     {
         // Find the requested language in this list based on the $languageKey
+        /** @var \TYPO3\CMS\Core\Localization\Locales $locales */
         $locales = GeneralUtility::makeInstance(Locales::class);
         // Language is found. Configure it:
-        if (in_array($languageKey, $locales->getLocales(), true)) {
+        if (in_array($languageKey, $locales->getLocales())) {
             // The current language key
             $this->lang = $languageKey;
             $this->languageDependencies[] = $languageKey;
@@ -127,7 +123,7 @@ class LanguageService
      */
     public function getLL($index)
     {
-        return $this->getLLL($index, !empty($GLOBALS['LOCAL_LANG']) ? $GLOBALS['LOCAL_LANG'] : $this->labels);
+        return $this->getLLL($index, $GLOBALS['LOCAL_LANG']);
     }
 
     /**
@@ -211,7 +207,7 @@ class LanguageService
             $GLOBALS['TCA_DESCR'][$table]['columns'] = [];
             // Get local-lang for each file in $TCA_DESCR[$table]['refs'] as they are ordered.
             foreach ($GLOBALS['TCA_DESCR'][$table]['refs'] as $llfile) {
-                $localLanguage = $this->includeLanguageFileRaw($llfile);
+                $localLanguage = $this->includeLLFile($llfile, false, true);
                 // Traverse all keys
                 if (is_array($localLanguage['default'])) {
                     foreach ($localLanguage['default'] as $lkey => $lVal) {
@@ -263,29 +259,19 @@ class LanguageService
      * Read language labels will be merged with $LOCAL_LANG (if $setGlobal = TRUE).
      *
      * @param string $fileRef $fileRef is a file-reference
-     * @param bool $setGlobal Setting in global variable $LOCAL_LANG (or returning the variable), do not set this, will be dropped in TYPO3 v11.0
-     * @param bool $mergeLocalOntoDefault, do not set this, will be dropped in TYPO3 v11.0
-     * @return array returns the loaded label file
+     * @param bool $setGlobal Setting in global variable $LOCAL_LANG (or returning the variable)
+     * @param bool $mergeLocalOntoDefault
+     * @return mixed if $setGlobal===TRUE, LL-files set $LOCAL_LANG in global scope, or array is returned from function
      */
-    public function includeLLFile($fileRef, $setGlobal = null, $mergeLocalOntoDefault = null)
+    public function includeLLFile($fileRef, $setGlobal = true, $mergeLocalOntoDefault = false)
     {
-        if ($setGlobal !== null) {
-            trigger_error('LanguageService->includeLLFile() with the second argument set will be removed in TYPO3 v11.0, use "includeLLFile()" with only the file reference.', E_USER_DEPRECATED);
-        } else {
-            $setGlobal = true;
-        }
-        if ($mergeLocalOntoDefault !== null) {
-            trigger_error('LanguageService->includeLLFile() with the third argument set will be removed in TYPO3 v11.0, use "includeLLFile()" with only the file reference.', E_USER_DEPRECATED);
-        } else {
-            $mergeLocalOntoDefault = false;
-        }
         $globalLanguage = [];
         // Get default file
         $localLanguage = $this->readLLfile($fileRef);
         if (is_array($localLanguage) && !empty($localLanguage)) {
             // it depends on, whether we should return the result or set it in the global $LOCAL_LANG array
             if ($setGlobal) {
-                $globalLanguage = (array)($GLOBALS['LOCAL_LANG'] ?? $this->labels ?: []);
+                $globalLanguage = (array)($GLOBALS['LOCAL_LANG'] ?? []);
                 ArrayUtility::mergeRecursiveWithOverrule($globalLanguage, $localLanguage);
             } else {
                 $globalLanguage = $localLanguage;
@@ -302,31 +288,8 @@ class LanguageService
         if (!$setGlobal) {
             return $globalLanguage;
         }
-        $this->labels = $globalLanguage;
         $GLOBALS['LOCAL_LANG'] = $globalLanguage;
-        return $localLanguage;
-    }
-
-    /**
-     * Includes a locallang file (and possibly additional localized version if configured for),
-     * and then puts everything into "default", so "default" is kept as fallback
-     *
-     * @param string $fileRef $fileRef is a file-reference
-     * @return array
-     */
-    protected function includeLanguageFileRaw($fileRef)
-    {
-        $labels = $this->readLLfile($fileRef);
-        if (is_array($labels) && !empty($labels)) {
-            // Merge local onto default
-            if ($this->lang !== 'default' && is_array($labels[$this->lang]) && is_array($labels['default'])) {
-                // array_merge can be used so far the keys are not
-                // numeric - which we assume they are not...
-                $labels['default'] = array_merge($labels['default'], $labels[$this->lang]);
-                unset($labels[$this->lang]);
-            }
-        }
-        return is_array($labels) ? $labels : [];
+        return null;
     }
 
     /**
@@ -378,11 +341,7 @@ class LanguageService
     public function getLabelsWithPrefix($prefix, $strip = '')
     {
         $extraction = [];
-        if (!empty($GLOBALS['LOCAL_LANG']['default'])) {
-            $labels = array_merge((array)$GLOBALS['LOCAL_LANG']['default'], (array)$GLOBALS['LOCAL_LANG'][$this->lang]);
-        } else {
-            $labels = array_merge((array)$this->labels['default'], (array)$this->labels[$this->lang]);
-        }
+        $labels = array_merge((array)$GLOBALS['LOCAL_LANG']['default'], (array)$GLOBALS['LOCAL_LANG'][$this->lang]);
         // Regular expression to strip the selection prefix and possibly something from the label name:
         $labelPattern = '#^' . preg_quote($prefix, '#') . '(' . preg_quote($strip, '#') . ')?#';
         // Iterate through all locallang labels:

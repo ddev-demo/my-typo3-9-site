@@ -1,6 +1,4 @@
 <?php
-declare(strict_types = 1);
-
 namespace TYPO3\CMS\Extbase\Reflection;
 
 /*
@@ -17,14 +15,9 @@ namespace TYPO3\CMS\Extbase\Reflection;
  */
 
 use Doctrine\Common\Annotations\AnnotationReader;
-use phpDocumentor\Reflection\DocBlock\Tags\Param;
-use phpDocumentor\Reflection\DocBlockFactory;
-use Symfony\Component\PropertyInfo\Extractor\ReflectionExtractor;
-use Symfony\Component\PropertyInfo\PropertyInfoExtractor;
-use Symfony\Component\PropertyInfo\Type;
 use TYPO3\CMS\Core\SingletonInterface;
-use TYPO3\CMS\Core\Type\BitSet;
 use TYPO3\CMS\Core\Utility\ClassNamingUtility;
+use TYPO3\CMS\Core\Utility\GeneralUtility;
 use TYPO3\CMS\Core\Utility\StringUtility;
 use TYPO3\CMS\Extbase\Annotation\IgnoreValidation;
 use TYPO3\CMS\Extbase\Annotation\Inject;
@@ -35,17 +28,10 @@ use TYPO3\CMS\Extbase\Annotation\Validate;
 use TYPO3\CMS\Extbase\DomainObject\AbstractEntity;
 use TYPO3\CMS\Extbase\DomainObject\AbstractValueObject;
 use TYPO3\CMS\Extbase\Mvc\Controller\ControllerInterface;
-use TYPO3\CMS\Extbase\Reflection\ClassSchema\Exception\NoSuchMethodException;
-use TYPO3\CMS\Extbase\Reflection\ClassSchema\Exception\NoSuchPropertyException;
-use TYPO3\CMS\Extbase\Reflection\ClassSchema\Method;
-use TYPO3\CMS\Extbase\Reflection\ClassSchema\Property;
-use TYPO3\CMS\Extbase\Reflection\ClassSchema\PropertyCharacteristics;
-use TYPO3\CMS\Extbase\Reflection\DocBlock\Tags\Null_;
-use TYPO3\CMS\Extbase\Reflection\PropertyInfo\Extractor\PhpDocPropertyTypeExtractor;
 use TYPO3\CMS\Extbase\Utility\TypeHandlingUtility;
 use TYPO3\CMS\Extbase\Validation\Exception\InvalidTypeHintException;
 use TYPO3\CMS\Extbase\Validation\Exception\InvalidValidationConfigurationException;
-use TYPO3\CMS\Extbase\Validation\ValidatorClassNameResolver;
+use TYPO3\CMS\Extbase\Validation\ValidatorResolver;
 
 /**
  * A class schema
@@ -53,29 +39,11 @@ use TYPO3\CMS\Extbase\Validation\ValidatorClassNameResolver;
  */
 class ClassSchema
 {
-    private const BIT_CLASS_IS_ENTITY = 1 << 0;
-    private const BIT_CLASS_IS_VALUE_OBJECT = 1 << 1;
-    private const BIT_CLASS_IS_AGGREGATE_ROOT = 1 << 2;
-    private const BIT_CLASS_IS_CONTROLLER = 1 << 3;
-    private const BIT_CLASS_IS_SINGLETON = 1 << 4;
-    private const BIT_CLASS_HAS_CONSTRUCTOR = 1 << 5;
-    private const BIT_CLASS_HAS_INJECT_METHODS = 1 << 6;
-    private const BIT_CLASS_HAS_INJECT_PROPERTIES = 1 << 7;
-
     /**
-     * @var BitSet
+     * Available model types
      */
-    private $bitSet;
-
-    /**
-     * @var array
-     */
-    private static $propertyObjects = [];
-
-    /**
-     * @var array
-     */
-    private static $methodObjects = [];
+    const MODELTYPE_ENTITY = 1;
+    const MODELTYPE_VALUEOBJECT = 2;
 
     /**
      * Name of the class this schema is referring to
@@ -85,6 +53,27 @@ class ClassSchema
     protected $className;
 
     /**
+     * Model type of the class this schema is referring to
+     *
+     * @var int
+     */
+    protected $modelType = 0;
+
+    /**
+     * Whether a repository exists for the class this schema is referring to
+     *
+     * @var bool
+     */
+    protected $aggregateRoot = false;
+
+    /**
+     * The name of the property holding the uuid of an entity, if any.
+     *
+     * @var string
+     */
+    protected $uuidPropertyName;
+
+    /**
      * Properties of the class which need to be persisted
      *
      * @var array
@@ -92,9 +81,38 @@ class ClassSchema
     protected $properties = [];
 
     /**
+     * The properties forming the identity of an object
+     *
      * @var array
      */
-    private $methods = [];
+    protected $identityProperties = [];
+
+    /**
+     * Indicates if the class is a singleton or not.
+     *
+     * @var bool
+     */
+    private $isSingleton;
+
+    /**
+     * @var bool
+     */
+    private $isController;
+
+    /**
+     * @var array
+     */
+    private $methods;
+
+    /**
+     * @var array
+     */
+    private $tags;
+
+    /**
+     * @var array
+     */
+    private $injectProperties = [];
 
     /**
      * @var array
@@ -102,81 +120,37 @@ class ClassSchema
     private $injectMethods = [];
 
     /**
-     * @var PropertyInfoExtractor
-     */
-    private static $propertyInfoExtractor;
-
-    /**
-     * @var DocBlockFactory
-     */
-    private static $docBlockFactory;
-
-    /**
      * Constructs this class schema
      *
      * @param string $className Name of the class this schema is referring to
-     * @throws InvalidTypeHintException
-     * @throws InvalidValidationConfigurationException
+     * @throws \TYPO3\CMS\Extbase\Reflection\Exception\UnknownClassException
      * @throws \ReflectionException
      */
-    public function __construct(string $className)
+    public function __construct($className)
     {
         $this->className = $className;
-        $this->bitSet = new BitSet();
 
         $reflectionClass = new \ReflectionClass($className);
 
-        if ($reflectionClass->implementsInterface(SingletonInterface::class)) {
-            $this->bitSet->set(self::BIT_CLASS_IS_SINGLETON);
-        }
-
-        if ($reflectionClass->implementsInterface(ControllerInterface::class)) {
-            $this->bitSet->set(self::BIT_CLASS_IS_CONTROLLER);
-        }
+        $this->isSingleton = $reflectionClass->implementsInterface(SingletonInterface::class);
+        $this->isController = $reflectionClass->implementsInterface(ControllerInterface::class);
 
         if ($reflectionClass->isSubclassOf(AbstractEntity::class)) {
-            $this->bitSet->set(self::BIT_CLASS_IS_ENTITY);
+            $this->modelType = static::MODELTYPE_ENTITY;
 
             $possibleRepositoryClassName = ClassNamingUtility::translateModelNameToRepositoryName($className);
             if (class_exists($possibleRepositoryClassName)) {
-                $this->bitSet->set(self::BIT_CLASS_IS_AGGREGATE_ROOT);
+                $this->setAggregateRoot(true);
             }
         }
 
         if ($reflectionClass->isSubclassOf(AbstractValueObject::class)) {
-            $this->bitSet->set(self::BIT_CLASS_IS_VALUE_OBJECT);
+            $this->modelType = static::MODELTYPE_VALUEOBJECT;
         }
 
-        if (self::$propertyInfoExtractor === null) {
-            $phpDocExtractor = new PhpDocPropertyTypeExtractor();
-            $reflectionExtractor = new ReflectionExtractor();
-
-            self::$propertyInfoExtractor = new PropertyInfoExtractor(
-                [],
-                [$phpDocExtractor, $reflectionExtractor]
-            );
-        }
-
-        if (self::$docBlockFactory === null) {
-            self::$docBlockFactory = DocBlockFactory::createInstance();
-            self::$docBlockFactory->registerTagHandler('author', Null_::class);
-            self::$docBlockFactory->registerTagHandler('covers', Null_::class);
-            self::$docBlockFactory->registerTagHandler('deprecated', Null_::class);
-            self::$docBlockFactory->registerTagHandler('link', Null_::class);
-            self::$docBlockFactory->registerTagHandler('method', Null_::class);
-            self::$docBlockFactory->registerTagHandler('property-read', Null_::class);
-            self::$docBlockFactory->registerTagHandler('property', Null_::class);
-            self::$docBlockFactory->registerTagHandler('property-write', Null_::class);
-            self::$docBlockFactory->registerTagHandler('return', Null_::class);
-            self::$docBlockFactory->registerTagHandler('see', Null_::class);
-            self::$docBlockFactory->registerTagHandler('since', Null_::class);
-            self::$docBlockFactory->registerTagHandler('source', Null_::class);
-            self::$docBlockFactory->registerTagHandler('throw', Null_::class);
-            self::$docBlockFactory->registerTagHandler('throws', Null_::class);
-            self::$docBlockFactory->registerTagHandler('uses', Null_::class);
-            self::$docBlockFactory->registerTagHandler('var', Null_::class);
-            self::$docBlockFactory->registerTagHandler('version', Null_::class);
-        }
+        $docCommentParser = new DocCommentParser(true);
+        $docCommentParser->parseDocComment($reflectionClass->getDocComment());
+        $this->tags = $docCommentParser->getTagsValues();
 
         $this->reflectProperties($reflectionClass);
         $this->reflectMethods($reflectionClass);
@@ -184,32 +158,39 @@ class ClassSchema
 
     /**
      * @param \ReflectionClass $reflectionClass
-     * @throws \Doctrine\Common\Annotations\AnnotationException
-     * @throws \TYPO3\CMS\Extbase\Validation\Exception\NoSuchValidatorException
      */
-    protected function reflectProperties(\ReflectionClass $reflectionClass): void
+    protected function reflectProperties(\ReflectionClass $reflectionClass)
     {
         $annotationReader = new AnnotationReader();
-
-        $classHasInjectProperties = false;
-        $defaultProperties = $reflectionClass->getDefaultProperties();
 
         foreach ($reflectionClass->getProperties() as $reflectionProperty) {
             $propertyName = $reflectionProperty->getName();
 
-            $propertyCharacteristicsBit = 0;
-            $propertyCharacteristicsBit += $reflectionProperty->isPrivate() ? PropertyCharacteristics::VISIBILITY_PRIVATE : 0;
-            $propertyCharacteristicsBit += $reflectionProperty->isProtected() ? PropertyCharacteristics::VISIBILITY_PROTECTED : 0;
-            $propertyCharacteristicsBit += $reflectionProperty->isPublic() ? PropertyCharacteristics::VISIBILITY_PUBLIC : 0;
-            $propertyCharacteristicsBit += $reflectionProperty->isStatic() ? PropertyCharacteristics::IS_STATIC : 0;
-
             $this->properties[$propertyName] = [
-                'c' => null, // cascade
-                'd' => $defaultProperties[$propertyName] ?? null, // defaultValue
-                'e' => null, // elementType
-                't' => null, // type
-                'v' => [] // validators
+                'default'     => $reflectionProperty->isDefault(),
+                'private'     => $reflectionProperty->isPrivate(),
+                'protected'   => $reflectionProperty->isProtected(),
+                'public'      => $reflectionProperty->isPublic(),
+                'static'      => $reflectionProperty->isStatic(),
+                'type'        => null, // Extbase
+                'elementType' => null, // Extbase
+                'annotations' => [],
+                'tags'        => [],
+                'validators'  => []
             ];
+
+            $docCommentParser = new DocCommentParser(true);
+            $docCommentParser->parseDocComment($reflectionProperty->getDocComment());
+            foreach ($docCommentParser->getTagsValues() as $tag => $values) {
+                $this->properties[$propertyName]['tags'][strtolower($tag)] = $values;
+            }
+
+            $this->properties[$propertyName]['annotations']['inject'] = false;
+            $this->properties[$propertyName]['annotations']['lazy'] = false;
+            $this->properties[$propertyName]['annotations']['transient'] = false;
+            $this->properties[$propertyName]['annotations']['type'] = null;
+            $this->properties[$propertyName]['annotations']['cascade'] = null;
+            $this->properties[$propertyName]['annotations']['dependency'] = null;
 
             $annotations = $annotationReader->getPropertyAnnotations($reflectionProperty);
 
@@ -219,10 +200,12 @@ class ClassSchema
             });
 
             if (count($validateAnnotations) > 0) {
-                foreach ($validateAnnotations as $validateAnnotation) {
-                    $validatorObjectName = ValidatorClassNameResolver::resolve($validateAnnotation->validator);
+                $validatorResolver = GeneralUtility::makeInstance(ValidatorResolver::class);
 
-                    $this->properties[$propertyName]['v'][] = [
+                foreach ($validateAnnotations as $validateAnnotation) {
+                    $validatorObjectName = $validatorResolver->resolveValidatorObjectName($validateAnnotation->validator);
+
+                    $this->properties[$propertyName]['validators'][] = [
                         'name' => $validateAnnotation->validator,
                         'options' => $validateAnnotation->options,
                         'className' => $validatorObjectName,
@@ -230,66 +213,161 @@ class ClassSchema
                 }
             }
 
-            if ($annotationReader->getPropertyAnnotation($reflectionProperty, Lazy::class) instanceof Lazy) {
-                $propertyCharacteristicsBit += PropertyCharacteristics::ANNOTATED_LAZY;
-            }
+            if ($docCommentParser->isTaggedWith('validate')) {
+                trigger_error(
+                    sprintf(
+                        'Property %s::%s is tagged with @validate which is deprecated and will be removed in TYPO3 v10.0.',
+                        $reflectionClass->getName(),
+                        $reflectionProperty->getName()
+                    ),
+                    E_USER_DEPRECATED
+                );
 
-            if ($annotationReader->getPropertyAnnotation($reflectionProperty, Transient::class) instanceof Transient) {
-                $propertyCharacteristicsBit += PropertyCharacteristics::ANNOTATED_TRANSIENT;
-            }
+                $validatorResolver = GeneralUtility::makeInstance(ValidatorResolver::class);
 
-            $isInjectProperty = $propertyName !== 'settings'
-                && ($annotationReader->getPropertyAnnotation($reflectionProperty, Inject::class) instanceof Inject);
+                $validateValues = $docCommentParser->getTagValues('validate');
+                foreach ($validateValues as $validateValue) {
+                    $validatorConfiguration = $validatorResolver->parseValidatorAnnotation($validateValue);
 
-            if ($isInjectProperty) {
-                $propertyCharacteristicsBit += PropertyCharacteristics::ANNOTATED_INJECT;
-                $classHasInjectProperties = true;
-            }
+                    foreach ($validatorConfiguration['validators'] ?? [] as $validator) {
+                        $validatorObjectName = $validatorResolver->resolveValidatorObjectName($validator['validatorName']);
 
-            /** @var Type[] $types */
-            $types = (array)self::$propertyInfoExtractor->getTypes($this->className, $propertyName, ['reflectionProperty' => $reflectionProperty]);
-            $typesCount = count($types);
-
-            if ($typesCount > 0
-                && ($annotation = $annotationReader->getPropertyAnnotation($reflectionProperty, Cascade::class)) instanceof Cascade
-            ) {
-                /** @var Cascade $annotation */
-                $this->properties[$propertyName]['c'] = $annotation->value;
-            }
-
-            if ($typesCount === 1) {
-                $this->properties[$propertyName]['t'] = $types[0]->getClassName() ?? $types[0]->getBuiltinType();
-            } elseif ($typesCount === 2) {
-                [$type, $elementType] = $types;
-                $actualType = $type->getClassName() ?? $type->getBuiltinType();
-
-                if (TypeHandlingUtility::isCollectionType($actualType)
-                    && $elementType->getBuiltinType() === 'array'
-                    && $elementType->getCollectionValueType() instanceof Type
-                    && $elementType->getCollectionValueType()->getClassName() !== null
-                ) {
-                    $this->properties[$propertyName]['t'] = ltrim($actualType, '\\');
-                    $this->properties[$propertyName]['e'] = ltrim($elementType->getCollectionValueType()->getClassName(), '\\');
+                        $this->properties[$propertyName]['validators'][] = [
+                            'name' => $validator['validatorName'],
+                            'options' => $validator['validatorOptions'],
+                            'className' => $validatorObjectName,
+                        ];
+                    }
                 }
             }
 
-            $this->properties[$propertyName]['propertyCharacteristicsBit'] = $propertyCharacteristicsBit;
-        }
+            if ($annotationReader->getPropertyAnnotation($reflectionProperty, Lazy::class) instanceof Lazy) {
+                $this->properties[$propertyName]['annotations']['lazy'] = true;
+            }
 
-        if ($classHasInjectProperties) {
-            $this->bitSet->set(self::BIT_CLASS_HAS_INJECT_PROPERTIES);
+            if ($docCommentParser->isTaggedWith('lazy')) {
+                $this->properties[$propertyName]['annotations']['lazy'] = true;
+                trigger_error(
+                    sprintf(
+                        'Property %s::%s is tagged with @lazy which is deprecated and will be removed in TYPO3 v10.0.',
+                        $reflectionClass->getName(),
+                        $reflectionProperty->getName()
+                    ),
+                    E_USER_DEPRECATED
+                );
+            }
+
+            if ($annotationReader->getPropertyAnnotation($reflectionProperty, Transient::class) instanceof Transient) {
+                $this->properties[$propertyName]['annotations']['transient'] = true;
+            }
+
+            if ($docCommentParser->isTaggedWith('transient')) {
+                $this->properties[$propertyName]['annotations']['transient'] = true;
+                trigger_error(
+                    sprintf(
+                        'Property %s::%s is tagged with @transient which is deprecated and will be removed in TYPO3 v10.0.',
+                        $reflectionClass->getName(),
+                        $reflectionProperty->getName()
+                    ),
+                    E_USER_DEPRECATED
+                );
+            }
+
+            if ($propertyName !== 'settings'
+                && ($annotationReader->getPropertyAnnotation($reflectionProperty, Inject::class) instanceof Inject)
+            ) {
+                try {
+                    $varValue = ltrim($docCommentParser->getTagValues('var')[0], '\\');
+                    $this->properties[$propertyName]['annotations']['inject'] = true;
+                    $this->properties[$propertyName]['annotations']['type'] = $varValue;
+                    $this->properties[$propertyName]['annotations']['dependency'] = $varValue;
+
+                    $this->injectProperties[] = $propertyName;
+                } catch (\Exception $e) {
+                }
+            }
+
+            if ($propertyName !== 'settings' && $docCommentParser->isTaggedWith('inject')) {
+                trigger_error(
+                    sprintf(
+                        'Property %s::%s is tagged with @inject which is deprecated and will be removed in TYPO3 v10.0.',
+                        $reflectionClass->getName(),
+                        $reflectionProperty->getName()
+                    ),
+                    E_USER_DEPRECATED
+                );
+                try {
+                    $varValues = $docCommentParser->getTagValues('var');
+                    $this->properties[$propertyName]['annotations']['inject'] = true;
+                    $this->properties[$propertyName]['annotations']['type'] = ltrim($varValues[0], '\\');
+                    $this->properties[$propertyName]['annotations']['dependency'] = ltrim($varValues[0], '\\');
+
+                    if (!$reflectionProperty->isPublic()) {
+                        trigger_error(
+                            sprintf(
+                                'Property %s::%s is not public and tagged with @inject which is deprecated and will stop working in TYPO3 v10.0.',
+                                $reflectionClass->getName(),
+                                $reflectionProperty->getName()
+                            ),
+                            E_USER_DEPRECATED
+                        );
+                    }
+
+                    $this->injectProperties[] = $propertyName;
+                } catch (\Exception $e) {
+                }
+            }
+
+            if ($docCommentParser->isTaggedWith('var') && !$docCommentParser->isTaggedWith('transient')) {
+                try {
+                    $cascadeAnnotationValues = $docCommentParser->getTagValues('cascade');
+                    $this->properties[$propertyName]['annotations']['cascade'] = $cascadeAnnotationValues[0];
+                } catch (\Exception $e) {
+                }
+
+                if ($this->properties[$propertyName]['annotations']['cascade'] !== null) {
+                    trigger_error(
+                        sprintf(
+                            'Property %s::%s is tagged with @cascade which is deprecated and will be removed in TYPO3 v10.0.',
+                            $reflectionClass->getName(),
+                            $reflectionProperty->getName()
+                        ),
+                        E_USER_DEPRECATED
+                    );
+                }
+
+                if (($annotation = $annotationReader->getPropertyAnnotation($reflectionProperty, Cascade::class)) instanceof Cascade) {
+                    /** @var Cascade $annotation */
+                    $this->properties[$propertyName]['annotations']['cascade'] = $annotation->value;
+                }
+
+                try {
+                    $type = TypeHandlingUtility::parseType(implode(' ', $docCommentParser->getTagValues('var')));
+                } catch (\Exception $e) {
+                    $type = [
+                        'type' => null,
+                        'elementType' => null
+                    ];
+                }
+
+                $this->properties[$propertyName]['type'] = $type['type'] ? ltrim($type['type'], '\\') : null;
+                $this->properties[$propertyName]['elementType'] = $type['elementType'] ? ltrim($type['elementType'], '\\') : null;
+            }
+
+            if ($docCommentParser->isTaggedWith('uuid')) {
+                $this->setUuidPropertyName($propertyName);
+            }
+
+            if ($docCommentParser->isTaggedWith('identity')) {
+                $this->markAsIdentityProperty($propertyName);
+            }
         }
     }
 
     /**
      * @param \ReflectionClass $reflectionClass
-     * @throws InvalidTypeHintException
-     * @throws InvalidValidationConfigurationException
-     * @throws \Doctrine\Common\Annotations\AnnotationException
-     * @throws \ReflectionException
-     * @throws \TYPO3\CMS\Extbase\Validation\Exception\NoSuchValidatorException
      */
-    protected function reflectMethods(\ReflectionClass $reflectionClass): void
+    protected function reflectMethods(\ReflectionClass $reflectionClass)
     {
         $annotationReader = new AnnotationReader();
 
@@ -307,6 +385,9 @@ class ClassSchema
             $this->methods[$methodName]['annotations']  = [];
             $this->methods[$methodName]['isAction']     = StringUtility::endsWith($methodName, 'Action');
 
+            $docCommentParser = new DocCommentParser(true);
+            $docCommentParser->parseDocComment($reflectionMethod->getDocComment());
+
             $argumentValidators = [];
 
             $annotations = $annotationReader->getMethodAnnotations($reflectionMethod);
@@ -316,13 +397,12 @@ class ClassSchema
                 return $annotation instanceof Validate;
             });
 
-            if ($this->methods[$methodName]['isAction']
-                && $this->bitSet->get(self::BIT_CLASS_IS_CONTROLLER)
-                && count($validateAnnotations) > 0
-            ) {
+            if ($this->isController && $this->methods[$methodName]['isAction'] && count($validateAnnotations) > 0) {
+                $validatorResolver = GeneralUtility::makeInstance(ValidatorResolver::class);
+
                 foreach ($validateAnnotations as $validateAnnotation) {
                     $validatorName = $validateAnnotation->validator;
-                    $validatorObjectName = ValidatorClassNameResolver::resolve($validatorName);
+                    $validatorObjectName = $validatorResolver->resolveValidatorObjectName($validatorName);
 
                     $argumentValidators[$validateAnnotation->param][] = [
                         'name' => $validatorName,
@@ -332,72 +412,140 @@ class ClassSchema
                 }
             }
 
+            foreach ($docCommentParser->getTagsValues() as $tag => $values) {
+                if ($tag === 'cli') {
+                    trigger_error(
+                        sprintf(
+                            'Method %s::%s is tagged with @cli which is deprecated and will be removed in TYPO3 v10.0.',
+                            $reflectionClass->getName(),
+                            $reflectionMethod->getName()
+                        ),
+                        E_USER_DEPRECATED
+                    );
+                }
+                if ($tag === 'internal' && $reflectionClass->isSubclassOf(\TYPO3\CMS\Extbase\Mvc\Controller\CommandController::class)) {
+                    trigger_error(
+                        sprintf(
+                            'Command method %s::%s is tagged with @internal which is deprecated and will be removed in TYPO3 v10.0.',
+                            $reflectionClass->getName(),
+                            $reflectionMethod->getName()
+                        ),
+                        E_USER_DEPRECATED
+                    );
+                }
+                if ($tag === 'ignorevalidation') {
+                    trigger_error(
+                        sprintf(
+                            'Method %s::%s is tagged with @ignorevalidation which is deprecated and will be removed in TYPO3 v10.0.',
+                            $reflectionClass->getName(),
+                            $reflectionMethod->getName()
+                        ),
+                        E_USER_DEPRECATED
+                    );
+                }
+                if ($tag === 'flushesCaches') {
+                    trigger_error(
+                        sprintf(
+                            'Method %s::%s is tagged with @flushesCaches which is deprecated and will be removed in TYPO3 v10.0.',
+                            $reflectionClass->getName(),
+                            $reflectionMethod->getName()
+                        ),
+                        E_USER_DEPRECATED
+                    );
+                }
+                if ($tag === 'validate' && $this->isController && $this->methods[$methodName]['isAction']) {
+                    trigger_error(
+                        sprintf(
+                            'Method %s::%s is tagged with @validate which is deprecated and will be removed in TYPO3 v10.0.',
+                            $reflectionClass->getName(),
+                            $reflectionMethod->getName()
+                        ),
+                        E_USER_DEPRECATED
+                    );
+
+                    $validatorResolver = GeneralUtility::makeInstance(ValidatorResolver::class);
+
+                    foreach ($values as $validate) {
+                        $methodValidatorDefinition = $validatorResolver->parseValidatorAnnotation($validate);
+
+                        foreach ($methodValidatorDefinition['validators'] as $validator) {
+                            $validatorObjectName = $validatorResolver->resolveValidatorObjectName($validator['validatorName']);
+
+                            $argumentValidators[$methodValidatorDefinition['argumentName']][] = [
+                                'name' => $validator['validatorName'],
+                                'options' => $validator['validatorOptions'],
+                                'className' => $validatorObjectName,
+                            ];
+                        }
+                    }
+                }
+                $this->methods[$methodName]['tags'][$tag] = array_map(function ($value) use ($tag) {
+                    // not stripping the dollar sign for @validate annotations is just
+                    // a quick fix for a regression introduced in 9.0.0.
+                    // This exception to the rules will vanish once the resolving of
+                    // validators will take place inside this class and not in the
+                    // controller during runtime.
+                    return $tag === 'validate' ? $value : ltrim($value, '$');
+                }, $values);
+            }
+            unset($methodValidatorDefinition);
+
             foreach ($annotations as $annotation) {
                 if ($annotation instanceof IgnoreValidation) {
                     $this->methods[$methodName]['tags']['ignorevalidation'][] = $annotation->argumentName;
                 }
             }
 
-            $docComment = $reflectionMethod->getDocComment();
-            $docComment = is_string($docComment) ? $docComment : '';
+            $this->methods[$methodName]['description'] = $docCommentParser->getDescription();
 
             foreach ($reflectionMethod->getParameters() as $parameterPosition => $reflectionParameter) {
                 /* @var \ReflectionParameter $reflectionParameter */
 
                 $parameterName = $reflectionParameter->getName();
 
-                $ignoreValidationParameters = array_filter($annotations, function ($annotation) use ($parameterName) {
-                    return $annotation instanceof IgnoreValidation && $annotation->argumentName === $parameterName;
-                });
-
                 $this->methods[$methodName]['params'][$parameterName] = [];
                 $this->methods[$methodName]['params'][$parameterName]['position'] = $parameterPosition; // compat
                 $this->methods[$methodName]['params'][$parameterName]['byReference'] = $reflectionParameter->isPassedByReference(); // compat
                 $this->methods[$methodName]['params'][$parameterName]['array'] = $reflectionParameter->isArray(); // compat
                 $this->methods[$methodName]['params'][$parameterName]['optional'] = $reflectionParameter->isOptional();
-                $this->methods[$methodName]['params'][$parameterName]['allowsNull'] = $reflectionParameter->allowsNull();
+                $this->methods[$methodName]['params'][$parameterName]['allowsNull'] = $reflectionParameter->allowsNull(); // compat
                 $this->methods[$methodName]['params'][$parameterName]['class'] = null; // compat
                 $this->methods[$methodName]['params'][$parameterName]['type'] = null;
+                $this->methods[$methodName]['params'][$parameterName]['nullable'] = $reflectionParameter->allowsNull();
+                $this->methods[$methodName]['params'][$parameterName]['default'] = null;
                 $this->methods[$methodName]['params'][$parameterName]['hasDefaultValue'] = $reflectionParameter->isDefaultValueAvailable();
-                $this->methods[$methodName]['params'][$parameterName]['defaultValue'] = null;
+                $this->methods[$methodName]['params'][$parameterName]['defaultValue'] = null; // compat
                 $this->methods[$methodName]['params'][$parameterName]['dependency'] = null; // Extbase DI
-                $this->methods[$methodName]['params'][$parameterName]['ignoreValidation'] = count($ignoreValidationParameters) === 1;
                 $this->methods[$methodName]['params'][$parameterName]['validators'] = [];
 
                 if ($reflectionParameter->isDefaultValueAvailable()) {
-                    $this->methods[$methodName]['params'][$parameterName]['defaultValue'] = $reflectionParameter->getDefaultValue();
+                    $this->methods[$methodName]['params'][$parameterName]['default'] = $reflectionParameter->getDefaultValue();
+                    $this->methods[$methodName]['params'][$parameterName]['defaultValue'] = $reflectionParameter->getDefaultValue(); // compat
                 }
 
-                if (($reflectionType = $reflectionParameter->getType()) instanceof \ReflectionType) {
-                    $this->methods[$methodName]['params'][$parameterName]['type'] = (string)$reflectionType;
-                    $this->methods[$methodName]['params'][$parameterName]['allowsNull'] = $reflectionType->allowsNull();
+                if (($reflectionType = $reflectionParameter->getType()) instanceof \ReflectionNamedType) {
+                    $this->methods[$methodName]['params'][$parameterName]['type'] = $reflectionType->getName();
+                    $this->methods[$methodName]['params'][$parameterName]['nullable'] = $reflectionType->allowsNull();
                 }
 
                 if (($parameterClass = $reflectionParameter->getClass()) instanceof \ReflectionClass) {
                     $this->methods[$methodName]['params'][$parameterName]['class'] = $parameterClass->getName();
                     $this->methods[$methodName]['params'][$parameterName]['type'] = ltrim($parameterClass->getName(), '\\');
-                }
+                } else {
+                    $methodTagsAndValues = $this->methods[$methodName]['tags'];
+                    if (isset($methodTagsAndValues['param'][$parameterPosition])) {
+                        $explodedParameters = explode(' ', $methodTagsAndValues['param'][$parameterPosition]);
+                        if (count($explodedParameters) >= 2) {
+                            if (TypeHandlingUtility::isSimpleType($explodedParameters[0])) {
+                                // ensure that short names of simple types are resolved correctly to the long form
+                                // this is important for all kinds of type checks later on
+                                $typeInfo = TypeHandlingUtility::parseType($explodedParameters[0]);
 
-                if ($docComment !== '' && $this->methods[$methodName]['params'][$parameterName]['type'] === null) {
-                    /*
-                     * We create (redundant) instances here in this loop due to the fact that
-                     * we do not want to analyse all doc blocks of all available methods. We
-                     * use this technique only if we couldn't grasp all necessary data via
-                     * reflection.
-                     *
-                     * Also, if we analyze all method doc blocks, we will trigger numerous errors
-                     * due to non PSR-5 compatible tags in the core and in user land code.
-                     *
-                     * Fetching the data type via doc blocks will also be deprecated and removed
-                     * in the near future.
-                     */
-                    $params = self::$docBlockFactory->create($docComment)
-                        ->getTagsByName('param');
-
-                    if (isset($params[$parameterPosition])) {
-                        /** @var Param $param */
-                        $param = $params[$parameterPosition];
-                        $this->methods[$methodName]['params'][$parameterName]['type'] = ltrim((string)$param->getType(), '\\');
+                                $this->methods[$methodName]['params'][$parameterName]['type'] = ltrim($typeInfo['type'], '\\');
+                            } else {
+                                $this->methods[$methodName]['params'][$parameterName]['type'] = ltrim($explodedParameters[0], '\\');
+                            }
+                        }
                     }
                 }
 
@@ -442,14 +590,6 @@ class ClassSchema
                 $this->injectMethods[] = $methodName;
             }
         }
-
-        if (isset($this->methods['__construct'])) {
-            $this->bitSet->set(self::BIT_CLASS_HAS_CONSTRUCTOR);
-        }
-
-        if (count($this->injectMethods) > 0) {
-            $this->bitSet->set(self::BIT_CLASS_HAS_INJECT_METHODS);
-        }
     }
 
     /**
@@ -463,28 +603,96 @@ class ClassSchema
     }
 
     /**
-     * @throws NoSuchPropertyException
+     * Adds (defines) a specific property and its type.
      *
-     * @param string $propertyName
-     * @return Property
+     * @param string $name Name of the property
+     * @param string $type Type of the property
+     * @param bool $lazy Whether the property should be lazy-loaded when reconstituting
+     * @param string $cascade Strategy to cascade the object graph.
+     * @deprecated since TYPO3 v9, will be removed in TYPO3 v10.0.
      */
-    public function getProperty(string $propertyName): Property
+    public function addProperty($name, $type, $lazy = false, $cascade = '')
     {
-        $properties = $this->buildPropertyObjects();
-
-        if (!isset($properties[$propertyName])) {
-            throw NoSuchPropertyException::create($this->className, $propertyName);
-        }
-
-        return $properties[$propertyName];
+        trigger_error(
+            'This method will be removed in TYPO3 v10.0, properties will be automatically added on ClassSchema construction.',
+            E_USER_DEPRECATED
+        );
+        $type = TypeHandlingUtility::parseType($type);
+        $this->properties[$name] = [
+            'type' => $type['type'],
+            'elementType' => $type['elementType'],
+            'lazy' => $lazy,
+            'cascade' => $cascade
+        ];
     }
 
     /**
-     * @return array|Property[]
+     * Returns the given property defined in this schema. Check with
+     * hasProperty($propertyName) before!
+     *
+     * @param string $propertyName
+     * @return array
      */
-    public function getProperties(): array
+    public function getProperty($propertyName)
     {
-        return $this->buildPropertyObjects();
+        return isset($this->properties[$propertyName]) && is_array($this->properties[$propertyName])
+            ? $this->properties[$propertyName]
+            : [];
+    }
+
+    /**
+     * Returns all properties defined in this schema
+     *
+     * @return array
+     */
+    public function getProperties()
+    {
+        return $this->properties;
+    }
+
+    /**
+     * Sets the model type of the class this schema is referring to.
+     *
+     * @param int $modelType The model type, one of the MODELTYPE_* constants.
+     * @throws \InvalidArgumentException
+     * @deprecated since TYPO3 v9, will be removed in TYPO3 v10.0.
+     */
+    public function setModelType($modelType)
+    {
+        trigger_error(
+            'This method will be removed in TYPO3 v10.0, modelType will be automatically set on ClassSchema construction.',
+            E_USER_DEPRECATED
+        );
+        if ($modelType < self::MODELTYPE_ENTITY || $modelType > self::MODELTYPE_VALUEOBJECT) {
+            throw new \InvalidArgumentException('"' . $modelType . '" is an invalid model type.', 1212519195);
+        }
+        $this->modelType = $modelType;
+    }
+
+    /**
+     * Returns the model type of the class this schema is referring to.
+     *
+     * @return int The model type, one of the MODELTYPE_* constants.
+     * @deprecated since TYPO3 v9, will be removed in TYPO3 v10.0.
+     */
+    public function getModelType()
+    {
+        trigger_error(
+            'This method will be removed in TYPO3 v10.0.',
+            E_USER_DEPRECATED
+        );
+        return $this->modelType;
+    }
+
+    /**
+     * Marks the class if it is root of an aggregate and therefore accessible
+     * through a repository - or not.
+     *
+     * @param bool $isRoot TRUE if it is the root of an aggregate
+     */
+    public function setAggregateRoot($isRoot)
+    {
+        $this->aggregateRoot = $isRoot;
     }
 
     /**
@@ -495,7 +703,7 @@ class ClassSchema
      */
     public function isAggregateRoot(): bool
     {
-        return $this->bitSet->get(self::BIT_CLASS_IS_AGGREGATE_ROOT);
+        return $this->aggregateRoot;
     }
 
     /**
@@ -504,9 +712,83 @@ class ClassSchema
      * @param string $propertyName Name of the property
      * @return bool
      */
-    public function hasProperty(string $propertyName): bool
+    public function hasProperty($propertyName): bool
     {
         return array_key_exists($propertyName, $this->properties);
+    }
+
+    /**
+     * Sets the property marked as uuid of an object with @uuid
+     *
+     * @param string $propertyName
+     * @throws \InvalidArgumentException
+     * @deprecated since TYPO3 v9, will be removed in TYPO3 v10.0.
+     */
+    public function setUuidPropertyName($propertyName)
+    {
+        trigger_error(
+            'Tagging properties with @uuid is deprecated and will be removed in TYPO3 v10.0.',
+            E_USER_DEPRECATED
+        );
+        if (!array_key_exists($propertyName, $this->properties)) {
+            throw new \InvalidArgumentException('Property "' . $propertyName . '" must be added to the class schema before it can be marked as UUID property.', 1233863842);
+        }
+        $this->uuidPropertyName = $propertyName;
+    }
+
+    /**
+     * Gets the name of the property marked as uuid of an object
+     *
+     * @return string
+     * @deprecated since TYPO3 v9, will be removed in TYPO3 v10.0.
+     */
+    public function getUuidPropertyName()
+    {
+        trigger_error(
+            'Tagging properties with @uuid is deprecated and will be removed in TYPO3 v10.0.',
+            E_USER_DEPRECATED
+        );
+        return $this->uuidPropertyName;
+    }
+
+    /**
+     * Marks the given property as one of properties forming the identity
+     * of an object. The property must already be registered in the class
+     * schema.
+     *
+     * @param string $propertyName
+     * @throws \InvalidArgumentException
+     * @deprecated since TYPO3 v9, will be removed in TYPO3 v10.0.
+     */
+    public function markAsIdentityProperty($propertyName)
+    {
+        trigger_error(
+            'Tagging properties with @identity is deprecated and will be removed in TYPO3 v10.0.',
+            E_USER_DEPRECATED
+        );
+        if (!array_key_exists($propertyName, $this->properties)) {
+            throw new \InvalidArgumentException('Property "' . $propertyName . '" must be added to the class schema before it can be marked as identity property.', 1233775407);
+        }
+        if ($this->properties[$propertyName]['annotations']['lazy'] === true) {
+            throw new \InvalidArgumentException('Property "' . $propertyName . '" must not be makred for lazy loading to be marked as identity property.', 1239896904);
+        }
+        $this->identityProperties[$propertyName] = $this->properties[$propertyName]['type'];
+    }
+
+    /**
+     * Gets the properties (names and types) forming the identity of an object.
+     *
+     * @return array
+     * @see markAsIdentityProperty()
+     * @deprecated since TYPO3 v9, will be removed in TYPO3 v10.0.
+     */
+    public function getIdentityProperties()
+    {
+        trigger_error(
+            'Tagging properties with @identity is deprecated and will be removed in TYPO3 v10.0.',
+            E_USER_DEPRECATED
+        );
+        return $this->identityProperties;
     }
 
     /**
@@ -514,32 +796,24 @@ class ClassSchema
      */
     public function hasConstructor(): bool
     {
-        return $this->bitSet->get(self::BIT_CLASS_HAS_CONSTRUCTOR);
+        return isset($this->methods['__construct']);
     }
 
     /**
-     * @throws NoSuchMethodException
-     *
-     * @param string $methodName
-     * @return Method
+     * @param string $name
+     * @return array
      */
-    public function getMethod(string $methodName): Method
+    public function getMethod(string $name): array
     {
-        $methods = $this->buildMethodObjects();
-
-        if (!isset($methods[$methodName])) {
-            throw NoSuchMethodException::create($this->className, $methodName);
-        }
-
-        return $methods[$methodName];
+        return $this->methods[$name] ?? [];
     }
 
     /**
-     * @return array|Method[]
+     * @return array
      */
     public function getMethods(): array
     {
-        return $this->buildMethodObjects();
+        return $this->methods;
     }
 
     /**
@@ -577,7 +851,7 @@ class ClassSchema
      */
     public function isEntity(): bool
     {
-        return $this->bitSet->get(self::BIT_CLASS_IS_ENTITY);
+        return $this->modelType === static::MODELTYPE_ENTITY;
     }
 
     /**
@@ -586,7 +860,7 @@ class ClassSchema
      */
     public function isValueObject(): bool
     {
-        return $this->bitSet->get(self::BIT_CLASS_IS_VALUE_OBJECT);
+        return $this->modelType === static::MODELTYPE_VALUEOBJECT;
     }
 
     /**
@@ -594,7 +868,7 @@ class ClassSchema
      */
     public function isSingleton(): bool
     {
-        return $this->bitSet->get(self::BIT_CLASS_IS_SINGLETON);
+        return $this->isSingleton;
     }
 
     /**
@@ -607,11 +881,19 @@ class ClassSchema
     }
 
     /**
+     * @return array
+     */
+    public function getTags(): array
+    {
+        return $this->tags;
+    }
+
+    /**
      * @return bool
      */
     public function hasInjectProperties(): bool
     {
-        return $this->bitSet->get(self::BIT_CLASS_HAS_INJECT_PROPERTIES);
+        return count($this->injectProperties) > 0;
     }
 
     /**
@@ -619,58 +901,44 @@ class ClassSchema
      */
     public function hasInjectMethods(): bool
     {
-        return $this->bitSet->get(self::BIT_CLASS_HAS_INJECT_METHODS);
+        return count($this->injectMethods) > 0;
     }
 
     /**
-     * @return array|Method[]
+     * @return array
      */
     public function getInjectMethods(): array
     {
-        return array_filter($this->buildMethodObjects(), function ($method) {
-            /** @var Method $method */
-            return $method->isInjectMethod();
-        });
+        $injectMethods = [];
+        foreach ($this->injectMethods as $injectMethodName) {
+            $injectMethods[$injectMethodName] = reset($this->methods[$injectMethodName]['params'])['dependency'];
+        }
+
+        return $injectMethods;
     }
 
     /**
-     * @return array|Property[]
+     * @return array
      */
     public function getInjectProperties(): array
     {
-        return array_filter($this->buildPropertyObjects(), static function ($property) {
-            /** @var Property $property */
-            return $property->isInjectProperty();
-        });
+        $injectProperties = [];
+        foreach ($this->injectProperties as $injectPropertyName) {
+            $injectProperties[$injectPropertyName] = $this->properties[$injectPropertyName]['annotations']['dependency'];
+        }
+
+        return $injectProperties;
     }
 
     /**
-     * @return array|Property[]
+     * @return array
      */
-    private function buildPropertyObjects(): array
+    public function getConstructorArguments(): array
     {
-        if (!isset(static::$propertyObjects[$this->className])) {
-            static::$propertyObjects[$this->className] = [];
-            foreach ($this->properties as $propertyName => $propertyDefinition) {
-                static::$propertyObjects[$this->className][$propertyName] = new Property($propertyName, $propertyDefinition);
-            }
+        if (!$this->hasConstructor()) {
+            return [];
         }
 
-        return static::$propertyObjects[$this->className];
-    }
-
-    /**
-     * @return array|Method[]
-     */
-    private function buildMethodObjects(): array
-    {
-        if (!isset(static::$methodObjects[$this->className])) {
-            static::$methodObjects[$this->className] = [];
-            foreach ($this->methods as $methodName => $methodDefinition) {
-                static::$methodObjects[$this->className][$methodName] = new Method($methodName, $methodDefinition, $this->className);
-            }
-        }
-
-        return static::$methodObjects[$this->className];
+        return $this->methods['__construct']['params'];
     }
 }

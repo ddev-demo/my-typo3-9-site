@@ -23,19 +23,24 @@ use TYPO3\CMS\Core\Context\LanguageAspect;
 use TYPO3\CMS\Core\Context\LanguageAspectFactory;
 use TYPO3\CMS\Core\Database\ConnectionPool;
 use TYPO3\CMS\Core\Database\Query\Restriction\DeletedRestriction;
-use TYPO3\CMS\Core\Domain\Repository\PageRepository;
 use TYPO3\CMS\Core\Exception\Page\RootLineException;
 use TYPO3\CMS\Core\Exception\SiteNotFoundException;
+use TYPO3\CMS\Core\Http\Uri;
 use TYPO3\CMS\Core\Routing\InvalidRouteArgumentsException;
 use TYPO3\CMS\Core\Routing\RouterInterface;
+use TYPO3\CMS\Core\Routing\SiteMatcher;
 use TYPO3\CMS\Core\Site\Entity\Site;
 use TYPO3\CMS\Core\Site\Entity\SiteInterface;
 use TYPO3\CMS\Core\Site\Entity\SiteLanguage;
 use TYPO3\CMS\Core\Site\SiteFinder;
 use TYPO3\CMS\Core\Utility\GeneralUtility;
+use TYPO3\CMS\Core\Utility\HttpUtility;
 use TYPO3\CMS\Core\Utility\MathUtility;
 use TYPO3\CMS\Core\Utility\RootlineUtility;
+use TYPO3\CMS\Frontend\Compatibility\LegacyDomainResolver;
 use TYPO3\CMS\Frontend\ContentObject\TypolinkModifyLinkConfigForPageLinksHookInterface;
+use TYPO3\CMS\Frontend\Page\CacheHashCalculator;
+use TYPO3\CMS\Frontend\Page\PageRepository;
 
 /**
  * Builds a TypoLink to a certain page
@@ -49,8 +54,11 @@ class PageLinkBuilder extends AbstractTypolinkBuilder
     public function build(array &$linkDetails, string $linkText, string $target, array $conf): array
     {
         $tsfe = $this->getTypoScriptFrontendController();
-        if (empty($linkDetails['pageuid']) || $linkDetails['pageuid'] === 'current') {
-            // If no id is given
+        // Checking if the id-parameter is an alias.
+        if (!empty($linkDetails['pagealias'])) {
+            $linkDetails['pageuid'] = $tsfe->sys_page->getPageIdFromAlias($linkDetails['pagealias']);
+        } elseif (empty($linkDetails['pageuid']) || $linkDetails['pageuid'] === 'current') {
+            // If no id or alias is given
             $linkDetails['pageuid'] = $tsfe->id;
         }
 
@@ -76,6 +84,7 @@ class PageLinkBuilder extends AbstractTypolinkBuilder
             /** @var TypolinkModifyLinkConfigForPageLinksHookInterface $hookObject */
             $conf = $hookObject->modifyPageLinkConfiguration($conf, $linkDetails, $page);
         }
+        $enableLinksAcrossDomains = $tsfe->config['config']['typolinkEnableLinksAcrossDomains'];
         if ($conf['no_cache.']) {
             $conf['no_cache'] = (string)$this->contentObjectRenderer->stdWrap($conf['no_cache'], $conf['no_cache.']);
         }
@@ -125,7 +134,10 @@ class PageLinkBuilder extends AbstractTypolinkBuilder
             // menu. Mount points always work in the content of the current domain and we must not change
             // domain if MP variables exist.
             // If we link across domains and page is free type shortcut, we must resolve the shortcut first!
-            if ((int)$page['doktype'] === PageRepository::DOKTYPE_SHORTCUT
+            // If we do not do it, TYPO3 will fail to (1) link proper page in RealURL/CoolURI because
+            // they return relative links and (2) show proper page if no RealURL/CoolURI exists when link is clicked
+            if ($enableLinksAcrossDomains
+                && (int)$page['doktype'] === PageRepository::DOKTYPE_SHORTCUT
                 && (int)$page['shortcut_mode'] === PageRepository::SHORTCUT_MODE_NONE
             ) {
                 // Save in case of broken destination or endless loop
@@ -146,10 +158,13 @@ class PageLinkBuilder extends AbstractTypolinkBuilder
                 }
             }
         }
-
-        if (isset($conf['useCacheHash'])) {
-            // This option will be removed in TYPO3 v11.0.
-            trigger_error('Setting typolink.useCacheHash has no effect anymore. Remove the option in all your TypoScript code and Fluid templates.', E_USER_DEPRECATED);
+        if ($conf['useCacheHash']) {
+            $params = $tsfe->linkVars . $addQueryParams . '&id=' . $page['uid'];
+            if (trim($params, '& ') !== '') {
+                $cHash = GeneralUtility::makeInstance(CacheHashCalculator::class)->generateForParameters($params);
+                $addQueryParams .= $cHash ? '&cHash=' . $cHash : '';
+            }
+            unset($params);
         }
 
         // get config.linkVars and prepend them before the actual GET parameters
@@ -166,15 +181,14 @@ class PageLinkBuilder extends AbstractTypolinkBuilder
         // Override language property if not being set already
         if (isset($queryParameters['L']) && !isset($conf['language'])) {
             $conf['language'] = (int)$queryParameters['L'];
-            unset($queryParameters['L']);
         }
 
         // Check if the target page has a site configuration
         try {
-            $siteOfTargetPage = GeneralUtility::makeInstance(SiteFinder::class)->getSiteByPageId((int)$page['uid']);
+            $siteOfTargetPage = GeneralUtility::makeInstance(SiteFinder::class)->getSiteByPageId((int)$page['uid'], null, $queryParameters['MP'] ?? '');
             $currentSite = $this->getCurrentSite();
         } catch (SiteNotFoundException $e) {
-            // Usually happens in tests, as sites with configuration should be available everywhere.
+            // Usually happens in tests, as Pseudo Sites should be available everywhere.
             $siteOfTargetPage = null;
             $currentSite = null;
         }
@@ -193,16 +207,20 @@ class PageLinkBuilder extends AbstractTypolinkBuilder
             }
             // Check if the target page can be access depending on l18n_cfg
             if (!$tsfe->sys_page->isPageSuitableForLanguage($page, $languageAspect)) {
-                $languageField = $GLOBALS['TCA']['pages']['ctrl']['languageField'] ?? null;
-                $languageOfPageRecord = (int)($page[$languageField] ?? 0);
-                if ($languageOfPageRecord === 0 && GeneralUtility::hideIfDefaultLanguage($page['l18n_cfg'])) {
+                if ($siteLanguageOfTargetPage->getLanguageId() === 0 && GeneralUtility::hideIfDefaultLanguage($page['l18n_cfg'])) {
                     throw new UnableToLinkException('Default language of page  "' . $linkDetails['typoLinkParameter'] . '" is hidden, so "' . $linkText . '" was not linked.', 1551621985, null, $linkText);
                 }
-                if ($languageOfPageRecord > 0 && !isset($page['_PAGES_OVERLAY']) && GeneralUtility::hideIfNotTranslated($page['l18n_cfg'])) {
+                // If the requested language is not the default language and the page has no overlay for this language
+                // generating a link would cause a 404 error when using this like if one of those conditions apply:
+                //  - The page is set to be hidden if it is not translated (evaluated in TSFE)
+                //  - The site configuration has a "strict" fallback set (evaluated in the Router - very early)
+                if ($siteLanguageOfTargetPage->getLanguageId() > 0 && !isset($page['_PAGES_OVERLAY']) && (GeneralUtility::hideIfNotTranslated($page['l18n_cfg']) || $siteLanguageOfTargetPage->getFallbackType() === 'strict')) {
                     throw new UnableToLinkException('Fallback to default language of page "' . $linkDetails['typoLinkParameter'] . '" is disabled, so "' . $linkText . '" was not linked.', 1551621996, null, $linkText);
                 }
             }
 
+            // No need for any L parameter with Site handling
+            unset($queryParameters['L']);
             if ($pageType) {
                 $queryParameters['type'] = (int)$pageType;
             }
@@ -216,6 +234,8 @@ class PageLinkBuilder extends AbstractTypolinkBuilder
             } else {
                 // URL has a scheme, possibly because someone requested a full URL. So now lets check if the URL
                 // is on the same site pagetree. If this is the case, we'll treat it as internal
+                // @todo: currently this does not check if the target page is a mounted page in a different site,
+                // so it is treating this as an absolute URL, which is wrong
                 if ($currentSite instanceof Site && $currentSite->getRootPageId() === $siteOfTargetPage->getRootPageId()) {
                     $treatAsExternalLink = false;
                 }
@@ -231,7 +251,25 @@ class PageLinkBuilder extends AbstractTypolinkBuilder
                 }
             }
         } else {
-            throw new UnableToLinkException('Could not link to page with ID: ' . $page['uid'], 1546887172, null, $linkText);
+            // Now overlay the page in the target language, in order to have valid title attributes etc.
+            if (isset($conf['language']) && $conf['language'] > 0 && $conf['language'] !== 'current') {
+                $page = $tsfe->sys_page->getPageOverlay($page, (int)$conf['language']);
+            }
+            if ($conf['language'] === 0 && GeneralUtility::hideIfDefaultLanguage($page['l18n_cfg'])) {
+                throw new UnableToLinkException('Default language of page  "' . $linkDetails['typoLinkParameter'] . '" is hidden, so "' . $linkText . '" was not linked.', 1529527301, null, $linkText);
+            }
+            // If the requested language is not the default language and the page has no overlay for this language
+            // generating a link would cause a 404 error when using this like if the page is set to be hidden
+            // if it is not translated (evaluated in TSFE)
+            if ($conf['language'] > 0 && !isset($page['_PAGES_OVERLAY']) && GeneralUtility::hideIfNotTranslated($page['l18n_cfg'])) {
+                throw new UnableToLinkException('Fallback to default language of page "' . $linkDetails['typoLinkParameter'] . '" is disabled, so "' . $linkText . '" was not linked.', 1529527488, null, $linkText);
+            }
+
+            // If the typolink.language parameter was set, ensure that this is added to L query parameter
+            if (!isset($queryParameters['L']) && MathUtility::canBeInterpretedAsInteger($conf['language'] ?? false)) {
+                $queryParameters['L'] = $conf['language'];
+            }
+            list($url, $target) = $this->generateUrlForPageWithoutSiteConfiguration($page, $queryParameters, $conf, $pageType, $sectionMark, $target, $MPvarAcc);
         }
 
         // If link is to an access restricted page which should be redirected, then find new URL:
@@ -303,6 +341,7 @@ class PageLinkBuilder extends AbstractTypolinkBuilder
         // Set the "pageuid" to the default-language page ID.
         $linkDetails['pageuid'] = (int)$languageParentPage['uid'];
         $configuration['language'] = $language;
+        $linkDetails['parameters'] .= '&L=' . $language;
         return $languageParentPage;
     }
 
@@ -379,25 +418,149 @@ class PageLinkBuilder extends AbstractTypolinkBuilder
             $queryParameters['no_cache'] = 1;
         }
 
-        try {
-            $uri = $siteOfTargetPage->getRouter()->generateUri(
-                $targetPageId,
-                $queryParameters,
-                $fragment,
-                $useAbsoluteUrl ? RouterInterface::ABSOLUTE_URL : RouterInterface::ABSOLUTE_PATH
-            );
-        } catch (InvalidRouteArgumentsException $e) {
-            throw new UnableToLinkException('The target page could not be linked. Error: ' . $e->getMessage(), 1535472406);
+        if ($fragment
+            && $useAbsoluteUrl === false
+            && $currentSiteLanguage === $siteLanguageOfTargetPage
+            && $targetPageId === (int)$GLOBALS['TSFE']->id
+            && (empty($conf['addQueryString']) || !isset($conf['addQueryString.']))
+            && !$GLOBALS['TSFE']->config['config']['baseURL']
+            && count($queryParameters) === 1 // _language is always set
+            ) {
+            $uri = (new Uri())->withFragment($fragment);
+        } else {
+            try {
+                $uri = $siteOfTargetPage->getRouter()->generateUri(
+                    $targetPageId,
+                    $queryParameters,
+                    $fragment,
+                    $useAbsoluteUrl ? RouterInterface::ABSOLUTE_URL : RouterInterface::ABSOLUTE_PATH
+                );
+            } catch (InvalidRouteArgumentsException $e) {
+                throw new UnableToLinkException('The target page could not be linked. Error: ' . $e->getMessage(), 1535472406);
+            }
+            // Override scheme, but only if the site does not define a scheme yet AND the site defines a domain/host
+            if ($useAbsoluteUrl && !$uri->getScheme() && $uri->getHost()) {
+                $scheme = $conf['forceAbsoluteUrl.']['scheme'] ?? 'https';
+                $uri = $uri->withScheme($scheme);
+            }
         }
-        // Override scheme, but only if the site does not define a scheme yet AND the site defines a domain/host
-        if ($useAbsoluteUrl && !$uri->getScheme() && $uri->getHost()) {
-            $scheme = $conf['forceAbsoluteUrl.']['scheme'] ?? 'https';
-            $uri = $uri->withScheme($scheme);
-        }
+
         return $uri;
     }
 
     /**
+     * Generate a URL for a page without site configuration
+     *
+     * @param array $page
+     * @param array $additionalQueryParams
+     * @param array $conf
+     * @param string $pageType
+     * @param string $sectionMark
+     * @param string $target
+     * @param array $MPvarAcc
+     * @return array
+     */
+    protected function generateUrlForPageWithoutSiteConfiguration(array $page, array $additionalQueryParams, array $conf, string $pageType, string $sectionMark, string $target, array $MPvarAcc): array
+    {
+        // Build a string out of the query parameters
+        $additionalQueryParams = http_build_query($additionalQueryParams, '', '&', PHP_QUERY_RFC3986);
+        if (!empty($additionalQueryParams)) {
+            $additionalQueryParams = '&' . $additionalQueryParams;
+        }
+
+        $tsfe = $this->getTypoScriptFrontendController();
+        $enableLinksAcrossDomains = $tsfe->config['config']['typolinkEnableLinksAcrossDomains'];
+        $targetDomain = '';
+        $currentDomain = (string)GeneralUtility::getIndpEnv('HTTP_HOST');
+        if (!empty($MPvarAcc)) {
+            $domainResolver = GeneralUtility::makeInstance(LegacyDomainResolver::class);
+            $targetDomainRecord = $domainResolver->matchPageId((int)$page['uid'], $GLOBALS['TYPO3_REQUEST']);
+            // Do not prepend the domain if it is the current hostname
+            if (!empty($targetDomainRecord) && !$targetDomainRecord['isCurrentDomain']) {
+                $targetDomain = $targetDomainRecord['domainName'];
+            }
+        }
+        $absoluteUrlScheme = GeneralUtility::getIndpEnv('TYPO3_SSL') ? 'https' : 'http';
+        // URL shall be absolute:
+        if (isset($conf['forceAbsoluteUrl']) && $conf['forceAbsoluteUrl']) {
+            // Override scheme:
+            if (isset($conf['forceAbsoluteUrl.']['scheme']) && $conf['forceAbsoluteUrl.']['scheme']) {
+                $absoluteUrlScheme = $conf['forceAbsoluteUrl.']['scheme'];
+            }
+            // If no domain records are defined, use current domain
+            $targetDomain = $targetDomain ?: $currentDomain;
+            // If go for an absolute link, add site path if it's not taken care about by absRefPrefix
+            if (!$tsfe->absRefPrefix && $targetDomain === $currentDomain) {
+                $targetDomain = $currentDomain . rtrim(GeneralUtility::getIndpEnv('TYPO3_SITE_PATH'), '/');
+            }
+        }
+        // If target page has a different domain and the current domain's linking scheme (e.g. RealURL/...) should not be used
+        if ($targetDomain !== '' && $targetDomain !== $currentDomain && !$enableLinksAcrossDomains) {
+            $target = $target ?: $this->resolveTargetAttribute($conf, 'extTarget', false, $tsfe->extTarget);
+            // Convert IDNA-like domain (if any)
+            if (!preg_match('/^[a-z0-9.\\-]*$/i', $targetDomain)) {
+                $targetDomain = GeneralUtility::idnaEncode($targetDomain);
+            }
+            $url = $absoluteUrlScheme . '://' . $targetDomain . '/index.php?id=' . $page['uid'] . $additionalQueryParams;
+        } else {
+            // Internal link or current domain's linking scheme should be used
+            // Internal target:
+            $target = (isset($page['target']) && trim($page['target'])) ? $page['target'] : $target;
+            if (empty($target)) {
+                $target = $this->resolveTargetAttribute($conf, 'target', true, $tsfe->intTarget);
+            }
+            $LD = $this->createTotalUrlAndLinkData($page, $target, $conf['no_cache'], $additionalQueryParams, $pageType, $targetDomain);
+            if ($targetDomain !== '') {
+                // We will add domain only if URL does not have it already.
+                if ($enableLinksAcrossDomains && $targetDomain !== $currentDomain && !empty($tsfe->absRefPrefix)) {
+                    // Get rid of the absRefPrefix if necessary. absRefPrefix is applicable only
+                    // to the current web site. If we have domain here it means we link across
+                    // domains. absRefPrefix can contain domain name, which will screw up
+                    // the link to the external domain.
+                    $prefixLength = strlen($tsfe->absRefPrefix);
+                    if (strpos($LD['totalURL'], $tsfe->absRefPrefix) === 0) {
+                        $LD['totalURL'] = substr($LD['totalURL'], $prefixLength);
+                    }
+                }
+                $urlParts = parse_url($LD['totalURL']);
+                if (empty($urlParts['host'])) {
+                    $LD['totalURL'] = $absoluteUrlScheme . '://' . $targetDomain . ($LD['totalURL'][0] === '/' ? '' : '/') . $LD['totalURL'];
+                }
+            }
+            $url = $LD['totalURL'];
+        }
+        $url .= $sectionMark;
+        // If sectionMark is set, there is no baseURL AND the current page is the page the link is to,
+        // check if there are any additional parameters or addQueryString parameters and if not, drop the url.
+        if ($sectionMark
+            && !$tsfe->config['config']['baseURL']
+            && (int)$page['uid'] === (int)$tsfe->id
+            && !trim($additionalQueryParams)
+            && (empty($conf['addQueryString']) || !isset($conf['addQueryString.']))
+        ) {
+            $currentQueryArray = [];
+            parse_str(GeneralUtility::getIndpEnv('QUERY_STRING'), $currentQueryArray);
+
+            if (empty($currentQueryArray)) {
+                list(, $URLparams) = explode('?', $url);
+                list($URLparams) = explode('#', (string)$URLparams);
+                parse_str($URLparams . $LD['orig_type'], $URLparamsArray);
+                // Type nums must match as well as page ids
+                if ((int)$URLparamsArray['type'] === (int)$tsfe->type) {
+                    unset($URLparamsArray['id']);
+                    unset($URLparamsArray['type']);
+                    // If there are no parameters left.... set the new url.
+                    if (empty($URLparamsArray)) {
+                        $url = $sectionMark;
+                    }
+                }
+            }
+        }
+        return [$url, $target];
+    }
+
+    /**
+     * Returns the &MP variable value for a page id.
      * The function will do its best to find a MP value that will keep the page id inside the current Mount Point rootline if any.
      *
      * @param int $pageId page id
@@ -484,7 +647,7 @@ class PageLinkBuilder extends AbstractTypolinkBuilder
      */
     protected function initializeMountPointMap(string $defaultMountPoints = null, string $mapRootPointList = null): array
     {
-        $runtimeCache = GeneralUtility::makeInstance(CacheManager::class)->getCache('runtime');
+        $runtimeCache = GeneralUtility::makeInstance(CacheManager::class)->getCache('cache_runtime');
         $mountPointMap = $runtimeCache->get('pageLinkBuilderMountPointMap') ?: [];
         if (!empty($mountPointMap) || (empty($mapRootPointList) && empty($defaultMountPoints))) {
             return $mountPointMap;
@@ -557,7 +720,7 @@ class PageLinkBuilder extends AbstractTypolinkBuilder
                 ->removeAll()
                 ->add(GeneralUtility::makeInstance(DeletedRestriction::class));
             $queryResult = $queryBuilder
-                ->select('uid', 'pid', 'doktype', 'mount_pid', 'mount_pid_ol')
+                ->select('uid', 'pid', 'doktype', 'mount_pid', 'mount_pid_ol', 't3ver_state')
                 ->from('pages')
                 ->where(
                     $queryBuilder->expr()->eq(
@@ -604,6 +767,80 @@ class PageLinkBuilder extends AbstractTypolinkBuilder
     }
 
     /**
+     * The mother of all functions creating links/URLs etc in a TypoScript environment.
+     * See the references below.
+     * Basically this function takes care of issues such as type,id,alias and Mount Points, URL rewriting (through hooks), M5/B6 encoded parameters etc.
+     * It is important to pass all links created through this function since this is the guarantee that globally configured settings for link creating are observed and that your applications will conform to the various/many configuration options in TypoScript Templates regarding this.
+     *
+     * @param array $page The page record of the page to which we are creating a link. Needed due to fields like uid, alias, target, title and sectionIndex_uid.
+     * @param string $target Target string
+     * @param bool $no_cache If set, then the "&no_cache=1" parameter is included in the URL.
+     * @param string $addParams Additional URL parameters to set in the URL. Syntax is "&foo=bar&foo2=bar2" etc. Also used internally to add parameters if needed.
+     * @param string $typeOverride If you set this value to something else than a blank string, then the typeNumber used in the link will be forced to this value. Normally the typeNum is based on the target set OR on $this->getTypoScriptFrontendController()->config['config']['forceTypeValue'] if found.
+     * @param string $targetDomain The target Doamin, if any was detected in typolink
+     * @return array Contains keys like "totalURL", "url", "sectionIndex", "linkVars", "no_cache", "type" of which "totalURL" is normally the value you would use while the other keys contains various parts that was used to construct "totalURL
+     */
+    protected function createTotalUrlAndLinkData($page, $target, $no_cache, $addParams = '', $typeOverride = '', $targetDomain = '')
+    {
+        $LD = [];
+        // Adding Mount Points, "&MP=", parameter for the current page if any is set
+        // but non other set explicitly
+        if (strpos($addParams, '&MP=') === false) {
+            $mountPointParameter = $this->getMountPointParameterFromRootPointMaps((int)$page['uid']);
+            if ($mountPointParameter) {
+                $addParams .= '&MP=' . rawurlencode($mountPointParameter);
+            }
+        }
+        // Setting ID/alias:
+        $script = 'index.php';
+        if ($page['alias']) {
+            $LD['url'] = $script . '?id=' . rawurlencode($page['alias']);
+        } else {
+            $LD['url'] = $script . '?id=' . $page['uid'];
+        }
+        // typeNum
+        $typeNum = $this->getTypoScriptFrontendController()->tmpl->setup[$target . '.']['typeNum'];
+        if (!MathUtility::canBeInterpretedAsInteger($typeOverride) && (int)$this->getTypoScriptFrontendController()->config['config']['forceTypeValue']) {
+            $typeOverride = (int)$this->getTypoScriptFrontendController()->config['config']['forceTypeValue'];
+        }
+        if ((string)$typeOverride !== '') {
+            $typeNum = $typeOverride;
+        }
+        // Override...
+        if ($typeNum) {
+            $LD['type'] = '&type=' . (int)$typeNum;
+        } else {
+            $LD['type'] = '';
+        }
+        // Preserving the type number.
+        $LD['orig_type'] = $LD['type'];
+        // noCache
+        $LD['no_cache'] = $no_cache ? '&no_cache=1' : '';
+        // linkVars
+        if ($addParams) {
+            $LD['linkVars'] = HttpUtility::buildQueryString(GeneralUtility::explodeUrl2Array($this->getTypoScriptFrontendController()->linkVars . $addParams), '&');
+        } else {
+            $LD['linkVars'] = $this->getTypoScriptFrontendController()->linkVars;
+        }
+        // Add absRefPrefix if exists.
+        $LD['url'] = $this->getTypoScriptFrontendController()->absRefPrefix . $LD['url'];
+        // If the special key 'sectionIndex_uid' (added 'manually' in tslib/menu.php to the page-record) is set, then the link jumps directly to a section on the page.
+        $LD['sectionIndex'] = $page['sectionIndex_uid'] ? '#c' . $page['sectionIndex_uid'] : '';
+        // Compile the normal total url
+        $LD['totalURL'] = rtrim($LD['url'] . $LD['type'] . $LD['no_cache'] . $LD['linkVars'] . $this->getTypoScriptFrontendController()->getMethodUrlIdToken, '?') . $LD['sectionIndex'];
+        // Call post processing function for link rendering:
+        $_params = [
+            'LD' => &$LD,
+            'args' => ['page' => $page, 'oTarget' => $target, 'no_cache' => $no_cache, 'script' => $script, 'addParams' => $addParams, 'typeOverride' => $typeOverride, 'targetDomain' => $targetDomain],
+            'typeNum' => $typeNum
+        ];
+        foreach ($GLOBALS['TYPO3_CONF_VARS']['SC_OPTIONS']['t3lib/class.t3lib_tstemplate.php']['linkData-PostProc'] ?? [] as $_funcRef) {
+            GeneralUtility::callUserFunction($_funcRef, $_params, $this->getTypoScriptFrontendController()->tmpl);
+        }
+        return $LD;
+    }
+
+    /**
      * Check if we have a site object in the current request. if null, this usually means that
      * this class was called from CLI context.
      *
@@ -615,9 +852,9 @@ class PageLinkBuilder extends AbstractTypolinkBuilder
             return $GLOBALS['TYPO3_REQUEST']->getAttribute('site', null);
         }
         if (MathUtility::canBeInterpretedAsInteger($GLOBALS['TSFE']->id) && $GLOBALS['TSFE']->id > 0) {
-            $finder = GeneralUtility::makeInstance(SiteFinder::class);
+            $matcher = GeneralUtility::makeInstance(SiteMatcher::class);
             try {
-                $site = $finder->getSiteByPageId((int)$GLOBALS['TSFE']->id);
+                $site = $matcher->matchByPageId((int)$GLOBALS['TSFE']->id);
             } catch (SiteNotFoundException $e) {
                 $site = null;
             }

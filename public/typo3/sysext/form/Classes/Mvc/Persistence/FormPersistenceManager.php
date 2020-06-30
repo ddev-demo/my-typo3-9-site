@@ -119,12 +119,14 @@ class FormPersistenceManager implements FormPersistenceManagerInterface
         $this->formSettings = GeneralUtility::makeInstance(ObjectManager::class)
             ->get(ConfigurationManagerInterface::class)
             ->getConfiguration(ConfigurationManagerInterface::CONFIGURATION_TYPE_YAML_SETTINGS, 'form');
-        $this->runtimeCache = GeneralUtility::makeInstance(CacheManager::class)->getCache('runtime');
+        $this->runtimeCache = GeneralUtility::makeInstance(CacheManager::class)->getCache('cache_runtime');
     }
 
     /**
      * Load the array formDefinition identified by $persistenceIdentifier, and return it.
      * Only files with the extension .yaml or .form.yaml are loaded.
+     * Form definition file names which not ends with ".form.yaml" has been
+     * deprecated in TYPO3 v9 and will not be supported in TYPO3 v10.0.
      *
      * @param string $persistenceIdentifier
      * @return array
@@ -277,6 +279,11 @@ class FormPersistenceManager implements FormPersistenceManagerInterface
         $forms = [];
 
         foreach ($this->retrieveYamlFilesFromStorageFolders() as $file) {
+            /** @var Folder $folder */
+            $folder = $file->getParentFolder();
+            // TODO: deprecated since TYPO3 v9, will be removed in TYPO3 v10.0
+            $formReadOnly = $folder->getCombinedIdentifier() === '1:/user_upload/';
+
             $form = $this->loadMetaData($file);
 
             if (!$this->looksLikeAFormDefinition($form)) {
@@ -289,7 +296,7 @@ class FormPersistenceManager implements FormPersistenceManagerInterface
                     'identifier' => $form['identifier'],
                     'name' => $form['label'] ?? $form['identifier'],
                     'persistenceIdentifier' => $persistenceIdentifier,
-                    'readOnly' => false,
+                    'readOnly' => $formReadOnly,
                     'removable' => true,
                     'location' => 'storage',
                     'duplicateIdentifier' => false,
@@ -297,6 +304,19 @@ class FormPersistenceManager implements FormPersistenceManagerInterface
                     'fileUid' => $form['fileUid'],
                 ];
                 $identifiers[$form['identifier']]++;
+            } else {
+                $forms[] = [
+                    'identifier' => $form['identifier'],
+                    'name' => $form['label'] ?? $form['identifier'],
+                    'persistenceIdentifier' => $persistenceIdentifier,
+                    'readOnly' => true,
+                    'removable' => false,
+                    'location' => 'storage',
+                    'duplicateIdentifier' => false,
+                    'invalid' => false,
+                    'deprecatedFileExtension' => true,
+                    'fileUid' => $form['fileUid'],
+                ];
             }
         }
 
@@ -317,6 +337,19 @@ class FormPersistenceManager implements FormPersistenceManagerInterface
                         'fileUid' => $form['fileUid'],
                     ];
                     $identifiers[$form['identifier']]++;
+                } else {
+                    $forms[] = [
+                        'identifier' => $form['identifier'],
+                        'name' => $form['label'] ?? $form['identifier'],
+                        'persistenceIdentifier' => $fullPath,
+                        'readOnly' => true,
+                        'removable' => false,
+                        'location' => 'extension',
+                        'duplicateIdentifier' => false,
+                        'invalid' => false,
+                        'deprecatedFileExtension' => true,
+                        'fileUid' => $form['fileUid'],
+                    ];
                 }
             }
         }
@@ -361,7 +394,7 @@ class FormPersistenceManager implements FormPersistenceManagerInterface
                 Folder::FILTER_MODE_USE_OWN_AND_STORAGE_FILTERS,
                 true
             );
-            $filesFromStorageFolders = $filesFromStorageFolders + $files;
+            $filesFromStorageFolders = array_merge($filesFromStorageFolders, array_values($files));
             $storage->resetFileAndFolderNameFiltersToDefault();
         }
 
@@ -405,6 +438,7 @@ class FormPersistenceManager implements FormPersistenceManagerInterface
     public function getAccessibleFormStorageFolders(): array
     {
         $storageFolders = [];
+
         if (
             !isset($this->formSettings['persistenceManager']['allowedFileMounts'])
             || !is_array($this->formSettings['persistenceManager']['allowedFileMounts'])
@@ -414,8 +448,9 @@ class FormPersistenceManager implements FormPersistenceManagerInterface
         }
 
         foreach ($this->formSettings['persistenceManager']['allowedFileMounts'] as $allowedFileMount) {
-            list($storageUid, $fileMountIdentifier) = explode(':', $allowedFileMount, 2);
-            $fileMountIdentifier = rtrim($fileMountIdentifier, '/') . '/';
+            [$storageUid, $fileMountPath] = explode(':', $allowedFileMount, 2);
+            // like "/form_definitions/" or "/group_homes/1/form_definitions/"
+            $fileMountPath = rtrim($fileMountPath, '/') . '/';
 
             try {
                 $storage = $this->getStorageByUid((int)$storageUid);
@@ -423,15 +458,41 @@ class FormPersistenceManager implements FormPersistenceManagerInterface
                 continue;
             }
 
+            $isStorageFileMount = false;
+            $parentFolder = $storage->getRootLevelFolder(false);
+
+            foreach ($storage->getFileMounts() as $storageFileMount) {
+                /** @var \TYPO3\CMS\Core\Resource\Folder */
+                $storageFileMountFolder = $storageFileMount['folder'];
+
+                // Normally should use ResourceStorage::isWithinFolder() to check if the configured file mount path is within a storage file mount but this requires a valid Folder object and thus a directory which already exists. And the folder could simply not exist yet.
+                if (StringUtility::beginsWith($fileMountPath, $storageFileMountFolder->getIdentifier())) {
+                    $isStorageFileMount = true;
+                    $parentFolder = $storageFileMountFolder;
+                }
+            }
+
+            // Get storage folder object, create it if missing
             try {
-                $folder = $storage->getFolder($fileMountIdentifier);
-            } catch (FolderDoesNotExistException $e) {
-                $storage->createFolder($fileMountIdentifier);
-                continue;
+                $fileMountFolder = $storage->getFolder($fileMountPath);
             } catch (InsufficientFolderAccessPermissionsException $e) {
                 continue;
+            } catch (FolderDoesNotExistException $e) {
+                if ($isStorageFileMount) {
+                    $fileMountPath = substr(
+                        $fileMountPath,
+                        strlen($parentFolder->getIdentifier())
+                    );
+                }
+
+                try {
+                    $fileMountFolder = $storage->createFolder($fileMountPath, $parentFolder);
+                } catch (InsufficientFolderAccessPermissionsException $e) {
+                    continue;
+                }
             }
-            $storageFolders[$allowedFileMount] = $folder;
+
+            $storageFolders[$allowedFileMount] = $fileMountFolder;
         }
         return $storageFolders;
     }
@@ -702,7 +763,14 @@ class FormPersistenceManager implements FormPersistenceManagerInterface
             $this->looksLikeAFormDefinition($formDefinition)
             && !$this->hasValidFileExtension($persistenceIdentifier)
         ) {
-            throw new PersistenceManagerException(sprintf('Form definition "%s" does not end with ".form.yaml".', $persistenceIdentifier), 1531160649);
+            if (strpos($persistenceIdentifier, 'EXT:') === 0) {
+                trigger_error(
+                    'Form definition file name ("' . $persistenceIdentifier . '") which does not end with ".form.yaml" will not be supported in TYPO3 v10.0.',
+                    E_USER_DEPRECATED
+                );
+            } elseif (strpos($persistenceIdentifier, 'EXT:') !== 0) {
+                throw new PersistenceManagerException(sprintf('Form definition "%s" does not end with ".form.yaml".', $persistenceIdentifier), 1531160649);
+            }
         }
     }
 
@@ -769,6 +837,6 @@ class FormPersistenceManager implements FormPersistenceManagerInterface
      */
     protected function looksLikeAFormDefinition(array $data): bool
     {
-        return isset($data['identifier'], $data['type']) && !empty($data['identifier']) && trim($data['type']) === 'Form';
+        return isset($data['identifier'], $data['type']) && !empty($data['identifier']) && $data['type'] === 'Form';
     }
 }

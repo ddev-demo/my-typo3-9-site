@@ -67,7 +67,7 @@ class FormProtectionFactory
      * @param string $classNameOrType Name of a form protection class, or one
      *                                of the pre-defined form protection types:
      *                                frontend, backend, installtool
-     * @param array|mixed[] $constructorArguments Arguments for the class-constructor
+     * @param array<int, mixed> $constructorArguments Arguments for the class-constructor
      * @return \TYPO3\CMS\Core\FormProtection\AbstractFormProtection the requested instance
      */
     public static function get($classNameOrType = 'default', ...$constructorArguments)
@@ -179,14 +179,14 @@ class FormProtectionFactory
      * and stores it internally.
      *
      * @param string $className
-     * @param array|mixed[] $constructorArguments
+     * @param array<int, mixed> $constructorArguments
      * @throws \InvalidArgumentException
      * @return AbstractFormProtection
      */
     protected static function createInstance($className, ...$constructorArguments)
     {
         if (!class_exists($className)) {
-            throw new \InvalidArgumentException('$className must be the name of an existing class, but actually was "' . $className . '".', 1285352962);
+            throw new \InvalidArgumentException('$className must be the name of an existing class, but ' . 'actually was "' . $className . '".', 1285352962);
         }
         $instance = GeneralUtility::makeInstance($className, ...$constructorArguments);
         if (!$instance instanceof AbstractFormProtection) {

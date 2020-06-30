@@ -79,16 +79,6 @@ return [
             'Important-83768-RemoveReferrerCheck.rst',
         ],
     ],
-    '$GLOBALS[\'TYPO3_CONF_VARS\'][\'SYS\'][\'caching\'][\'cacheConfigurations\'][\'extbase_reflection\']' => [
-        'restFiles' => [
-            'Breaking-87558-ConsolidateExtbaseCaches.rst',
-        ],
-    ],
-    '$GLOBALS[\'TYPO3_CONF_VARS\'][\'SYS\'][\'caching\'][\'cacheConfigurations\'][\'extbase_datamapfactory_datamap\']' => [
-        'restFiles' => [
-            'Breaking-87558-ConsolidateExtbaseCaches.rst',
-        ],
-    ],
 
     // Hooks
     '$GLOBALS[\'TYPO3_CONF_VARS\'][\'SC_OPTIONS\'][\'t3lib/class.t3lib_befunc.php\'][\'getFlexFormDSClass\']' => [
@@ -122,7 +112,6 @@ return [
     '$GLOBALS[\'TYPO3_CONF_VARS\'][\'EXT\'][\'extConf\']' => [
         'restFiles' => [
             'Deprecation-82254-DeprecateGLOBALSTYPO3_CONF_VARSEXTextConf.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
         ],
     ],
     '$GLOBALS[\'TYPO3_CONF_VARS\'][\'EXT\'][\'allowSystemInstall\']' => [
@@ -133,13 +122,11 @@ return [
     '$GLOBALS[\'TYPO3_CONF_VARS\'][\'SC_OPTIONS\'][\'t3lib/class.t3lib_div.php\'][\'devLog\']' => [
         'restFiles' => [
             'Deprecation-52694-DeprecatedGeneralUtilitydevLog.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
         ],
     ],
     '$GLOBALS[\'TYPO3_CONF_VARS\'][\'SYS\'][\'enableDeprecationLog\']' => [
         'restFiles' => [
             'Deprecation-82438-DeprecationMethods.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
         ],
     ],
     '$GLOBALS[\'TYPO3_CONF_VARS\'][\'BE\'][\'fileExtensions\'][\'webspace\'][\'allow\']' => [
@@ -155,19 +142,16 @@ return [
     '$GLOBALS[\'TYPO3_CONF_VARS\'][\'SC_OPTIONS\'][\'t3lib/class.t3lib_parsehtml_proc.php\'][\'modifyParams_LinksRte_PostProc\']' => [
         'restFiles' => [
             'Deprecation-83252-Link-tagSyntaxProcesssing.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
         ],
     ],
     '$GLOBALS[\'TYPO3_CONF_VARS\'][\'SC_OPTIONS\'][\'t3lib/class.t3lib_parsehtml_proc.php\'][\'modifyParams_LinksDb_PostProc\']' => [
         'restFiles' => [
             'Deprecation-83252-Link-tagSyntaxProcesssing.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
         ],
     ],
     '$GLOBALS[\'TYPO3_CONF_VARS\'][\'SC_OPTIONS\'][\'TYPO3\CMS\Recordlist\RecordList\DatabaseRecordList\'][\'buildQueryParameters\']' => [
         'restFiles' => [
             'Deprecation-83740-CleanupOfAbstractRecordListBreaksHook.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
         ],
     ],
     '$GLOBALS[\'TYPO3_CONF_VARS\'][\'SC_OPTIONS\'][\'tslib/class.tslib_adminpanel.php\'][\'extendAdminPanel\']' => [
@@ -183,14 +167,12 @@ return [
     ],
     '$GLOBALS[\'TYPO3_CONF_VARS\'][\'SC_OPTIONS\'][\'ext/saltedpasswords\'][\'saltMethods\']' => [
         'restFiles' => [
-            'Deprecation-85804-SaltedPasswordHashClassDeprecations.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
+            'Deprecation-85804-SaltedPasswordHashClassDeprecations.rst'
         ],
     ],
     '$GLOBALS[\'TYPO3_CONF_VARS\'][\'SC_OPTIONS\'][\'tslib/class.tslib_fe.php\'][\'hook_previewInfo\']' => [
         'restFiles' => [
             'Deprecation-85878-EidUtilityAndVariousTSFEMethods.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
         ],
     ],
     '$GLOBALS[\'TYPO3_CONF_VARS\'][\'SC_OPTIONS\'][\'extbase\'][\'commandControllers\']' => [
@@ -201,124 +183,41 @@ return [
     '$GLOBALS[\'TYPO3_CONF_VARS\'][\'SC_OPTIONS\'][\'tslib/class.tslib_fe.php\'][\'tslib_fe-PostProc\']' => [
         'restFiles' => [
             'Deprecation-86279-VariousHooksAndPSR-15Middlewares.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
         ],
     ],
     '$GLOBALS[\'TYPO3_CONF_VARS\'][\'SC_OPTIONS\'][\'tslib/class.tslib_fe.php\'][\'connectToDB\']' => [
         'restFiles' => [
             'Deprecation-86279-VariousHooksAndPSR-15Middlewares.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
         ],
     ],
     '$GLOBALS[\'TYPO3_CONF_VARS\'][\'SC_OPTIONS\'][\'tslib/class.tslib_fe.php\'][\'initFEuser\']' => [
         'restFiles' => [
             'Deprecation-86279-VariousHooksAndPSR-15Middlewares.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
         ],
     ],
     '$GLOBALS[\'TYPO3_CONF_VARS\'][\'SC_OPTIONS\'][\'tslib/index_ts.php\'][\'preBeUser\']' => [
         'restFiles' => [
             'Deprecation-86279-VariousHooksAndPSR-15Middlewares.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
         ],
     ],
     '$GLOBALS[\'TYPO3_CONF_VARS\'][\'SC_OPTIONS\'][\'tslib/index_ts.php\'][\'postBeUser\']' => [
         'restFiles' => [
             'Deprecation-86279-VariousHooksAndPSR-15Middlewares.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
         ],
     ],
     '$GLOBALS[\'TYPO3_CONF_VARS\'][\'SC_OPTIONS\'][\'tslib/class.tslib_fe.php\'][\'checkAlternativeIdMethods-PostProc\']' => [
         'restFiles' => [
             'Deprecation-86279-VariousHooksAndPSR-15Middlewares.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
         ],
     ],
     '$GLOBALS[\'TYPO3_CONF_VARS\'][\'SC_OPTIONS\'][\'tslib/index_ts.php\'][\'preprocessRequest\']' => [
         'restFiles' => [
             'Deprecation-86279-VariousHooksAndPSR-15Middlewares.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
         ],
     ],
     '$GLOBALS[\'TYPO3_CONF_VARS\'][\'SC_OPTIONS\'][\'tslib/class.tslib_fe.php\'][\'checkDataSubmission\']' => [
         'restFiles' => [
             'Deprecation-86279-VariousHooksAndPSR-15Middlewares.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
-        ],
-    ],
-    '$GLOBALS[\'TYPO3_CONF_VARS\'][\'SC_OPTIONS\'][\'t3lib/class.t3lib_tstemplate.php\'][\'linkData-PostProc\']' => [
-        'restFiles' => [
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
-        ],
-    ],
-    '$GLOBALS[\'TYPO3_CONF_VARS\'][\'FE\'][\'pageNotFound_handling\']' => [
-        'restFiles' => [
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
-            'Breaking-88376-RemovedObsoletePageNotFound_handlingSettings.rst',
-        ],
-    ],
-    '$GLOBALS[\'TYPO3_CONF_VARS\'][\'FE\'][\'pageNotFound_handling_statheader\']' => [
-        'restFiles' => [
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
-            'Breaking-88376-RemovedObsoletePageNotFound_handlingSettings.rst',
-        ],
-    ],
-    '$GLOBALS[\'TYPO3_CONF_VARS\'][\'FE\'][\'pageNotFound_handling_accessdeniedheader\']' => [
-        'restFiles' => [
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
-            'Breaking-88376-RemovedObsoletePageNotFound_handlingSettings.rst',
-        ],
-    ],
-    '$GLOBALS[\'TYPO3_CONF_VARS\'][\'FE\'][\'pageUnavailable_handling\']' => [
-        'restFiles' => [
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
-            'Breaking-88376-RemovedObsoletePageNotFound_handlingSettings.rst',
-        ],
-    ],
-    '$GLOBALS[\'TYPO3_CONF_VARS\'][\'FE\'][\'pageUnavailable_handling_statheader\']' => [
-        'restFiles' => [
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
-            'Breaking-88376-RemovedObsoletePageNotFound_handlingSettings.rst',
-        ],
-    ],
-    '$GLOBALS[\'TCA\'][\'sys_history\']' => [
-        'restFiles' => [
-            'Breaking-87936-TCAForSysHistoryRemoved.rst',
-        ],
-    ],
-    '$GLOBALS[\'TYPO3_CONF_VARS\'][\'FE\'][\'get_url_id_token\']' => [
-        'restFiles' => [
-            'Breaking-88458-RemovedFrontendTrackUserFtuFunctionality.rst',
-        ],
-    ],
-    '$GLOBALS[\'TYPO3_MISC\'][\'microtime_start\']' => [
-        'restFiles' => [
-            'Breaking-88498-GlobalDataForTimeTrackerStatisticsRemoved.rst',
-        ],
-    ],
-    '$GLOBALS[\'TYPO3_MISC\'][\'microtime_end\']' => [
-        'restFiles' => [
-            'Breaking-88498-GlobalDataForTimeTrackerStatisticsRemoved.rst',
-        ],
-    ],
-    '$GLOBALS[\'TYPO3_MISC\'][\'microtime_BE_USER_start\']' => [
-        'restFiles' => [
-            'Breaking-88498-GlobalDataForTimeTrackerStatisticsRemoved.rst',
-        ],
-    ],
-    '$GLOBALS[\'TYPO3_MISC\'][\'microtime_BE_USER_end\']' => [
-        'restFiles' => [
-            'Breaking-88498-GlobalDataForTimeTrackerStatisticsRemoved.rst',
-        ],
-    ],
-    '$GLOBALS[\'T3_VAR\'][\'softRefParser\']' => [
-        'restFiles' => [
-            'Breaking-88638-StreamlinedSoftRefParserReferenceLookup.rst',
-        ],
-    ],
-    '$GLOBALS[\'T3_VAR\'][\'ext\'][\'indexed_search\'][\'indexLocalFiles\']' => [
-        'restFiles' => [
-            'Breaking-88660-GLOBALST3_VARRemoved.rst',
         ],
     ],
 ];

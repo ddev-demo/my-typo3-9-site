@@ -18,15 +18,17 @@ namespace TYPO3\CMS\Frontend\Http;
 
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
-use Psr\Http\Server\RequestHandlerInterface;
+use Psr\Http\Server\RequestHandlerInterface as PsrRequestHandlerInterface;
 use TYPO3\CMS\Core\Core\Environment;
 use TYPO3\CMS\Core\Http\NullResponse;
+use TYPO3\CMS\Core\Http\RequestHandlerInterface;
 use TYPO3\CMS\Core\Http\Response;
 use TYPO3\CMS\Core\Page\PageRenderer;
 use TYPO3\CMS\Core\Site\Entity\SiteLanguage;
 use TYPO3\CMS\Core\TimeTracker\TimeTracker;
 use TYPO3\CMS\Core\Type\File\ImageInfo;
 use TYPO3\CMS\Core\TypoScript\TypoScriptService;
+use TYPO3\CMS\Core\Utility\ArrayUtility;
 use TYPO3\CMS\Core\Utility\GeneralUtility;
 use TYPO3\CMS\Core\Utility\PathUtility;
 use TYPO3\CMS\Frontend\ContentObject\ContentObjectRenderer;
@@ -54,13 +56,59 @@ use TYPO3\CMS\Frontend\Resource\FilePathSanitizer;
  *
  * Then the right HTTP response headers are compiled together and sent as well.
  */
-class RequestHandler implements RequestHandlerInterface
+class RequestHandler implements RequestHandlerInterface, PsrRequestHandlerInterface
 {
     /**
      * Instance of the timetracker
      * @var TimeTracker
      */
     protected $timeTracker;
+
+    /**
+     * Handles a frontend request
+     *
+     * @param ServerRequestInterface $request
+     * @return ResponseInterface
+     */
+    public function handleRequest(ServerRequestInterface $request): ResponseInterface
+    {
+        return $this->handle($request);
+    }
+
+    /**
+     * Puts parameters that have been added or removed from the global _GET or _POST arrays
+     * into the given request (however, the PSR-7 request information takes precedence).
+     *
+     * @param ServerRequestInterface $request
+     * @return ServerRequestInterface
+     */
+    protected function addModifiedGlobalsToIncomingRequest(ServerRequestInterface $request): ServerRequestInterface
+    {
+        $originalGetParameters = $request->getAttribute('_originalGetParameters', null);
+        if ($originalGetParameters !== null && !empty($_GET) && $_GET !== $originalGetParameters) {
+            // Find out what has been changed.
+            $modifiedGetParameters = ArrayUtility::arrayDiffAssocRecursive($_GET ?? [], $originalGetParameters);
+            if (!empty($modifiedGetParameters)) {
+                $queryParams = array_replace_recursive($modifiedGetParameters, $request->getQueryParams());
+                $request = $request->withQueryParams($queryParams);
+                $GLOBALS['TYPO3_REQUEST'] = $request;
+                $this->timeTracker->setTSlogMessage('GET parameters have been modified during Request building in a hook.');
+            }
+        }
+        // do same for $_POST if the request is a POST request
+        $originalPostParameters = $request->getAttribute('_originalPostParameters', null);
+        if ($request->getMethod() === 'POST' && $originalPostParameters !== null && !empty($_POST) && $_POST !== $originalPostParameters) {
+            // Find out what has been changed
+            $modifiedPostParameters = ArrayUtility::arrayDiffAssocRecursive($_POST ?? [], $originalPostParameters);
+            if (!empty($modifiedPostParameters)) {
+                $parsedBody = array_replace_recursive($modifiedPostParameters, $request->getParsedBody());
+                $request = $request->withParsedBody($parsedBody);
+                $GLOBALS['TYPO3_REQUEST'] = $request;
+                $this->timeTracker->setTSlogMessage('POST parameters have been modified during Request building in a hook.');
+            }
+        }
+        return $request;
+    }
 
     /**
      * Sets the global GET and POST to the values, so if people access $_GET and $_POST
@@ -85,9 +133,7 @@ class RequestHandler implements RequestHandlerInterface
                 $GLOBALS['HTTP_POST_VARS'] = $_POST;
             }
         }
-        $GLOBALS['TYPO3_REQUEST'] = $request;
     }
-
     /**
      * Handles a frontend request, after finishing running middlewares
      *
@@ -101,6 +147,8 @@ class RequestHandler implements RequestHandlerInterface
         /** @var TypoScriptFrontendController $controller */
         $controller = $GLOBALS['TSFE'];
 
+        // safety net, will be removed in TYPO3 v10.0. Aligns $_GET/$_POST to the incoming request.
+        $request = $this->addModifiedGlobalsToIncomingRequest($request);
         $this->resetGlobalsToCurrentRequest($request);
 
         // Generate page
@@ -123,6 +171,7 @@ class RequestHandler implements RequestHandlerInterface
             $this->timeTracker->pull($this->timeTracker->LR ? $controller->content : '');
             $this->timeTracker->decStackPointer();
 
+            $controller->setAbsRefPrefix();
             $controller->generatePage_postProcessing();
             $this->timeTracker->pull();
         }
@@ -150,6 +199,25 @@ class RequestHandler implements RequestHandlerInterface
             $controller->processContentForOutput();
             $this->timeTracker->pull();
         }
+        // Store session data for fe_users
+        $controller->fe_user->storeSessionData();
+
+        // @deprecated since TYPO3 v9.3, will be removed in TYPO3 v10.0.
+        $redirectResponse = $controller->redirectToExternalUrl(true);
+        if ($redirectResponse instanceof ResponseInterface) {
+            $controller->sendHttpHeadersDirectly();
+            return $redirectResponse;
+        }
+
+        // Statistics
+        $GLOBALS['TYPO3_MISC']['microtime_end'] = microtime(true);
+        if ($isOutputting && ($controller->config['config']['debug'] ?? !empty($GLOBALS['TYPO3_CONF_VARS']['FE']['debug']))) {
+            $response = $response->withHeader('X-TYPO3-Parsetime', $this->timeTracker->getParseTime() . 'ms');
+        }
+
+        // Preview info
+        // @deprecated since TYPO3 v9.4, will be removed in TYPO3 v10.0.
+        $controller->previewInfo(true);
 
         // Hook for "end-of-frontend"
         $_params = ['pObj' => &$controller];
@@ -157,11 +225,14 @@ class RequestHandler implements RequestHandlerInterface
             GeneralUtility::callUserFunction($_funcRef, $_params, $controller);
         }
 
+        // Finish time tracking (started in TYPO3\CMS\Frontend\Middleware\TimeTrackerInitialization)
+        $this->timeTracker->pull();
+
         if ($isOutputting) {
             $response->getBody()->write($controller->content);
-            return $response;
         }
-        return new NullResponse();
+
+        return $isOutputting ? $response : new NullResponse();
     }
 
     /**
@@ -216,10 +287,15 @@ class RequestHandler implements RequestHandlerInterface
         // Reset the content variables:
         $controller->content = '';
         $htmlTagAttributes = [];
-        $htmlLang = $siteLanguage && $siteLanguage->getTwoLetterIsoCode() ? $siteLanguage->getTwoLetterIsoCode() : '';
+        $htmlLang = $controller->config['config']['htmlTag_langKey'] ?? ($controller->sys_language_isocode ?: 'en');
+        $direction = $controller->config['config']['htmlTag_dir'] ?? null;
+        if ($siteLanguage !== null) {
+            $direction = $siteLanguage->getDirection();
+            $htmlLang = $siteLanguage->getHreflang();
+        }
 
-        if ($siteLanguage && $siteLanguage->getDirection()) {
-            $htmlTagAttributes['dir'] = htmlspecialchars($siteLanguage->getDirection());
+        if ($direction) {
+            $htmlTagAttributes['dir'] = htmlspecialchars($direction);
         }
         // Setting document type:
         $docTypeParts = [];
@@ -247,7 +323,6 @@ class RequestHandler implements RequestHandlerInterface
         }
         // Part 2: DTD
         $doctype = $controller->config['config']['doctype'] ?? null;
-        $defaultTypeAttributeForJavaScript = 'text/javascript';
         if ($doctype) {
             switch ($doctype) {
                 case 'xhtml_trans':
@@ -276,7 +351,6 @@ class RequestHandler implements RequestHandlerInterface
     "http://www.w3.org/MarkUp/DTD/xhtml-rdfa-1.dtd">';
                     break;
                 case 'html5':
-                    $defaultTypeAttributeForJavaScript = '';
                     $docTypeParts[] = '<!DOCTYPE html>';
                     if ($xmlDocument) {
                         $pageRenderer->setMetaCharsetTag('<meta charset="|" />');
@@ -296,15 +370,12 @@ class RequestHandler implements RequestHandlerInterface
             } else {
                 $pageRenderer->setMetaCharsetTag('<meta charset="|">');
             }
-            $defaultTypeAttributeForJavaScript = '';
         }
-        if ($htmlLang) {
-            if ($controller->xhtmlVersion) {
-                $htmlTagAttributes['xml:lang'] = $htmlLang;
-            }
-            if ($controller->xhtmlVersion < 110 || $doctype === 'html5') {
-                $htmlTagAttributes['lang'] = $htmlLang;
-            }
+        if ($controller->xhtmlVersion) {
+            $htmlTagAttributes['xml:lang'] = $htmlLang;
+        }
+        if ($controller->xhtmlVersion < 110 || $doctype === 'html5') {
+            $htmlTagAttributes['lang'] = $htmlLang;
         }
         if ($controller->xhtmlVersion || $doctype === 'html5' && $xmlDocument) {
             // We add this to HTML5 to achieve a slightly better backwards compatibility
@@ -419,7 +490,7 @@ class RequestHandler implements RequestHandlerInterface
                                 $cssFileConfig['alternate'] ? 'alternate stylesheet' : 'stylesheet',
                                 $cssFileConfig['media'] ?: 'all',
                                 $cssFileConfig['title'] ?: '',
-                                $cssFileConfig['external'] ? false : empty($cssFileConfig['disableCompression']),
+                                $cssFileConfig['external']  || (bool)$cssFileConfig['inline'] ? false : empty($cssFileConfig['disableCompression']),
                                 (bool)$cssFileConfig['forceOnTop'],
                                 $cssFileConfig['allWrap'],
                                 (bool)$cssFileConfig['excludeFromConcatenation'] || (bool)$cssFileConfig['inline'],
@@ -462,7 +533,7 @@ class RequestHandler implements RequestHandlerInterface
                                 $cssFileConfig['alternate'] ? 'alternate stylesheet' : 'stylesheet',
                                 $cssFileConfig['media'] ?: 'all',
                                 $cssFileConfig['title'] ?: '',
-                                $cssFileConfig['external'] ? false : empty($cssFileConfig['disableCompression']),
+                                $cssFileConfig['external'] || (bool)$cssFileConfig['inline'] ? false : empty($cssFileConfig['disableCompression']),
                                 (bool)$cssFileConfig['forceOnTop'],
                                 $cssFileConfig['allWrap'],
                                 (bool)$cssFileConfig['excludeFromConcatenation'] || (bool)$cssFileConfig['inline'],
@@ -482,6 +553,29 @@ class RequestHandler implements RequestHandlerInterface
         if (trim($style)) {
             $this->addCssToPageRenderer($controller, $style, true, 'additionalTSFEInlineStyle');
         }
+        // Javascript Libraries
+        if (isset($controller->pSetup['javascriptLibs.']) && is_array($controller->pSetup['javascriptLibs.'])) {
+            // @deprecated since TYPO3 v9, will be removed in TYPO3 v10.0, the setting page.javascriptLibs has been deprecated and will be removed in TYPO3 v10.0.
+            trigger_error('The setting page.javascriptLibs will be removed in TYPO3 v10.0.', E_USER_DEPRECATED);
+
+            // Include jQuery into the page renderer
+            if (!empty($controller->pSetup['javascriptLibs.']['jQuery'])) {
+                // @deprecated since TYPO3 v9, will be removed in TYPO3 v10.0, the setting page.javascriptLibs.jQuery has been deprecated and will be removed in TYPO3 v10.0.
+                trigger_error('The setting page.javascriptLibs.jQuery will be removed in TYPO3 v10.0.', E_USER_DEPRECATED);
+
+                $jQueryTS = $controller->pSetup['javascriptLibs.']['jQuery.'];
+                // Check if version / source is set, if not set variable to "NULL" to use the default of the page renderer
+                $version = $jQueryTS['version'] ?? null;
+                $source = $jQueryTS['source'] ?? null;
+                // When "noConflict" is not set or "1" enable the default jQuery noConflict mode, otherwise disable the namespace
+                if (!isset($jQueryTS['noConflict']) || !empty($jQueryTS['noConflict'])) {
+                    $namespace = 'noConflict';
+                } else {
+                    $namespace = PageRenderer::JQUERY_NAMESPACE_NONE;
+                }
+                $pageRenderer->loadJquery($version, $source, $namespace, true);
+            }
+        }
         // JavaScript library files
         if (isset($controller->pSetup['includeJSLibs.']) && is_array($controller->pSetup['includeJSLibs.'])) {
             foreach ($controller->pSetup['includeJSLibs.'] as $key => $JSfile) {
@@ -500,7 +594,10 @@ class RequestHandler implements RequestHandlerInterface
                     }
                     if ($ss) {
                         $jsFileConfig = &$controller->pSetup['includeJSLibs.'][$key . '.'];
-                        $type = $jsFileConfig['type'] ?? $defaultTypeAttributeForJavaScript;
+                        $type = $jsFileConfig['type'];
+                        if (!$type) {
+                            $type = 'text/javascript';
+                        }
                         $crossOrigin = $jsFileConfig['crossorigin'];
                         if (!$crossOrigin && $jsFileConfig['integrity'] && $jsFileConfig['external']) {
                             $crossOrigin = 'anonymous';
@@ -541,7 +638,10 @@ class RequestHandler implements RequestHandlerInterface
                     }
                     if ($ss) {
                         $jsFileConfig = &$controller->pSetup['includeJSFooterlibs.'][$key . '.'];
-                        $type = $jsFileConfig['type'] ?? $defaultTypeAttributeForJavaScript;
+                        $type = $jsFileConfig['type'];
+                        if (!$type) {
+                            $type = 'text/javascript';
+                        }
                         $crossorigin = $jsFileConfig['crossorigin'];
                         if (!$crossorigin && $jsFileConfig['integrity'] && $jsFileConfig['external']) {
                             $crossorigin = 'anonymous';
@@ -583,7 +683,10 @@ class RequestHandler implements RequestHandlerInterface
                     }
                     if ($ss) {
                         $jsConfig = &$controller->pSetup['includeJS.'][$key . '.'];
-                        $type = $jsConfig['type'] ?? $defaultTypeAttributeForJavaScript;
+                        $type = $jsConfig['type'];
+                        if (!$type) {
+                            $type = 'text/javascript';
+                        }
                         $crossorigin = $jsConfig['crossorigin'];
                         if (!$crossorigin && $jsConfig['integrity'] && $jsConfig['external']) {
                             $crossorigin = 'anonymous';
@@ -623,7 +726,10 @@ class RequestHandler implements RequestHandlerInterface
                     }
                     if ($ss) {
                         $jsConfig = &$controller->pSetup['includeJSFooter.'][$key . '.'];
-                        $type = $jsConfig['type'] ?? $defaultTypeAttributeForJavaScript;
+                        $type = $jsConfig['type'];
+                        if (!$type) {
+                            $type = 'text/javascript';
+                        }
                         $crossorigin = $jsConfig['crossorigin'];
                         if (!$crossorigin && $jsConfig['integrity'] && $jsConfig['external']) {
                             $crossorigin = 'anonymous';
@@ -793,7 +899,7 @@ class RequestHandler implements RequestHandlerInterface
                 $pageRenderer->addJsInlineCode('TS_inlineJSint', $inlineJSint, $controller->config['config']['compressJs']);
             }
             if (trim($scriptJsCode . $inlineJS)) {
-                $pageRenderer->addJsFile(GeneralUtility::writeJavaScriptContentToTemporaryFile($scriptJsCode . $inlineJS), $defaultTypeAttributeForJavaScript, $controller->config['config']['compressJs']);
+                $pageRenderer->addJsFile(GeneralUtility::writeJavaScriptContentToTemporaryFile($scriptJsCode . $inlineJS), 'text/javascript', $controller->config['config']['compressJs']);
             }
             if ($inlineFooterJs) {
                 $inlineFooterJSint = '';
@@ -801,7 +907,7 @@ class RequestHandler implements RequestHandlerInterface
                 if ($inlineFooterJSint) {
                     $pageRenderer->addJsFooterInlineCode('TS_inlineFooterJSint', $inlineFooterJSint, $controller->config['config']['compressJs']);
                 }
-                $pageRenderer->addJsFooterFile(GeneralUtility::writeJavaScriptContentToTemporaryFile($inlineFooterJs), $defaultTypeAttributeForJavaScript, $controller->config['config']['compressJs']);
+                $pageRenderer->addJsFooterFile(GeneralUtility::writeJavaScriptContentToTemporaryFile($inlineFooterJs), 'text/javascript', $controller->config['config']['compressJs']);
             }
         } else {
             // Include only inlineJS
@@ -842,6 +948,13 @@ class RequestHandler implements RequestHandlerInterface
             $pageRenderer->enableConcatenateCss();
         }
         if ($controller->config['config']['concatenateJs'] ?? false) {
+            $pageRenderer->enableConcatenateJavascript();
+        }
+        // Backward compatibility for old configuration
+        // @deprecated - remove this option in TYPO3 v10.0.
+        if ($controller->config['config']['concatenateJsAndCss'] ?? false) {
+            trigger_error('Setting config.concatenateJsAndCss is deprecated in favor of config.concatenateJs and config.concatenateCss, and will have no effect anymore in TYPO3 v10.0.', E_USER_DEPRECATED);
+            $pageRenderer->enableConcatenateCss();
             $pageRenderer->enableConcatenateJavascript();
         }
         // Add header data block
@@ -923,7 +1036,7 @@ class RequestHandler implements RequestHandlerInterface
             $replace = false;
             if (is_array($properties)) {
                 $nodeValue = $properties['_typoScriptNodeValue'] ?? '';
-                $value = trim($cObj->stdWrap($nodeValue, $metaTagTypoScript[$key . '.']) ?? '');
+                $value = trim((string)$cObj->stdWrap($nodeValue, $metaTagTypoScript[$key . '.']));
                 if ($value === '' && !empty($properties['value'])) {
                     $value = $properties['value'];
                     $replace = false;
@@ -1031,5 +1144,27 @@ class RequestHandler implements RequestHandlerInterface
             $htmlTag = $cObj->stdWrap($htmlTag, $configuration['htmlTag_stdWrap.']);
         }
         return $htmlTag;
+    }
+
+    /**
+     * This request handler can handle any frontend request.
+     *
+     * @param ServerRequestInterface $request
+     * @return bool If the request is not an eID request, TRUE otherwise FALSE
+     */
+    public function canHandleRequest(ServerRequestInterface $request): bool
+    {
+        return true;
+    }
+
+    /**
+     * Returns the priority - how eager the handler is to actually handle the
+     * request.
+     *
+     * @return int The priority of the request handler.
+     */
+    public function getPriority(): int
+    {
+        return 50;
     }
 }

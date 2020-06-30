@@ -34,7 +34,6 @@ lib.contentElement {
             }
             additionalConfig {
                 no-cookie = 1
-                api = 0
             }
         }
     }

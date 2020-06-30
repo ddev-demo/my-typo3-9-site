@@ -15,6 +15,7 @@ namespace TYPO3\CMS\Core\Crypto\PasswordHashing;
  * The TYPO3 project - inspiring people to share!
  */
 
+use TYPO3\CMS\Core\Compatibility\PublicMethodDeprecationTrait;
 use TYPO3\CMS\Core\Crypto\Random;
 use TYPO3\CMS\Core\Utility\GeneralUtility;
 
@@ -27,10 +28,28 @@ use TYPO3\CMS\Core\Utility\GeneralUtility;
  */
 class Md5PasswordHash implements PasswordHashInterface
 {
+    use PublicMethodDeprecationTrait;
+
+    /**
+     * @var array
+     */
+    private $deprecatedPublicMethods = [
+        'isValidSalt' => 'Using Md5PasswordHash::isValidSalt() is deprecated and will not be possible anymore in TYPO3 v10.0.',
+        'base64Encode' => 'Using Md5PasswordHash::base64Encode() is deprecated and will not be possible anymore in TYPO3 v10.0.',
+    ];
+
     /**
      * Prefix for the password hash.
      */
     protected const PREFIX = '$1$';
+
+    /**
+     * Keeps a string for mapping an int to the corresponding
+     * base 64 character.
+     *
+     * @deprecated and will be removed in TYPO3 v10.0.
+     */
+    const ITOA64 = './0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz';
 
     /**
      * Method checks if a given plaintext password is correct by comparing it with
@@ -63,13 +82,19 @@ class Md5PasswordHash implements PasswordHashInterface
      * Method creates a salted hash for a given plaintext password
      *
      * @param string $password plaintext password to create a salted hash from
+     * @param string $salt Deprecated optional custom salt with setting to use
      * @return string Salted hashed password
      */
-    public function getHashedPassword(string $password)
+    public function getHashedPassword(string $password, string $salt = null)
     {
+        if ($salt !== null) {
+            trigger_error(static::class . ': using a custom salt is deprecated.', E_USER_DEPRECATED);
+        }
         $saltedPW = null;
         if (!empty($password)) {
-            $salt = $this->getGeneratedSalt();
+            if (empty($salt) || !$this->isValidSalt($salt)) {
+                $salt = $this->getGeneratedSalt();
+            }
             $saltedPW = crypt($password, $this->applySettingsToSalt($salt));
         }
         return $saltedPW;
@@ -224,5 +249,29 @@ class Md5PasswordHash implements PasswordHashInterface
     {
         // Calculates bytes in bits in base64
         return (int)ceil($byteLength * 8 / 6);
+    }
+
+    /**
+     * Returns setting string of MD5 salted hashes.
+     *
+     * @return string Setting string of MD5 salted hashes
+     * @deprecated and will be removed in TYPO3 v10.0.
+     */
+    public function getSetting(): string
+    {
+        trigger_error('This method will be removed in TYPO3 v10.0.', E_USER_DEPRECATED);
+        return self::PREFIX;
+    }
+
+    /**
+     * Returns length of a MD5 salt in bytes.
+     *
+     * @return int Length of a MD5 salt in bytes
+     * @deprecated and will be removed in TYPO3 v10.0.
+     */
+    public function getSaltLength(): int
+    {
+        trigger_error('This method will be removed in TYPO3 v10.0.', E_USER_DEPRECATED);
+        return 6;
     }
 }

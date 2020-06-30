@@ -15,6 +15,7 @@ namespace TYPO3\CMS\Backend\Tree\Repository;
  * The TYPO3 project - inspiring people to share!
  */
 
+use TYPO3\CMS\Backend\Utility\BackendUtility;
 use TYPO3\CMS\Core\Database\ConnectionPool;
 use TYPO3\CMS\Core\Database\Query\Restriction\DeletedRestriction;
 use TYPO3\CMS\Core\Database\Query\Restriction\WorkspaceRestriction;
@@ -48,6 +49,7 @@ class PageTreeRepository
         'title',
         'nav_title',
         'nav_hide',
+        'alias',
         'php_tree_stop',
         'doktype',
         'is_siteroot',
@@ -55,7 +57,9 @@ class PageTreeRepository
         'extendToSubpages',
         'content_from_pid',
         't3ver_oid',
+        't3ver_id',
         't3ver_wsid',
+        't3ver_label',
         't3ver_state',
         't3ver_stage',
         't3ver_tstamp',
@@ -70,6 +74,8 @@ class PageTreeRepository
         'shortcut_mode',
         'mount_pid_ol',
         'url',
+        'sys_language_uid',
+        'l10n_parent',
     ];
 
     /**
@@ -116,9 +122,9 @@ class PageTreeRepository
      * @param callable $callback a callback to be used to check for permissions and filter out pages not to be included.
      * @return array
      */
-    public function getTree(int $entryPoint, callable $callback = null): array
+    public function getTree(int $entryPoint, callable $callback = null, array $dbMounts = []): array
     {
-        $this->fetchAllPages();
+        $this->fetchAllPages($dbMounts);
         if ($entryPoint === 0) {
             $tree = $this->fullPageTree;
         } else {
@@ -155,7 +161,7 @@ class PageTreeRepository
      *
      * @return array the full page tree of the whole installation
      */
-    protected function fetchAllPages(): array
+    protected function fetchAllPages($dbMounts): array
     {
         if (!empty($this->fullPageTree)) {
             return $this->fullPageTree;
@@ -182,6 +188,19 @@ class PageTreeRepository
             )
             ->execute()
             ->fetchAll();
+
+        $ids = array_column($pageRecords, 'uid');
+        foreach ($dbMounts as $mount) {
+            $entryPointRootLine = BackendUtility::BEgetRootLine($mount, '', false, $this->fields);
+            foreach ($entryPointRootLine as $page) {
+                $pageId = (int)$page['uid'];
+                if (in_array($pageId, $ids) || $pageId === 0) {
+                    continue;
+                }
+                $pageRecords[] = $page;
+                $ids[] = $pageId;
+            }
+        }
 
         $livePagePids = [];
         $movePlaceholderData = [];
@@ -228,7 +247,7 @@ class PageTreeRepository
             // In case this is a record from a workspace
             // The uid+pid of the live-version record is fetched
             // This is done in order to avoid fetching records again (e.g. via BackendUtility::workspaceOL()
-            if ((int)$pageRecord['t3ver_oid'] > 0) {
+            if ($parentPageId === -1) {
                 // When a move pointer is found, the pid+sorting of the MOVE_PLACEHOLDER should be used (this is the
                 // workspace record holding this information), also the t3ver_state is set to the MOVE_PLACEHOLDER
                 // because the record is then added

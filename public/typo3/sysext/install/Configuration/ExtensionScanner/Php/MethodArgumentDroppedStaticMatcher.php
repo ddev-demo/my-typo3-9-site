@@ -31,38 +31,18 @@ return [
         'maximumNumberOfArguments' => 1,
         'restFiles' => [
             'Deprecation-54152-DeprecateArgumentsOfBackendUtilityGetPagesTSconfig.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
         ],
     ],
     'TYPO3\CMS\Core\Utility\ExtensionManagementUtility::isLoaded' => [
         'maximumNumberOfArguments' => 1,
         'restFiles' => [
             'Deprecation-82899-ExtensionManagementUtilityMethods.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
         ],
     ],
     'TYPO3\CMS\Core\Utility\GeneralUtility::explodeUrl2Array' => [
         'maximumNumberOfArguments' => 1,
         'restFiles' => [
             'Deprecation-85801-GeneralUtilityexplodeUrl2Array-2ndMethodArgument.rst',
-        ],
-    ],
-    'TYPO3\CMS\Extbase\Reflection\ObjectAccess::getProperty' => [
-        'maximumNumberOfArguments' => 2,
-        'restFiles' => [
-            'Deprecation-87332-AvoidRuntimeReflectionCallsInObjectAccess.rst',
-        ],
-    ],
-    'TYPO3\CMS\Extbase\Reflection\ObjectAccess::getPropertyInternal' => [
-        'maximumNumberOfArguments' => 2,
-        'restFiles' => [
-            'Deprecation-87332-AvoidRuntimeReflectionCallsInObjectAccess.rst',
-        ],
-    ],
-    'TYPO3\CMS\Extbase\Reflection\ObjectAccess::setProperty' => [
-        'maximumNumberOfArguments' => 3,
-        'restFiles' => [
-            'Deprecation-87332-AvoidRuntimeReflectionCallsInObjectAccess.rst',
         ],
     ],
 ];

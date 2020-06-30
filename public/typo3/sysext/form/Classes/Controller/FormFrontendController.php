@@ -114,7 +114,6 @@ class FormFrontendController extends ActionController
                     $prototypeFinisherDefinition = $prototypeConfiguration['finishersDefinition'][$finisherIdentifier] ?? [];
                     $converterDto = GeneralUtility::makeInstance(
                         FlexFormFinisherOverridesConverterDto::class,
-                        $prototypeFinisherDefinition,
                         $formFinisherDefinition,
                         $finisherIdentifier,
                         $flexFormSheetSettings
@@ -125,7 +124,7 @@ class FormFrontendController extends ActionController
                         GeneralUtility::makeInstance(
                             ArrayProcessing::class,
                             'modifyFinisherOptionsFromFlexFormOverrides',
-                            '^(.*)(?:(?<!\.TCEforms)\.config\.type|\.section)$',
+                            '^(.*)\.config\.type$',
                             GeneralUtility::makeInstance(FinisherOptionsFlexFormOverridesConverter::class, $converterDto)
                         )
                     );

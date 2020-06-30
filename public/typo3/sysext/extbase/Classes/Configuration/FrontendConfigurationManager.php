@@ -1,6 +1,4 @@
 <?php
-declare(strict_types = 1);
-
 namespace TYPO3\CMS\Extbase\Configuration;
 
 /*
@@ -33,19 +31,10 @@ class FrontendConfigurationManager extends \TYPO3\CMS\Extbase\Configuration\Abst
     protected $flexFormService;
 
     /**
-     * @param \TYPO3\CMS\Extbase\Object\ObjectManagerInterface $objectManager
-     * @param \TYPO3\CMS\Core\TypoScript\TypoScriptService $typoScriptService
-     * @param \TYPO3\CMS\Extbase\Service\EnvironmentService $environmentService
      * @param \TYPO3\CMS\Core\Service\FlexFormService $flexFormService
      */
-    public function __construct(
-        \TYPO3\CMS\Extbase\Object\ObjectManagerInterface $objectManager,
-        \TYPO3\CMS\Core\TypoScript\TypoScriptService $typoScriptService,
-        \TYPO3\CMS\Extbase\Service\EnvironmentService $environmentService,
-        \TYPO3\CMS\Core\Service\FlexFormService $flexFormService
-    ) {
-        parent::__construct($objectManager, $typoScriptService, $environmentService);
-
+    public function injectFlexFormService(\TYPO3\CMS\Core\Service\FlexFormService $flexFormService)
+    {
         $this->flexFormService = $flexFormService;
     }
 
@@ -54,9 +43,9 @@ class FrontendConfigurationManager extends \TYPO3\CMS\Extbase\Configuration\Abst
      *
      * @return array the raw TypoScript setup
      */
-    public function getTypoScriptSetup(): array
+    public function getTypoScriptSetup()
     {
-        return $GLOBALS['TSFE']->tmpl->setup ?? [];
+        return $GLOBALS['TSFE']->tmpl->setup;
     }
 
     /**
@@ -67,7 +56,7 @@ class FrontendConfigurationManager extends \TYPO3\CMS\Extbase\Configuration\Abst
      * @param string $pluginName
      * @return array
      */
-    protected function getPluginConfiguration(string $extensionName, string $pluginName = null): array
+    protected function getPluginConfiguration($extensionName, $pluginName = null)
     {
         $setup = $this->getTypoScriptSetup();
         $pluginConfiguration = [];
@@ -87,7 +76,7 @@ class FrontendConfigurationManager extends \TYPO3\CMS\Extbase\Configuration\Abst
     }
 
     /**
-     * Returns the configured controller/action configuration of the specified plugin in the format
+     * Returns the configured controller/action pairs of the specified plugin in the format
      * array(
      * 'Controller1' => array('action1', 'action2'),
      * 'Controller2' => array('action3', 'action4')
@@ -97,13 +86,13 @@ class FrontendConfigurationManager extends \TYPO3\CMS\Extbase\Configuration\Abst
      * @param string $pluginName
      * @return array
      */
-    protected function getControllerConfiguration(string $extensionName, string $pluginName): array
+    protected function getSwitchableControllerActions($extensionName, $pluginName)
     {
-        $controllerConfiguration = $GLOBALS['TYPO3_CONF_VARS']['EXTCONF']['extbase']['extensions'][$extensionName]['plugins'][$pluginName]['controllers'];
-        if (!is_array($controllerConfiguration)) {
-            $controllerConfiguration = [];
+        $switchableControllerActions = $GLOBALS['TYPO3_CONF_VARS']['EXTCONF']['extbase']['extensions'][$extensionName]['plugins'][$pluginName]['controllers'] ?? [];
+        if (!is_array($switchableControllerActions)) {
+            $switchableControllerActions = [];
         }
-        return $controllerConfiguration;
+        return $switchableControllerActions;
     }
 
     /**
@@ -114,7 +103,7 @@ class FrontendConfigurationManager extends \TYPO3\CMS\Extbase\Configuration\Abst
      * @param array $frameworkConfiguration The framework configuration to modify
      * @return array the modified framework configuration
      */
-    protected function getContextSpecificFrameworkConfiguration(array $frameworkConfiguration): array
+    protected function getContextSpecificFrameworkConfiguration(array $frameworkConfiguration)
     {
         $frameworkConfiguration = $this->overrideStoragePidIfStartingPointIsSet($frameworkConfiguration);
         $frameworkConfiguration = $this->overrideConfigurationFromPlugin($frameworkConfiguration);
@@ -129,7 +118,7 @@ class FrontendConfigurationManager extends \TYPO3\CMS\Extbase\Configuration\Abst
      * @param array $frameworkConfiguration the framework configurations
      * @return array the framework configuration with overridden storagePid
      */
-    protected function overrideStoragePidIfStartingPointIsSet(array $frameworkConfiguration): array
+    protected function overrideStoragePidIfStartingPointIsSet(array $frameworkConfiguration)
     {
         $pages = $this->contentObject->data['pages'];
         if (is_string($pages) && $pages !== '') {
@@ -161,7 +150,7 @@ class FrontendConfigurationManager extends \TYPO3\CMS\Extbase\Configuration\Abst
      * @param array $frameworkConfiguration the framework configuration
      * @return array the framework configuration with overridden data from typoscript
      */
-    protected function overrideConfigurationFromPlugin(array $frameworkConfiguration): array
+    protected function overrideConfigurationFromPlugin(array $frameworkConfiguration)
     {
         $setup = $this->getTypoScriptSetup();
         $pluginSignature = strtolower($frameworkConfiguration['extensionName'] . '_' . $frameworkConfiguration['pluginName']);
@@ -177,13 +166,12 @@ class FrontendConfigurationManager extends \TYPO3\CMS\Extbase\Configuration\Abst
 
     /**
      * Overrides configuration settings from flexForms.
-     * This merges the whole flexForm data, and overrides the controller configuration with possibly configured
-     * switchable controller actions.
+     * This merges the whole flexForm data, and overrides switchable controller actions.
      *
      * @param array $frameworkConfiguration the framework configuration
      * @return array the framework configuration with overridden data from flexForm
      */
-    protected function overrideConfigurationFromFlexForm(array $frameworkConfiguration): array
+    protected function overrideConfigurationFromFlexForm(array $frameworkConfiguration)
     {
         $flexFormConfiguration = $this->contentObject->data['pi_flexform'];
         if (is_string($flexFormConfiguration)) {
@@ -197,7 +185,7 @@ class FrontendConfigurationManager extends \TYPO3\CMS\Extbase\Configuration\Abst
             $frameworkConfiguration = $this->mergeConfigurationIntoFrameworkConfiguration($frameworkConfiguration, $flexFormConfiguration, 'settings');
             $frameworkConfiguration = $this->mergeConfigurationIntoFrameworkConfiguration($frameworkConfiguration, $flexFormConfiguration, 'persistence');
             $frameworkConfiguration = $this->mergeConfigurationIntoFrameworkConfiguration($frameworkConfiguration, $flexFormConfiguration, 'view');
-            $frameworkConfiguration = $this->overrideControllerConfigurationWithSwitchableControllerActionsFromFlexForm($frameworkConfiguration, $flexFormConfiguration);
+            $frameworkConfiguration = $this->overrideSwitchableControllerActionsFromFlexForm($frameworkConfiguration, $flexFormConfiguration);
         }
         return $frameworkConfiguration;
     }
@@ -210,7 +198,7 @@ class FrontendConfigurationManager extends \TYPO3\CMS\Extbase\Configuration\Abst
      * @param string $configurationPartName The name of the configuration part which should be merged.
      * @return array the processed framework configuration
      */
-    protected function mergeConfigurationIntoFrameworkConfiguration(array $frameworkConfiguration, array $configuration, string $configurationPartName): array
+    protected function mergeConfigurationIntoFrameworkConfiguration(array $frameworkConfiguration, array $configuration, $configurationPartName)
     {
         if (isset($configuration[$configurationPartName]) && is_array($configuration[$configurationPartName])) {
             if (isset($frameworkConfiguration[$configurationPartName]) && is_array($frameworkConfiguration[$configurationPartName])) {
@@ -223,15 +211,14 @@ class FrontendConfigurationManager extends \TYPO3\CMS\Extbase\Configuration\Abst
     }
 
     /**
-     * Overrides the controller configuration with possibly registered switchable controller actions of the flex form
-     * configuration.
+     * Overrides the switchable controller actions from the flexForm.
      *
      * @param array $frameworkConfiguration The original framework configuration
      * @param array $flexFormConfiguration The full flexForm configuration
      * @throws Exception\ParseErrorException
      * @return array the modified framework configuration, if needed
      */
-    protected function overrideControllerConfigurationWithSwitchableControllerActionsFromFlexForm(array $frameworkConfiguration, array $flexFormConfiguration): array
+    protected function overrideSwitchableControllerActionsFromFlexForm(array $frameworkConfiguration, array $flexFormConfiguration)
     {
         if (!isset($flexFormConfiguration['switchableControllerActions']) || is_array($flexFormConfiguration['switchableControllerActions'])) {
             return $frameworkConfiguration;
@@ -239,16 +226,16 @@ class FrontendConfigurationManager extends \TYPO3\CMS\Extbase\Configuration\Abst
         // As "," is the flexForm field value delimiter, we need to use ";" as in-field delimiter. That's why we need to replace ; by  , first.
         // The expected format is: "Controller1->action2;Controller2->action3;Controller2->action1"
         $switchableControllerActionPartsFromFlexForm = GeneralUtility::trimExplode(',', str_replace(';', ',', $flexFormConfiguration['switchableControllerActions']), true);
-        $overriddenControllerConfiguration = [];
+        $newSwitchableControllerActionsFromFlexForm = [];
         foreach ($switchableControllerActionPartsFromFlexForm as $switchableControllerActionPartFromFlexForm) {
             list($controller, $action) = GeneralUtility::trimExplode('->', $switchableControllerActionPartFromFlexForm);
             if (empty($controller) || empty($action)) {
                 throw new \TYPO3\CMS\Extbase\Configuration\Exception\ParseErrorException('Controller or action were empty when overriding switchableControllerActions from flexForm.', 1257146403);
             }
-            $overriddenControllerConfiguration[$controller][] = $action;
+            $newSwitchableControllerActionsFromFlexForm[$controller][] = $action;
         }
-        if (!empty($overriddenControllerConfiguration)) {
-            $this->overrideControllerConfigurationWithSwitchableControllerActions($frameworkConfiguration, $overriddenControllerConfiguration);
+        if (!empty($newSwitchableControllerActionsFromFlexForm)) {
+            $this->overrideSwitchableControllerActions($frameworkConfiguration, $newSwitchableControllerActionsFromFlexForm);
         }
         return $frameworkConfiguration;
     }
@@ -256,25 +243,24 @@ class FrontendConfigurationManager extends \TYPO3\CMS\Extbase\Configuration\Abst
     /**
      * Returns a comma separated list of storagePid that are below a certain storage pid.
      *
-     * @param array|int[] $storagePids Storage PIDs to start at; multiple PIDs possible as comma-separated list
+     * @param string $storagePid Storage PID to start at; multiple PIDs possible as comma-separated list
      * @param int $recursionDepth Maximum number of levels to search, 0 to disable recursive lookup
-     * @return array|int[] storage PIDs
+     * @return string storage PIDs
      */
-    protected function getRecursiveStoragePids(array $storagePids, int $recursionDepth = 0): array
+    protected function getRecursiveStoragePids($storagePid, $recursionDepth = 0)
     {
-        array_map('intval', $storagePids);
-
         if ($recursionDepth <= 0) {
-            return $storagePids;
+            return $storagePid;
         }
 
-        $recursiveStoragePids = [];
+        $recursiveStoragePids = '';
+        $storagePids = GeneralUtility::intExplode(',', $storagePid);
         foreach ($storagePids as $startPid) {
             $pids = $this->getContentObject()->getTreeList($startPid, $recursionDepth, 0);
-            foreach (GeneralUtility::intExplode(',', $pids, true) as $pid) {
-                $recursiveStoragePids[] = $pid;
+            if ((string)$pids !== '') {
+                $recursiveStoragePids .= $pids . ',';
             }
         }
-        return array_unique($recursiveStoragePids);
+        return rtrim($recursiveStoragePids, ',');
     }
 }

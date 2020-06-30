@@ -13,24 +13,26 @@
 		"sort-packages": true
 	},
 	"require": {
-		"typo3/cms-core": "10.1.0"
+		"typo3/cms-core": "9.5.19"
 	},
 	"conflict": {
 		"typo3/cms": "*"
 	},
 	"replace": {
-		"info": "*",
 		"typo3/cms-info-pagetsconfig": "*"
 	},
 	"extra": {
-		"branch-alias": {
-			"dev-master": "10.1.x-dev"
-		},
 		"typo3/cms": {
 			"Package": {
 				"partOfFactoryDefault": true
 			},
 			"extension-key": "info"
+		},
+		"typo3/class-alias-loader": {
+			"always-add-alias-loader": true,
+			"class-alias-maps": [
+				"Migrations/Code/ClassAliasMap.php"
+			]
 		}
 	},
 	"autoload": {

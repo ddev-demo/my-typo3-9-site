@@ -60,6 +60,14 @@ class FormResultCompiler
     protected $additionalJavaScriptPost = [];
 
     /**
+     * Additional JavaScript executed on submit; If you set "OK" variable it will raise an error
+     * about RTEs not being loaded and offer to block further submission.
+     *
+     * @var array
+     */
+    protected $additionalJavaScriptSubmit = [];
+
+    /**
      * Additional language label files to include.
      *
      * @var array
@@ -91,6 +99,9 @@ class FormResultCompiler
         foreach ($resultArray['additionalJavaScriptPost'] as $element) {
             $this->additionalJavaScriptPost[] = $element;
         }
+        foreach ($resultArray['additionalJavaScriptSubmit'] as $element) {
+            $this->additionalJavaScriptSubmit[] = $element;
+        }
         if (!empty($resultArray['requireJsModules'])) {
             foreach ($resultArray['requireJsModules'] as $module) {
                 $moduleName = null;
@@ -101,8 +112,11 @@ class FormResultCompiler
                     $callback = null;
                 } elseif (is_array($module)) {
                     // if $module is an array, callback is possible
-                    $callback = reset($module);
-                    $moduleName = key($module);
+                    foreach ($module as $key => $value) {
+                        $moduleName = $key;
+                        $callback = $value;
+                        break;
+                    }
                 }
                 if ($moduleName !== null) {
                     if (!empty($this->requireJsModules[$moduleName]) && $callback !== null) {
@@ -187,10 +201,7 @@ class FormResultCompiler
         $html = implode(LF, $this->hiddenFieldAccum);
         $pageRenderer->addJsFile('EXT:backend/Resources/Public/JavaScript/md5.js');
         // load the main module for FormEngine with all important JS functions
-        if (!is_array($this->requireJsModules['TYPO3/CMS/Backend/FormEngine'] ?? null)) {
-            $this->requireJsModules['TYPO3/CMS/Backend/FormEngine'] = [$this->requireJsModules['TYPO3/CMS/Backend/FormEngine']];
-        }
-        $this->requireJsModules['TYPO3/CMS/Backend/FormEngine'][] = 'function(FormEngine) {
+        $this->requireJsModules['TYPO3/CMS/Backend/FormEngine'] = 'function(FormEngine) {
 			FormEngine.initialize(
 				' . GeneralUtility::quoteJSvalue((string)$uriBuilder->buildUriFromRoute('wizard_element_browser')) . ',
 				' . ($GLOBALS['TYPO3_CONF_VARS']['SYS']['USdateFormat'] ? '1' : '0') . '
@@ -208,16 +219,46 @@ class FormResultCompiler
         }
         $backendUser = $this->getBackendUserAuthentication();
 
+        // define the window size of the element browser etc.
+        $popupWindowWidth  = 800;
+        $popupWindowHeight = 600;
+        $popupWindowSize = trim($backendUser->getTSConfig()['options.']['popupWindowSize'] ?? '');
+        if (!empty($popupWindowSize)) {
+            list($popupWindowWidth, $popupWindowHeight) = GeneralUtility::intExplode('x', $popupWindowSize);
+        }
+
+        // define the window size of the popups within the RTE
+        $rtePopupWindowSize = trim($backendUser->getTSConfig()['options.']['rte.']['popupWindowSize'] ?? '');
+        if (!empty($rtePopupWindowSize)) {
+            list($rtePopupWindowWidth, $rtePopupWindowHeight) = GeneralUtility::trimExplode('x', $rtePopupWindowSize);
+        }
+        $rtePopupWindowWidth  = !empty($rtePopupWindowWidth) ? (int)$rtePopupWindowWidth : $popupWindowWidth;
+        $rtePopupWindowHeight = !empty($rtePopupWindowHeight) ? (int)$rtePopupWindowHeight : $popupWindowHeight;
+
         // Make textareas resizable and flexible ("autogrow" in height)
         $textareaSettings = [
             'autosize'  => (bool)$backendUser->uc['resizeTextareas_Flexible'],
+            'RTEPopupWindow' => [
+                'width' => $rtePopupWindowWidth,
+                'height' => $rtePopupWindowHeight
+            ]
         ];
         $pageRenderer->addInlineSettingArray('Textarea', $textareaSettings);
+
+        $popupSettings = [
+            'PopupWindow' => [
+                'width' => $popupWindowWidth,
+                'height' => $popupWindowHeight
+            ]
+        ];
+        $pageRenderer->addInlineSettingArray('Popup', $popupSettings);
 
         $pageRenderer->addJsFile('EXT:backend/Resources/Public/JavaScript/jsfunc.tbe_editor.js');
         // Needed for FormEngine manipulation (date picker)
         $dateFormat = ($GLOBALS['TYPO3_CONF_VARS']['SYS']['USdateFormat'] ? ['MM-DD-YYYY', 'HH:mm MM-DD-YYYY'] : ['DD-MM-YYYY', 'HH:mm DD-MM-YYYY']);
         $pageRenderer->addInlineSetting('DateTimePicker', 'DateFormat', $dateFormat);
+
+        $pageRenderer->loadRequireJsModule('TYPO3/CMS/Filelist/FileListLocalisation');
 
         $pageRenderer->addInlineLanguageLabelFile('EXT:core/Resources/Private/Language/locallang_core.xlf', 'file_upload');
         if (!empty($this->additionalInlineLanguageLabelFiles)) {
@@ -225,6 +266,9 @@ class FormResultCompiler
                 $pageRenderer->addInlineLanguageLabelFile($additionalInlineLanguageLabelFile);
             }
         }
+        // @TODO: Refactor jsfunc.inline.js to an AMD module / TypsScript. If this is done, remove loadJquery() call.
+        $pageRenderer->loadJquery(null, null, PageRenderer::JQUERY_NAMESPACE_NONE, true);
+        $pageRenderer->addJsFile('EXT:backend/Resources/Public/JavaScript/jsfunc.inline.js');
 
         // todo: change these things in JS
         $pageRenderer->addInlineLanguageLabelArray([
@@ -237,11 +281,19 @@ class FormResultCompiler
             'FormEngine.remainingCharacters'    => $this->getLanguageService()->sL('LLL:EXT:core/Resources/Private/Language/locallang_core.xlf:labels.remainingCharacters'),
         ]);
 
+        $out = LF . 'TBE_EDITOR.doSaveFieldName = "' . ($this->doSaveFieldName ? addslashes($this->doSaveFieldName) : '') . '";';
+
         // Add JS required for inline fields
         if (!empty($this->inlineData)) {
-            $pageRenderer->addInlineSettingArray('FormEngineInline', $this->inlineData);
+            $out .= LF . 'inline.addToDataArray(' . json_encode($this->inlineData) . ');';
         }
-        $out = LF . implode(LF, $this->additionalJavaScriptPost);
+        // $this->additionalJS_submit:
+        if ($this->additionalJavaScriptSubmit) {
+            $additionalJS_submit = implode('', $this->additionalJavaScriptSubmit);
+            $additionalJS_submit = str_replace([CR, LF], '', $additionalJS_submit);
+            $out .= 'TBE_EDITOR.addActionChecks("submit", "' . addslashes($additionalJS_submit) . '");';
+        }
+        $out .= LF . implode(LF, $this->additionalJavaScriptPost);
 
         return $html . LF . "\t" . GeneralUtility::wrapJS($out);
     }

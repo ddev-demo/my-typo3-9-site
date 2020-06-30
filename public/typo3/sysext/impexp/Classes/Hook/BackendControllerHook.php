@@ -15,7 +15,6 @@ namespace TYPO3\CMS\Impexp\Hook;
  */
 
 use TYPO3\CMS\Backend\Controller\BackendController;
-use TYPO3\CMS\Backend\Routing\UriBuilder;
 use TYPO3\CMS\Core\Page\PageRenderer;
 use TYPO3\CMS\Core\Utility\GeneralUtility;
 
@@ -33,10 +32,9 @@ class BackendControllerHook
      */
     public function addJavaScript(array $configuration, BackendController $backendController)
     {
-        /** @var UriBuilder $uriBuilder */
-        $uriBuilder = GeneralUtility::makeInstance(UriBuilder::class);
-        $this->getPageRenderer()->addInlineSetting('ImportExport', 'exportModuleUrl', (string)$uriBuilder->buildUriFromRoute('tx_impexp_export'));
-        $this->getPageRenderer()->addInlineSetting('ImportExport', 'importModuleUrl', (string)$uriBuilder->buildUriFromRoute('tx_impexp_import'));
+        /** @var \TYPO3\CMS\Backend\Routing\UriBuilder $uriBuilder */
+        $uriBuilder = GeneralUtility::makeInstance(\TYPO3\CMS\Backend\Routing\UriBuilder::class);
+        $this->getPageRenderer()->addInlineSetting('ImportExport', 'moduleUrl', (string)$uriBuilder->buildUriFromRoute('xMOD_tximpexp'));
     }
 
     /**

@@ -15,6 +15,7 @@ namespace TYPO3\CMS\Beuser\Controller;
  */
 
 use TYPO3\CMS\Core\Authentication\BackendUserAuthentication;
+use TYPO3\CMS\Core\Compatibility\PublicMethodDeprecationTrait;
 use TYPO3\CMS\Core\Session\Backend\SessionBackendInterface;
 use TYPO3\CMS\Core\Session\SessionManager;
 use TYPO3\CMS\Core\Utility\GeneralUtility;
@@ -28,6 +29,15 @@ use TYPO3\CMS\Extbase\Utility\LocalizationUtility;
  */
 class BackendUserController extends ActionController
 {
+    use PublicMethodDeprecationTrait;
+
+    /**
+     * @var array
+     */
+    private $deprecatedPublicMethods = [
+        'initializeView' => 'Using BackendUserController::initializeView() is deprecated and will not be possible anymore in TYPO3 v10.0.',
+    ];
+
     /**
      * @var int
      */
@@ -157,7 +167,7 @@ class BackendUserController extends ActionController
             'demand' => $demand,
             'backendUsers' => $this->backendUserRepository->findDemanded($demand),
             'backendUserGroups' => array_merge([''], $this->backendUserGroupRepository->findAll()->toArray()),
-            'compareUserUidList' => array_combine(array_keys($compareUserList), array_fill(0, count($compareUserList), true)),
+            'compareUserUidList' => array_combine($compareUserList, $compareUserList),
             'currentUserUid' => $this->getBackendUserAuthentication()->user['uid'],
             'compareUserList' => !empty($compareUserList) ? $this->backendUserRepository->findByUidList($compareUserList) : '',
         ]);
@@ -255,20 +265,6 @@ class BackendUserController extends ActionController
             $this->getBackendUserAuthentication()->uc['startModuleOnFirstLogin'] = 'system_BeuserTxBeuser';
             $this->getBackendUserAuthentication()->uc['recentSwitchedToUsers'] = $this->generateListOfMostRecentSwitchedUsers($targetUser['uid']);
             $this->getBackendUserAuthentication()->writeUC();
-
-            // User switch   written to log
-            $this->getBackendUserAuthentication()->writelog(
-                255,
-                2,
-                0,
-                1,
-                'User %s switched to user %s (be_users:%s)',
-                [
-                    $this->getBackendUserAuthentication()->user['username'],
-                    $targetUser['username'],
-                    $targetUser['uid'],
-                ]
-            );
 
             $sessionBackend = $this->getSessionBackend();
             $sessionBackend->update(

@@ -18,10 +18,10 @@ namespace TYPO3\CMS\Backend\Controller\File;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
 use TYPO3\CMS\Backend\Clipboard\Clipboard;
-use TYPO3\CMS\Backend\Routing\Exception\RouteNotFoundException;
 use TYPO3\CMS\Backend\Routing\UriBuilder;
 use TYPO3\CMS\Backend\Utility\BackendUtility;
 use TYPO3\CMS\Core\Authentication\BackendUserAuthentication;
+use TYPO3\CMS\Core\Compatibility\PublicMethodDeprecationTrait;
 use TYPO3\CMS\Core\Http\HtmlResponse;
 use TYPO3\CMS\Core\Http\JsonResponse;
 use TYPO3\CMS\Core\Http\RedirectResponse;
@@ -34,6 +34,7 @@ use TYPO3\CMS\Core\Resource\ProcessedFile;
 use TYPO3\CMS\Core\Resource\ResourceFactory;
 use TYPO3\CMS\Core\Utility\File\ExtendedFileUtility;
 use TYPO3\CMS\Core\Utility\GeneralUtility;
+use TYPO3\CMS\Core\Utility\HttpUtility;
 
 /**
  * Gateway for TCE (TYPO3 Core Engine) file-handling through POST forms.
@@ -43,6 +44,16 @@ use TYPO3\CMS\Core\Utility\GeneralUtility;
  */
 class FileController
 {
+    use PublicMethodDeprecationTrait;
+
+    /**
+     * @var array
+     */
+    private $deprecatedPublicMethods = [
+        'initClipboard' => 'Using FileController::initClipboard() is deprecated and will not be possible anymore in TYPO3 v10.0.',
+        'main' => 'Using FileController::main() is deprecated and will not be possible anymore in TYPO3 v10.0.',
+    ];
+
     /**
      * Array of file-operations.
      *
@@ -88,16 +99,23 @@ class FileController
     protected $fileData;
 
     /**
+     * Constructor
+     */
+    public function __construct()
+    {
+        // @deprecated since TYPO3 v9, will be moved out of __construct() in TYPO3 v10.0
+        $this->init($GLOBALS['TYPO3_REQUEST']);
+    }
+
+    /**
      * Injects the request object for the current request or subrequest
      * As this controller goes only through the main() method, it just redirects to the given URL afterwards.
      *
      * @param ServerRequestInterface $request the current request
      * @return ResponseInterface the response with the content
-     * @throws \TYPO3\CMS\Backend\Routing\Exception\RouteNotFoundException
      */
     public function mainAction(ServerRequestInterface $request): ResponseInterface
     {
-        $this->init($request);
         $this->main();
 
         BackendUtility::setUpdateSignal('updateFolderTree');
@@ -122,14 +140,15 @@ class FileController
 
     /**
      * Handles the actual process from within the ajaxExec function
-     * therefore, it does exactly the same as the real typo3/tce_file.php.
+     * therefore, it does exactly the same as the real typo3/tce_file.php
+     * but without calling the "finish" method, thus makes it simpler to deal with the
+     * actual return value
      *
      * @param ServerRequestInterface $request
      * @return ResponseInterface
      */
     public function processAjaxRequest(ServerRequestInterface $request): ResponseInterface
     {
-        $this->init($request);
         $this->main();
         $errors = $this->fileProcessor->getErrorMessages();
         if (!empty($errors)) {
@@ -158,7 +177,6 @@ class FileController
      */
     public function fileExistsInFolderAction(ServerRequestInterface $request): ResponseInterface
     {
-        $this->init($request);
         $fileName = $request->getParsedBody()['fileName'] ?? $request->getQueryParams()['fileName'] ?? null;
         $fileTarget = $request->getParsedBody()['fileTarget'] ?? $request->getQueryParams()['fileTarget'] ?? null;
 
@@ -258,11 +276,21 @@ class FileController
             $urlParameters['returnUrl'] = $this->redirect;
         }
         $uriBuilder = GeneralUtility::makeInstance(UriBuilder::class);
-        try {
-            return (string)$uriBuilder->buildUriFromRoute('file_edit', $urlParameters);
-        } catch (RouteNotFoundException $exception) {
-            // no route for editing files available
-            return '';
+        return (string)$uriBuilder->buildUriFromRoute('file_edit', $urlParameters);
+    }
+
+    /**
+     * Redirecting the user after the processing has been done.
+     * Might also display error messages directly, if any.
+     *
+     * @deprecated since TYPO3 v9. Will be removed in TYPO3 v10.0.
+     */
+    public function finish()
+    {
+        trigger_error('FileController->finish() will be removed in TYPO3 v10.0. Do not call from other extension.', E_USER_DEPRECATED);
+        BackendUtility::setUpdateSignal('updateFolderTree');
+        if ($this->redirect) {
+            HttpUtility::redirect($this->redirect);
         }
     }
 

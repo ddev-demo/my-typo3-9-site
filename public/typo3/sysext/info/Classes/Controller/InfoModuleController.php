@@ -14,14 +14,16 @@ namespace TYPO3\CMS\Info\Controller;
  * The TYPO3 project - inspiring people to share!
  */
 
-use Psr\Container\ContainerInterface;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
 use TYPO3\CMS\Backend\Routing\UriBuilder;
 use TYPO3\CMS\Backend\Template\Components\ButtonBar;
+use TYPO3\CMS\Backend\Template\DocumentTemplate;
 use TYPO3\CMS\Backend\Template\ModuleTemplate;
 use TYPO3\CMS\Backend\Utility\BackendUtility;
 use TYPO3\CMS\Core\Authentication\BackendUserAuthentication;
+use TYPO3\CMS\Core\Compatibility\PublicMethodDeprecationTrait;
+use TYPO3\CMS\Core\Compatibility\PublicPropertyDeprecationTrait;
 use TYPO3\CMS\Core\Http\HtmlResponse;
 use TYPO3\CMS\Core\Imaging\Icon;
 use TYPO3\CMS\Core\Localization\LanguageService;
@@ -38,6 +40,46 @@ use TYPO3\CMS\Fluid\View\StandaloneView;
  */
 class InfoModuleController
 {
+    use PublicPropertyDeprecationTrait;
+    use PublicMethodDeprecationTrait;
+
+    /**
+     * @var array
+     */
+    private $deprecatedPublicProperties = [
+        'perms_clause' => 'Using InfoModuleController::$perms_clause is deprecated and will not be possible anymore in TYPO3 v10.0.',
+        'modTSconfig' => 'Using InfoModuleController::$modTSconfig is deprecated and will not be possible anymore in TYPO3 v10.0.',
+        'modMenu_setDefaultList' => 'Using InfoModuleController::$modMenu_setDefaultList is deprecated and will not be possible anymore in TYPO3 v10.0.',
+        'modMenu_dontValidateList' => 'Using InfoModuleController::$modMenu_dontValidateList is deprecated and will not be possible anymore in TYPO3 v10.0.',
+        'modMenu_type' => 'Using InfoModuleController::$modMenu_type$ is deprecated and will not be possible anymore in TYPO3 v10.0.',
+        'extClassConf' => 'Using InfoModuleController::extClassConf$ is deprecated and will not be possible anymore in TYPO3 v10.0.',
+        'extObj' => 'Using InfoModuleController::$extObj is deprecated and will not be possible anymore in TYPO3 v10.0.',
+        'content' => 'Using InfoModuleController::$content is deprecated and will not be possible anymore in TYPO3 v10.0.',
+        'pObj' => 'Using InfoModuleController::$pObj is deprecated and will not be possible anymore in TYPO3 v10.0.',
+        'id' => 'Using InfoModuleController::id$ is deprecated and will not be possible anymore in TYPO3 v10.0.',
+        'CMD' => 'Using InfoModuleController::$CMD is deprecated, property will be removed in TYPO3 v10.0.',
+        'doc' => 'Using InfoModuleController::$doc is deprecated, property will be removed in TYPO3 v10.0.',
+        'MCONF' => 'Using InfoModuleController::$MCONF is deprecated, property will be removed in TYPO3 v10.0.',
+    ];
+
+    /**
+     * @var array
+     */
+    private $deprecatedPublicMethods = [
+        'main' => 'Using InfoModuleController::main() is deprecated and will not be possible anymore in TYPO3 v10.0.',
+        'init' => 'Using InfoModuleController::init() is deprecated and will not be possible anymore in TYPO3 v10.0.',
+        'getModuleTemplate' => 'Using InfoModuleController::getModuleTemplate() is deprecated and will not be possible anymore in TYPO3 v10.0.',
+        'menuConfig' => 'Using InfoModuleController::menuConfig() is deprecated and will not be possible anymore in TYPO3 v10.0.',
+        'handleExternalFunctionValue' => 'Using InfoModuleController::handleExternalFunctionValue() is deprecated and will not be possible anymore in TYPO3 v10.0.',
+        'mergeExternalItems' => 'Using InfoModuleController::mergeExternalItems() is deprecated and will not be possible anymore in TYPO3 v10.0.',
+        'getExternalItemConfig' => 'Using InfoModuleController::getExternalItemConfig() is deprecated and will not be possible anymore in TYPO3 v10.0.',
+        'extObjContent' => 'Using InfoModuleController::extObjContent() is deprecated and will not be possible anymore in TYPO3 v10.0.',
+        'getExtObjContent' => 'Using InfoModuleController::getExtObjContent() is deprecated and will not be possible anymore in TYPO3 v10.0.',
+        'checkExtObj' => 'Using InfoModuleController::checkExtObj() is deprecated and will not be possible anymore in TYPO3 v10.0.',
+        'extObjHeader' => 'Using InfoModuleController::extObjHeader() is deprecated, method will be removed in TYPO3 v10.0.',
+        'checkSubExtObj' => 'Using InfoModuleController::checkSubExtObj() is deprecated, method will be removed in TYPO3 v10.0.',
+    ];
+
     /**
      * @var array Used by client classes.
      */
@@ -63,24 +105,24 @@ class InfoModuleController
     protected $view;
 
     /**
-     * @var UriBuilder
+     * Loaded with the global array $MCONF which holds some module configuration from the conf.php file of backend modules.
+     *
+     * @var array
      */
-    protected $uriBuilder;
-
-    /**
-     * @var FlashMessageService
-     */
-    protected $flashMessageService;
-
-    /**
-     * @var ContainerInterface
-     */
-    protected $container;
+    protected $MCONF = [];
 
     /**
      * @var int Value of the GET/POST var 'id'
      */
     protected $id;
+
+    /**
+     * The value of GET/POST var, 'CMD'
+     *
+     * @var mixed
+     * @deprecated since TYPO3 v9, will be removed in TYPO3 v10.0.
+     */
+    protected $CMD;
 
     /**
      * A WHERE clause for selection records from the pages table based on read-permissions of the current backend user.
@@ -151,6 +193,11 @@ class InfoModuleController
     protected $content = '';
 
     /**
+     * @var DocumentTemplate
+     */
+    protected $doc;
+
+    /**
      * May contain an instance of a 'Function menu module' which connects to this backend module.
      *
      * @var \object
@@ -160,19 +207,16 @@ class InfoModuleController
     /**
      * Constructor
      */
-    public function __construct(
-        ModuleTemplate $moduleTemplate,
-        UriBuilder $uriBuilder,
-        FlashMessageService $flashMessageService,
-        ContainerInterface $container
-    ) {
-        $this->moduleTemplate = $moduleTemplate;
-        $this->uriBuilder = $uriBuilder;
-        $this->flashMessageService = $flashMessageService;
-        $this->container = $container;
-
+    public function __construct()
+    {
+        $this->moduleTemplate = GeneralUtility::makeInstance(ModuleTemplate::class);
         $languageService = $this->getLanguageService();
         $languageService->includeLLFile('EXT:info/Resources/Private/Language/locallang_mod_web_info.xlf');
+
+        // @deprecated and will be removed in TYPO3 v10.0.
+        $this->MCONF = [
+            'name' => $this->moduleName,
+        ];
     }
 
     /**
@@ -181,6 +225,8 @@ class InfoModuleController
     protected function init()
     {
         $this->id = (int)GeneralUtility::_GP('id');
+        // @deprecated since TYPO3 v9, will be removed in TYPO3 v10.0.
+        $this->CMD = GeneralUtility::_GP('CMD');
         $this->perms_clause = $this->getBackendUser()->getPagePermsClause(Permission::PAGE_SHOW);
         $this->menuConfig();
         $this->handleExternalFunctionValue();
@@ -191,6 +237,9 @@ class InfoModuleController
      */
     protected function main()
     {
+        // since TYPO3 v9, will be removed in TYPO3 v10.0.
+        $this->doc = GeneralUtility::makeInstance(DocumentTemplate::class);
+
         $languageService = $this->getLanguageService();
         $backendUser = $this->getBackendUser();
 
@@ -209,13 +258,18 @@ class InfoModuleController
             $this->moduleTemplate->addJavaScriptCode(
                 'WebFuncInLineJS',
                 'if (top.fsMod) top.fsMod.recentIds["web"] = ' . (int)$this->id . ';
+				function jumpToUrl(URL) {
+					window.location.href = URL;
+					return false;
+				}
 				'
             );
             // Setting up the context sensitive menu:
             $this->moduleTemplate->getPageRenderer()->loadRequireJsModule('TYPO3/CMS/Backend/ContextMenu');
 
             $this->view = $this->getFluidTemplateObject();
-            $this->view->assign('moduleName', (string)$this->uriBuilder->buildUriFromRoute($this->moduleName));
+            $uriBuilder = GeneralUtility::makeInstance(UriBuilder::class);
+            $this->view->assign('moduleName', (string)$uriBuilder->buildUriFromRoute($this->moduleName));
             $this->view->assign('functionMenuModuleContent', $this->getExtObjContent());
             // Setting up the buttons and markers for doc header
             $this->getButtons();
@@ -237,8 +291,6 @@ class InfoModuleController
     public function mainAction(ServerRequestInterface $request): ResponseInterface
     {
         // @deprecated and will be removed in TYPO3 v10.0.
-        // @todo: PageLayoutView / $dblist used by PageInformationController still relies on this being set at the moment,
-        // @todo: otherwise the "pages_levels" / "depth" information gets lost rendering the Pagetree Overview.
         $GLOBALS['SOBE'] = $this;
 
         $this->init();
@@ -246,6 +298,9 @@ class InfoModuleController
         // Checking for first level external objects
         $this->checkExtObj();
 
+        // Checking second level external objects
+        // @deprecated and will be removed in TYPO3 v10.0.
+        $this->checkSubExtObj();
         $this->main();
 
         $this->moduleTemplate->setContent($this->content);
@@ -301,11 +356,12 @@ class InfoModuleController
     {
         $menu = $this->moduleTemplate->getDocHeaderComponent()->getMenuRegistry()->makeMenu();
         $menu->setIdentifier('WebInfoJumpMenu');
+        $uriBuilder = GeneralUtility::makeInstance(UriBuilder::class);
         foreach ($this->MOD_MENU['function'] as $controller => $title) {
             $item = $menu
                 ->makeMenuItem()
                 ->setHref(
-                    (string)$this->uriBuilder->buildUriFromRoute(
+                    (string)$uriBuilder->buildUriFromRoute(
                         $this->moduleName,
                         [
                             'id' => $this->id,
@@ -322,6 +378,17 @@ class InfoModuleController
             $menu->addMenuItem($item);
         }
         $this->moduleTemplate->getDocHeaderComponent()->getMenuRegistry()->addMenu($menu);
+    }
+
+    /**
+     * Returns the ModuleTemplate container
+     * This is used by PageLayoutView.php
+     *
+     * @return ModuleTemplate
+     */
+    protected function getModuleTemplate()
+    {
+        return $this->moduleTemplate;
     }
 
     /**
@@ -430,16 +497,37 @@ class InfoModuleController
     protected function checkExtObj()
     {
         if (is_array($this->extClassConf) && $this->extClassConf['name']) {
-            if ($this->container->has($this->extClassConf['name'])) {
-                $this->extObj = $this->container->get($this->extClassConf['name']);
-            } else {
-                $this->extObj = GeneralUtility::makeInstance($this->extClassConf['name']);
-            }
+            $this->extObj = GeneralUtility::makeInstance($this->extClassConf['name']);
             if (is_callable([$this->extObj, 'init'])) {
                 $this->extObj->init($this);
             }
             // Re-write:
             $this->MOD_SETTINGS = BackendUtility::getModuleData($this->MOD_MENU, GeneralUtility::_GP('SET'), 'web_info', $this->modMenu_type, $this->modMenu_dontValidateList, $this->modMenu_setDefaultList);
+        }
+    }
+
+    /**
+     * Calls the checkExtObj function in sub module if present.
+     *
+     * @deprecated since TYPO3 v9, will be removed in TYPO3 v10.0.
+     */
+    protected function checkSubExtObj()
+    {
+        if (is_object($this->extObj) && is_callable([$this->extObj, 'checkExtObj'])) {
+            $this->extObj->checkExtObj();
+        }
+    }
+
+    /**
+     * Calls the 'header' function inside the "Function menu module" if present.
+     * A header function might be needed to add JavaScript or other stuff in the head. This can't be done in the main function because the head is already written.
+     *
+     * @deprecated since TYPO3 v9, will be removed in TYPO3 v10.0.
+     */
+    protected function extObjHeader()
+    {
+        if (is_callable([$this->extObj, 'head'])) {
+            $this->extObj->head();
         }
     }
 
@@ -456,8 +544,9 @@ class InfoModuleController
                 $languageService->getLL('title'),
                 FlashMessage::ERROR
             );
+            $flashMessageService = GeneralUtility::makeInstance(FlashMessageService::class);
             /** @var \TYPO3\CMS\Core\Messaging\FlashMessageQueue $defaultFlashMessageQueue */
-            $defaultFlashMessageQueue = $this->flashMessageService->getMessageQueueByIdentifier();
+            $defaultFlashMessageQueue = $flashMessageService->getMessageQueueByIdentifier();
             $defaultFlashMessageQueue->enqueue($flashMessage);
         } else {
             if (is_callable([$this->extObj, 'main'])) {

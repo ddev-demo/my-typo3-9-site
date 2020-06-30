@@ -103,10 +103,14 @@ class ResourceCompressor
     /**
      * Concatenates the Stylesheet files
      *
+     * Options:
+     * baseDirectories If set, only include files below one of the base directories
+     *
      * @param array $cssFiles CSS files to process
+     * @param array $options Additional options
      * @return array CSS files
      */
-    public function concatenateCssFiles(array $cssFiles)
+    public function concatenateCssFiles(array $cssFiles, array $options = [])
     {
         $filesToIncludeByType = ['all' => []];
         foreach ($cssFiles as $key => $fileOptions) {
@@ -115,34 +119,45 @@ class ResourceCompressor
                 continue;
             }
             $filenameFromMainDir = $this->getFilenameFromMainDir($fileOptions['file']);
-            $type = isset($fileOptions['media']) ? strtolower($fileOptions['media']) : 'all';
-            if (!isset($filesToIncludeByType[$type])) {
-                $filesToIncludeByType[$type] = [];
+            // if $options['baseDirectories'] set, we only include files below these directories
+            if (
+                !isset($options['baseDirectories'])
+                || $this->checkBaseDirectory(
+                    $filenameFromMainDir,
+                    array_merge($options['baseDirectories'], [$this->targetDirectory])
+                )
+            ) {
+                $type = isset($fileOptions['media']) ? strtolower($fileOptions['media']) : 'all';
+                if (!isset($filesToIncludeByType[$type])) {
+                    $filesToIncludeByType[$type] = [];
+                }
+                if (!empty($fileOptions['forceOnTop'])) {
+                    array_unshift($filesToIncludeByType[$type], $filenameFromMainDir);
+                } else {
+                    $filesToIncludeByType[$type][] = $filenameFromMainDir;
+                }
+                // remove the file from the incoming file array
+                unset($cssFiles[$key]);
             }
-            if (!empty($fileOptions['forceOnTop'])) {
-                array_unshift($filesToIncludeByType[$type], $filenameFromMainDir);
-            } else {
-                $filesToIncludeByType[$type][] = $filenameFromMainDir;
-            }
-            // remove the file from the incoming file array
-            unset($cssFiles[$key]);
         }
-        foreach ($filesToIncludeByType as $mediaOption => $filesToInclude) {
-            if (empty($filesToInclude)) {
-                continue;
+        if (!empty($filesToIncludeByType)) {
+            foreach ($filesToIncludeByType as $mediaOption => $filesToInclude) {
+                if (empty($filesToInclude)) {
+                    continue;
+                }
+                $targetFile = $this->createMergedCssFile($filesToInclude);
+                $concatenatedOptions = [
+                    'file' => $targetFile,
+                    'rel' => 'stylesheet',
+                    'media' => $mediaOption,
+                    'compress' => true,
+                    'excludeFromConcatenation' => true,
+                    'forceOnTop' => false,
+                    'allWrap' => ''
+                ];
+                // place the merged stylesheet on top of the stylesheets
+                $cssFiles = array_merge($cssFiles, [$targetFile => $concatenatedOptions]);
             }
-            $targetFile = $this->createMergedCssFile($filesToInclude);
-            $concatenatedOptions = [
-                'file' => $targetFile,
-                'rel' => 'stylesheet',
-                'media' => $mediaOption,
-                'compress' => true,
-                'excludeFromConcatenation' => true,
-                'forceOnTop' => false,
-                'allWrap' => ''
-            ];
-            // place the merged stylesheet on top of the stylesheets
-            $cssFiles = array_merge($cssFiles, [$targetFile => $concatenatedOptions]);
         }
         return $cssFiles;
     }
@@ -160,7 +175,7 @@ class ResourceCompressor
         $filesToInclude = [];
         foreach ($jsFiles as $key => $fileOptions) {
             // invalid section found or no concatenation allowed, so continue
-            if (empty($fileOptions['section']) || !empty($fileOptions['excludeFromConcatenation'])) {
+            if (empty($fileOptions['section']) || !empty($fileOptions['excludeFromConcatenation']) || !empty($fileOptions['defer'])) {
                 continue;
             }
             if (!isset($filesToInclude[$fileOptions['section']])) {
@@ -432,11 +447,12 @@ class ResourceCompressor
 
         // if the file is an absolute reference within the docRoot
         $absolutePath = $docRoot . '/' . $fileNameWithoutSlash;
-        // if it is already an absolute path to the file
-        if (PathUtility::isAbsolutePath($filename)) {
+        // If the $filename stems from a call to PathUtility::getAbsoluteWebPath() it has a leading slash,
+        // hence isAbsolutePath() results in true, which is obviously wrong. Check file existence to be sure.
+        // Calling is_file without @ for a path starting with '../' causes a PHP Warning when using open_basedir restriction
+        if (PathUtility::isAbsolutePath($filename) && @is_file($filename)) {
             $absolutePath = $filename;
         }
-        // Calling is_file without @ for a path starting with '../' causes a PHP Warning when using open_basedir restriction
         if (@is_file($absolutePath)) {
             if (strpos($absolutePath, $this->rootPath) === 0) {
                 // the path is within the current root path, simply strip rootPath off
@@ -463,7 +479,7 @@ class ResourceCompressor
             $file = Environment::getPublicPath() . '/' . $filename;
         }
 
-        // check if the file exists, and if so, return the path relative to current PHP script
+        // check if the file exists, and if so, return the path relative to PATH_thisScript
         if (is_file($file)) {
             return rtrim(PathUtility::getRelativePathTo($file), '/');
         }
@@ -640,7 +656,7 @@ class ResourceCompressor
         $filename = $this->targetDirectory . 'external-' . md5($url);
         // Write only if file does not exist OR md5 of the content is not the same as fetched one
         if (!file_exists(Environment::getPublicPath() . '/' . $filename)
-            || (md5($externalContent) !== md5(file_get_contents(Environment::getPublicPath() . '/' . $filename)))
+            || !hash_equals(md5(file_get_contents(Environment::getPublicPath() . '/' . $filename)), md5($externalContent))
         ) {
             GeneralUtility::writeFile(Environment::getPublicPath() . '/' . $filename, $externalContent);
         }

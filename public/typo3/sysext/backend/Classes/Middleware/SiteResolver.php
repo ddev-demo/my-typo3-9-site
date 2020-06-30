@@ -21,6 +21,7 @@ use Psr\Http\Server\MiddlewareInterface;
 use Psr\Http\Server\RequestHandlerInterface;
 use TYPO3\CMS\Backend\Utility\BackendUtility;
 use TYPO3\CMS\Core\Routing\SiteMatcher;
+use TYPO3\CMS\Core\Utility\GeneralUtility;
 use TYPO3\CMS\Core\Utility\MathUtility;
 
 /**
@@ -33,16 +34,6 @@ use TYPO3\CMS\Core\Utility\MathUtility;
  */
 class SiteResolver implements MiddlewareInterface
 {
-    /**
-     * @var SiteMatcher
-     */
-    protected $siteMatcher;
-
-    public function __construct(SiteMatcher $siteMatcher)
-    {
-        $this->siteMatcher = $siteMatcher;
-    }
-
     /**
      * Resolve the site information by checking the page ID ("id" parameter) which is typically used in BE modules
      * of type "web".
@@ -61,8 +52,9 @@ class SiteResolver implements MiddlewareInterface
             if ($pageId > 0) {
                 $rootLine = BackendUtility::BEgetRootLine($pageId);
             }
-            $site = $this->siteMatcher->matchByPageId($pageId, $rootLine);
+            $site = GeneralUtility::makeInstance(SiteMatcher::class)->matchByPageId($pageId, $rootLine);
             $request = $request->withAttribute('site', $site);
+            $GLOBALS['TYPO3_REQUEST'] = $request;
         }
         return $handler->handle($request);
     }

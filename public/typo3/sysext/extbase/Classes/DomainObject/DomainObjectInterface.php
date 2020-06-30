@@ -1,6 +1,4 @@
 <?php
-declare(strict_types = 1);
-
 namespace TYPO3\CMS\Extbase\DomainObject;
 
 /*
@@ -31,55 +29,51 @@ interface DomainObjectInterface
      *
      * @return int The uid or NULL if none set yet.
      */
-    public function getUid(): ?int;
+    public function getUid();
 
     /**
      * Setter for the pid.
      *
      * @param int $pid
      */
-    public function setPid(int $pid);
+    public function setPid($pid);
 
     /**
      * Getter for the pid.
      *
      * @return int The pid or NULL if none set yet.
      */
-    public function getPid(): ?int;
+    public function getPid();
 
     /**
      * Returns TRUE if the object is new (the uid was not set, yet). Only for internal use
      *
      * @return bool
-     * @internal
      */
-    public function _isNew(): bool;
+    public function _isNew();
 
     /**
      * Reconstitutes a property. Only for internal use.
      *
      * @param string $propertyName
-     * @param mixed $value
-     * @internal
+     * @param string $value
      */
-    public function _setProperty(string $propertyName, $value);
+    public function _setProperty($propertyName, $value);
 
     /**
      * Returns the property value of the given property name. Only for internal use.
      *
      * @param string $propertyName
      * @return mixed The propertyValue
-     * @internal
      */
-    public function _getProperty(string $propertyName);
+    public function _getProperty($propertyName);
 
     /**
      * Returns a hash map of property names and property values
      *
      * @return array The properties
-     * @internal
      */
-    public function _getProperties(): array;
+    public function _getProperties();
 
     /**
      * Returns the clean value of the given property. The returned value will be NULL if the clean state was not memorized before, or
@@ -87,7 +81,6 @@ interface DomainObjectInterface
      *
      * @param string $propertyName The name of the property to be memorized.
      * @return mixed The clean property value or NULL
-     * @internal
      */
-    public function _getCleanProperty(string $propertyName);
+    public function _getCleanProperty($propertyName);
 }

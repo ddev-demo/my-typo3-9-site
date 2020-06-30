@@ -23,6 +23,7 @@ use TYPO3\CMS\Core\Log\LogManager;
 use TYPO3\CMS\Core\Registry;
 use TYPO3\CMS\Core\Resource\Driver\StreamableDriverInterface;
 use TYPO3\CMS\Core\Resource\Exception\ExistingTargetFileNameException;
+use TYPO3\CMS\Core\Resource\Exception\InvalidHashException;
 use TYPO3\CMS\Core\Resource\Exception\InvalidTargetFolderException;
 use TYPO3\CMS\Core\Resource\Index\FileIndexRepository;
 use TYPO3\CMS\Core\Resource\OnlineMedia\Helpers\OnlineMediaHelperRegistry;
@@ -303,10 +304,7 @@ class ResourceStorage implements ResourceStorageInterface
      * Returns the capabilities of this storage.
      *
      * @return int
-     * @see \TYPO3\CMS\Core\Resource\ResourceStorageInterface::CAPABILITY_BROWSABLE
-     * @see \TYPO3\CMS\Core\Resource\ResourceStorageInterface::CAPABILITY_PUBLIC
-     * @see \TYPO3\CMS\Core\Resource\ResourceStorageInterface::CAPABILITY_WRITABLE
-     * @see \TYPO3\CMS\Core\Resource\ResourceStorageInterface::CAPABILITY_HIERARCHICAL_IDENTIFIERS
+     * @see CAPABILITY_* constants
      */
     public function getCapabilities()
     {
@@ -1240,6 +1238,9 @@ class ResourceStorage implements ResourceStorageInterface
         if ($replaceExisting && $file instanceof File) {
             $this->getIndexer()->updateIndexEntry($file);
         }
+        if ($this->autoExtractMetadataEnabled()) {
+            $this->getIndexer()->extractMetaData($file);
+        }
 
         $this->emitPostFileAddSignal($file, $targetFolder);
 
@@ -1275,6 +1276,7 @@ class ResourceStorage implements ResourceStorageInterface
      *
      * @param FileInterface $fileObject
      * @param string $hash
+     * @throws \TYPO3\CMS\Core\Resource\Exception\InvalidHashException
      * @return string
      */
     public function hashFile(FileInterface $fileObject, $hash)
@@ -1287,12 +1289,16 @@ class ResourceStorage implements ResourceStorageInterface
      *
      * @param string $fileIdentifier
      * @param string $hash
-     *
+     * @throws \TYPO3\CMS\Core\Resource\Exception\InvalidHashException
      * @return string
      */
     public function hashFileByIdentifier($fileIdentifier, $hash)
     {
-        return $this->driver->hash($fileIdentifier, $hash);
+        $hash = $this->driver->hash($fileIdentifier, $hash);
+        if (!is_string($hash) || $hash === '') {
+            throw new InvalidHashException('Hash has to be non-empty string.', 1551950301);
+        }
+        return $hash;
     }
 
     /**
@@ -1684,6 +1690,43 @@ class ResourceStorage implements ResourceStorageInterface
     }
 
     /**
+     * Outputs file Contents,
+     * clears output buffer first and sends headers accordingly.
+     *
+     * @param FileInterface $file
+     * @param bool $asDownload If set Content-Disposition attachment is sent, inline otherwise
+     * @param string $alternativeFilename the filename for the download (if $asDownload is set)
+     * @param string $overrideMimeType If set this will be used as Content-Type header instead of the automatically detected mime type.
+     * @deprecated since TYPO3 v9.5, will be removed in TYPO3 v10.0.
+     */
+    public function dumpFileContents(FileInterface $file, $asDownload = false, $alternativeFilename = null, $overrideMimeType = null)
+    {
+        trigger_error('ResourceStorage->dumpFileContents() will be removed in TYPO3 v10.0. Use streamFile() instead.', E_USER_DEPRECATED);
+
+        $downloadName = $alternativeFilename ?: $file->getName();
+        $contentDisposition = $asDownload ? 'attachment' : 'inline';
+        header('Content-Disposition: ' . $contentDisposition . '; filename="' . $downloadName . '"');
+        header('Content-Type: ' . ($overrideMimeType ?: $file->getMimeType()));
+        header('Content-Length: ' . $file->getSize());
+
+        // Cache-Control header is needed here to solve an issue with browser IE8 and lower
+        // See for more information: http://support.microsoft.com/kb/323308
+        header("Cache-Control: ''");
+        header(
+            'Last-Modified: ' .
+            gmdate('D, d M Y H:i:s', array_pop($this->driver->getFileInfoByIdentifier($file->getIdentifier(), ['mtime']))) . ' GMT',
+            true,
+            200
+        );
+        ob_clean();
+        flush();
+        while (ob_get_level() > 0) {
+            ob_end_clean();
+        }
+        $this->driver->dumpFileContents($file->getIdentifier());
+    }
+
+    /**
      * Returns a PSR-7 Response which can be used to stream the requested file
      *
      * @param FileInterface $file
@@ -2015,6 +2058,9 @@ class ResourceStorage implements ResourceStorageInterface
         if ($file instanceof File) {
             $this->getIndexer()->updateIndexEntry($file);
         }
+        if ($this->autoExtractMetadataEnabled()) {
+            $this->getIndexer()->extractMetaData($file);
+        }
         $this->emitPostFileReplaceSignal($file, $localFilePath);
 
         return $file;
@@ -2234,7 +2280,7 @@ class ResourceStorage implements ResourceStorageInterface
         }
         $returnObject = $this->getFolder($fileMappings[$folderObject->getIdentifier()]);
 
-        $this->emitPostFolderRenameSignal($returnObject, $returnObject->getName());
+        $this->emitPostFolderRenameSignal($folderObject, $returnObject->getName());
 
         return $returnObject;
     }
@@ -2430,7 +2476,7 @@ class ResourceStorage implements ResourceStorageInterface
     public function getFolder($identifier, $returnInaccessibleFolderObject = false)
     {
         $data = $this->driver->getFolderInfoByIdentifier($identifier);
-        $folder = $this->getResourceFactoryInstance()->createFolderObject($this, $data['identifier'], $data['name']);
+        $folder = $this->getResourceFactoryInstance()->createFolderObject($this, $data['identifier'] ?? null, $data['name'] ?? null);
 
         try {
             $this->assureFolderReadPermission($folder);

@@ -48,6 +48,8 @@ class DatabaseUpdatedPrerequisite implements PrerequisiteInterface, ChattyInterf
         return 'Database Up-to-Date';
     }
 
+    /**
+     */
     public function ensure(): bool
     {
         $adds = $this->upgradeWizardsService->getBlockingDatabaseAdds();

@@ -14,18 +14,18 @@ namespace TYPO3\CMS\Core\Localization;
  * The TYPO3 project - inspiring people to share!
  */
 
-use TYPO3\CMS\Core\Log\LogManager;
-use TYPO3\CMS\Core\SingletonInterface;
-use TYPO3\CMS\Core\Site\Entity\SiteLanguage;
+use TYPO3\CMS\Core\Utility\ArrayUtility;
 use TYPO3\CMS\Core\Utility\GeneralUtility;
 
 /**
- * Locales. Used to define TYPO3- system languages
+ * Locales.
+ *
+ * Used to define backend system languages
  * When adding new keys, remember to:
  * - Update 'setup' extension labels (sysext/setup/Resources/Private/Language/locallang.xlf)
  * That's it!
  */
-class Locales implements SingletonInterface
+class Locales implements \TYPO3\CMS\Core\SingletonInterface
 {
     /**
      * Supported TYPO3 languages with locales
@@ -67,6 +67,8 @@ class Locales implements SingletonInterface
         'ko' => 'Korean',
         'lt' => 'Lithuanian',
         'lv' => 'Latvian',
+        'mi' => 'Maori',
+        'mk' => 'Macedonian',
         'ms' => 'Malay',
         'nl' => 'Dutch',
         'no' => 'Norwegian',
@@ -75,6 +77,7 @@ class Locales implements SingletonInterface
         'pt_BR' => 'Brazilian Portuguese',
         'ro' => 'Romanian',
         'ru' => 'Russian',
+        'rw' => 'Kinyarwanda',
         'sk' => 'Slovak',
         'sl' => 'Slovenian',
         'sq' => 'Albanian',
@@ -116,46 +119,44 @@ class Locales implements SingletonInterface
     ];
 
     /**
-     * Dependencies for locales
-     * This is a reverse mapping for the built-in languages within $this->languages that contain 5-letter codes.
+     * Mapping for backward compatibility codes
      *
      * @var array
      */
-    protected $localeDependencies = [
-        'pt_BR' => ['pt'],
-        'fr_CA' => ['fr']
-    ];
+    protected $isoMapping;
 
-    public function __construct()
-    {
-        // Allow user-defined locales
-        foreach ($GLOBALS['TYPO3_CONF_VARS']['SYS']['localization']['locales']['user'] ?? [] as $locale => $name) {
-            if (!isset($this->languages[$locale])) {
-                $this->languages[$locale] = $name;
-            }
-            // Initializes the locale dependencies with TYPO3 supported locales
-            if (strlen($locale) === 5) {
-                $this->localeDependencies[$locale] = [substr($locale, 0, 2)];
-            }
-        }
-        // Merge user-provided locale dependencies
-        if (is_array($GLOBALS['TYPO3_CONF_VARS']['SYS']['localization']['locales']['dependencies'] ?? null)) {
-            $this->localeDependencies = array_replace_recursive(
-                $this->localeDependencies,
-                $GLOBALS['TYPO3_CONF_VARS']['SYS']['localization']['locales']['dependencies']
-            );
-        }
-    }
+    /**
+     * Dependencies for locales
+     *
+     * @var array
+     */
+    protected $localeDependencies;
 
     /**
      * Initializes the languages.
      * @return Locales
-     * @deprecated will be removed in TYPO3 v11.0. Use the regular constructor instead.
      */
     public static function initialize(): Locales
     {
-        trigger_error('Locales::initialize() will be removed in TYPO3 v11.0, fetch the instance of a class via GeneralUtility::makeInstance() or DependencyInjection', E_USER_DEPRECATED);
-        return new self;
+        /** @var Locales $instance */
+        $instance = GeneralUtility::makeInstance(self::class);
+        $instance->isoMapping = array_flip($instance->isoReverseMapping);
+        // Allow user-defined locales
+        foreach ($GLOBALS['TYPO3_CONF_VARS']['SYS']['localization']['locales']['user'] ?? [] as $locale => $name) {
+            if (!isset($instance->languages[$locale])) {
+                $instance->languages[$locale] = $name;
+            }
+        }
+        // Initializes the locale dependencies with TYPO3 supported locales
+        $instance->localeDependencies = [];
+        foreach ($instance->languages as $locale => $name) {
+            if (strlen($locale) === 5) {
+                $instance->localeDependencies[$locale] = [substr($locale, 0, 2)];
+            }
+        }
+        // Merge user-provided locale dependencies
+        ArrayUtility::mergeRecursiveWithOverrule($instance->localeDependencies, $GLOBALS['TYPO3_CONF_VARS']['SYS']['localization']['locales']['dependencies'] ?? []);
+        return $instance;
     }
 
     /**
@@ -185,7 +186,7 @@ class Locales implements SingletonInterface
      */
     public function getIsoMapping()
     {
-        return array_flip($this->isoReverseMapping);
+        return $this->isoMapping;
     }
 
     /**
@@ -257,42 +258,5 @@ class Locales implements SingletonInterface
             $selectedLanguage = 'default';
         }
         return $selectedLanguage;
-    }
-
-    /**
-     * Setting locale based on a SiteLanguage's defined locale.
-     * Used for frontend rendering, previously set within TSFE->settingLocale
-     *
-     * @param SiteLanguage $siteLanguage
-     * @return bool whether the locale was found on the system (and could be set properly) or not
-     */
-    public static function setSystemLocaleFromSiteLanguage(SiteLanguage $siteLanguage): bool
-    {
-        $locale = $siteLanguage->getLocale();
-        // No locale was given, so return false;
-        if (!$locale) {
-            return false;
-        }
-        $availableLocales = GeneralUtility::trimExplode(',', $locale, true);
-        // If LC_NUMERIC is set e.g. to 'de_DE' PHP parses float values locale-aware resulting in strings with comma
-        // as decimal point which causes problems with value conversions - so we set all locale types except LC_NUMERIC
-        // @see https://bugs.php.net/bug.php?id=53711
-        $locale = setlocale(LC_COLLATE, ...$availableLocales);
-        if ($locale) {
-            // As str_* methods are locale aware and turkish has no upper case I
-            // Class autoloading and other checks depending on case changing break with turkish locale LC_CTYPE
-            // @see http://bugs.php.net/bug.php?id=35050
-            if (strpos($locale, 'tr') !== 0) {
-                setlocale(LC_CTYPE, ...$availableLocales);
-            }
-            setlocale(LC_MONETARY, ...$availableLocales);
-            setlocale(LC_TIME, ...$availableLocales);
-        } else {
-            GeneralUtility::makeInstance(LogManager::class)
-                ->getLogger(__CLASS__)
-                ->error('Locale "' . htmlspecialchars($siteLanguage->getLocale()) . '" not found.');
-            return false;
-        }
-        return true;
     }
 }

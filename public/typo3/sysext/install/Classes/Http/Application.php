@@ -16,13 +16,14 @@ namespace TYPO3\CMS\Install\Http;
 
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
-use Psr\Http\Server\RequestHandlerInterface;
 use TYPO3\CMS\Core\Context\Context;
 use TYPO3\CMS\Core\Context\DateTimeAspect;
 use TYPO3\CMS\Core\Context\UserAspect;
 use TYPO3\CMS\Core\Context\VisibilityAspect;
 use TYPO3\CMS\Core\Context\WorkspaceAspect;
 use TYPO3\CMS\Core\Http\AbstractApplication;
+use TYPO3\CMS\Core\Http\RequestHandlerInterface;
+use TYPO3\CMS\Core\Utility\GeneralUtility;
 
 /**
  * Entry point for the TYPO3 Install Tool
@@ -31,32 +32,54 @@ use TYPO3\CMS\Core\Http\AbstractApplication;
 class Application extends AbstractApplication
 {
     /**
-     * @var Context
+     * All available request handlers that can handle an install tool request
+     * @var array
      */
-    protected $context;
+    protected $availableRequestHandlers = [];
 
+    /**
+     * Construct Application
+     *
+     * @param RequestHandlerInterface $requestHandler
+     * @param RequestHandlerInterface $installerRequestHandler
+     */
     public function __construct(
         RequestHandlerInterface $requestHandler,
-        Context $context
+        RequestHandlerInterface $installerRequestHandler
     ) {
-        $this->requestHandler = $requestHandler;
-        $this->context = $context;
+        $this->availableRequestHandlers = [
+            $requestHandler,
+            $installerRequestHandler
+        ];
     }
 
+    /**
+     * @param ServerRequestInterface $request
+     * @return ResponseInterface
+     */
     protected function handle(ServerRequestInterface $request): ResponseInterface
     {
         $this->initializeContext();
-        return parent::handle($request);
+        foreach ($this->availableRequestHandlers as $handler) {
+            if ($handler->canHandleRequest($request)) {
+                return $handler->handle($request)
+                    ->withHeader('X-Frame-Options', 'SAMEORIGIN');
+            }
+        }
+        throw new \TYPO3\CMS\Core\Exception('No suitable request handler found.', 1518448686);
     }
 
     /**
      * Initializes the Context used for accessing data and finding out the current state of the application
+     * Will be moved to a DI-like concept once introduced, for now, this is a singleton
      */
-    protected function initializeContext(): void
+    protected function initializeContext()
     {
-        $this->context->setAspect('date', new DateTimeAspect(new \DateTimeImmutable('@' . $GLOBALS['EXEC_TIME'])));
-        $this->context->setAspect('visibility', new VisibilityAspect(true, true, true));
-        $this->context->setAspect('workspace', new WorkspaceAspect(0));
-        $this->context->setAspect('backend.user', new UserAspect());
+        GeneralUtility::makeInstance(Context::class, [
+            'date' => new DateTimeAspect(new \DateTimeImmutable('@' . $GLOBALS['EXEC_TIME'])),
+            'visibility' => new VisibilityAspect(true, true, true),
+            'workspace' => new WorkspaceAspect(0),
+            'backend.user' => new UserAspect(),
+        ]);
     }
 }

@@ -10,4 +10,260 @@
  *
  * The TYPO3 project - inspiring people to share!
  */
-define(["require","exports","jquery","TYPO3/CMS/Backend/Storage/Persistent","jquery-ui/resizable"],function(e,t,i,s){"use strict";var r;!function(e){e.resizableContainerIdentifier=".t3js-viewpage-resizeable",e.sizeIdentifier=".t3js-viewpage-size",e.moduleBodySelector=".t3js-module-body",e.customSelector=".t3js-preset-custom",e.customWidthSelector=".t3js-preset-custom",e.customHeightSelector=".t3js-preset-custom-height",e.changeOrientationSelector=".t3js-change-orientation",e.changePresetSelector=".t3js-change-preset",e.inputWidthSelector=".t3js-viewpage-input-width",e.inputHeightSelector=".t3js-viewpage-input-height",e.currentLabelSelector=".t3js-viewpage-current-label",e.topbarContainerSelector=".t3js-viewpage-topbar"}(r||(r={}));class h{constructor(){this.defaultLabel="",this.minimalHeight=300,this.minimalWidth=300,this.storagePrefix="moduleData.web_view.States.",this.queue=[],this.queueIsRunning=!1,i(()=>{const e=i(".t3js-preset-custom-label");this.defaultLabel=e.length>0?e.html().trim():"",this.$iframe=i("#tx_this_iframe"),this.$resizableContainer=i(r.resizableContainerIdentifier),this.$sizeSelector=i(r.sizeIdentifier),this.initialize()})}static getCurrentWidth(){return i(r.inputWidthSelector).val()}static getCurrentHeight(){return i(r.inputHeightSelector).val()}static setLabel(e){i(r.currentLabelSelector).html(e)}static getCurrentLabel(){return i(r.currentLabelSelector).html().trim()}persistQueue(){if(!1===this.queueIsRunning&&this.queue.length>=1){this.queueIsRunning=!0;let e=this.queue.shift();s.set(e.storageIdentifier,e.data).done(()=>{this.queueIsRunning=!1,this.persistQueue()})}}addToQueue(e,t){const i={storageIdentifier:e,data:t};this.queue.push(i),this.queue.length>=1&&this.persistQueue()}setSize(e,t){isNaN(t)&&(t=this.calculateContainerMaxHeight()),t<this.minimalHeight&&(t=this.minimalHeight),isNaN(e)&&(e=this.calculateContainerMaxWidth()),e<this.minimalWidth&&(e=this.minimalWidth),i(r.inputWidthSelector).val(e),i(r.inputHeightSelector).val(t),this.$resizableContainer.css({width:e,height:t,left:0})}persistCurrentPreset(){let e={width:h.getCurrentWidth(),height:h.getCurrentHeight(),label:h.getCurrentLabel()};this.addToQueue(this.storagePrefix+"current",e)}persistCustomPreset(){let e={width:h.getCurrentWidth(),height:h.getCurrentHeight()};i(r.customSelector).data("width",e.width),i(r.customSelector).data("height",e.height),i(r.customWidthSelector).html(e.width),i(r.customHeightSelector).html(e.height),this.addToQueue(this.storagePrefix+"custom",e)}persistCustomPresetAfterChange(){clearTimeout(this.queueDelayTimer),this.queueDelayTimer=window.setTimeout(()=>{this.persistCustomPreset()},1e3)}initialize(){i(document).on("click",r.changeOrientationSelector,()=>{const e=i(r.inputHeightSelector).val(),t=i(r.inputWidthSelector).val();this.setSize(e,t),this.persistCurrentPreset()}),i(document).on("change",r.inputWidthSelector,()=>{const e=i(r.inputWidthSelector).val(),t=i(r.inputHeightSelector).val();this.setSize(e,t),h.setLabel(this.defaultLabel),this.persistCustomPresetAfterChange()}),i(document).on("change",r.inputHeightSelector,()=>{const e=i(r.inputWidthSelector).val(),t=i(r.inputHeightSelector).val();this.setSize(e,t),h.setLabel(this.defaultLabel),this.persistCustomPresetAfterChange()}),i(document).on("click",r.changePresetSelector,e=>{const t=i(e.currentTarget).data();this.setSize(parseInt(t.width,10),parseInt(t.height,10)),h.setLabel(t.label),this.persistCurrentPreset()}),this.$resizableContainer.resizable({handles:"w, sw, s, se, e"}),this.$resizableContainer.on("resizestart",e=>{i(e.currentTarget).append('<div id="this-iframe-cover" style="z-index:99;position:absolute;width:100%;top:0;left:0;height:100%;"></div>')}),this.$resizableContainer.on("resize",(e,t)=>{t.size.width=t.originalSize.width+2*(t.size.width-t.originalSize.width),t.size.height<this.minimalHeight&&(t.size.height=this.minimalHeight),t.size.width<this.minimalWidth&&(t.size.width=this.minimalWidth),i(r.inputWidthSelector).val(t.size.width),i(r.inputHeightSelector).val(t.size.height),this.$resizableContainer.css({left:0}),h.setLabel(this.defaultLabel)}),this.$resizableContainer.on("resizestop",()=>{i("#viewpage-iframe-cover").remove(),this.persistCurrentPreset(),this.persistCustomPreset()})}calculateContainerMaxHeight(){this.$resizableContainer.hide();let e=i(r.moduleBodySelector),t=e.outerHeight()-e.height(),s=i(document).height(),h=i(r.topbarContainerSelector).outerHeight();return this.$resizableContainer.show(),s-t-h-8}calculateContainerMaxWidth(){this.$resizableContainer.hide();let e=i(r.moduleBodySelector),t=e.outerWidth()-e.width(),s=i(document).width();return this.$resizableContainer.show(),parseInt(s-t+"",10)}}return new h});
+/**
+ * Module: TYPO3/CMS/Viewpage/Main
+ * Main logic for resizing the view of the frame
+ */
+define([
+  'jquery',
+  'TYPO3/CMS/Backend/Storage/Persistent',
+  'jquery-ui/resizable'
+], function($, PersistentStorage) {
+  'use strict';
+
+  /**
+   * @type {{<resizableContainerIdentifier: string, sizeIdentifier: string, moduleBodySelector: string, storagePrefix: string, $iframe: null, $resizableContainer: null, $sizeSelector: null}}
+   * @exports TYPO3/CMS/Viewpage/Main
+   */
+  var ViewPage = {
+
+    resizableContainerIdentifier: '.t3js-viewpage-resizeable',
+    sizeIdentifier: ' .t3js-viewpage-size',
+    moduleBodySelector: '.t3js-module-body',
+
+    defaultLabel: $('.t3js-preset-custom-label').html().trim(),
+    minimalHeight: 300,
+    minimalWidth: 300,
+
+    storagePrefix: 'moduleData.web_view.States.',
+    $iframe: null,
+    $resizableContainer: null,
+    $sizeSelector: null,
+
+    customSelector: '.t3js-preset-custom',
+    customWidthSelector: '.t3js-preset-custom-width',
+    customHeightSelector: '.t3js-preset-custom-height',
+
+    changeOrientationSelector: '.t3js-change-orientation',
+    changePresetSelector: '.t3js-change-preset',
+
+    inputWidthSelector: '.t3js-viewpage-input-width',
+    inputHeightSelector: '.t3js-viewpage-input-height',
+
+    currentLabelSelector: '.t3js-viewpage-current-label',
+    topbarContainerSelector: '.t3js-viewpage-topbar',
+
+    queue: [],
+    queueIsRunning: false,
+    queueDelayTimer: null
+
+  };
+
+  ViewPage.persistQueue = function() {
+    if (ViewPage.queueIsRunning === false && ViewPage.queue.length >= 1) {
+      ViewPage.queueIsRunning = true;
+      var item = ViewPage.queue.shift();
+      PersistentStorage.set(item.storageIdentifier, item.data).done(function() {
+        ViewPage.queueIsRunning = false;
+        ViewPage.persistQueue();
+      });
+    }
+  }
+
+  ViewPage.addToQueue = function(storageIdentifier, data) {
+    var item = {
+      'storageIdentifier': storageIdentifier,
+      'data': data
+    };
+    ViewPage.queue.push(item);
+    if (ViewPage.queue.length >= 1) {
+      ViewPage.persistQueue();
+    }
+  }
+
+  ViewPage.setSize = function(width, height) {
+    if (isNaN(height)) {
+      height = ViewPage.calculateContainerMaxHeight();
+    }
+    if (height < ViewPage.minimalHeight) {
+      height = ViewPage.minimalHeight;
+    }
+    if (isNaN(width)) {
+      width = ViewPage.calculateContainerMaxWidth();
+    }
+    if (width < ViewPage.minimalWidth) {
+      width = ViewPage.minimalWidth;
+    }
+
+    $(ViewPage.inputWidthSelector).val(width);
+    $(ViewPage.inputHeightSelector).val(height);
+
+    ViewPage.$resizableContainer.css({
+      width: width,
+      height: height,
+      left: 0
+    });
+  }
+
+  ViewPage.getCurrentWidth = function() {
+    return $(ViewPage.inputWidthSelector).val();
+  }
+
+  ViewPage.getCurrentHeight = function() {
+    return $(ViewPage.inputHeightSelector).val();
+  }
+
+  ViewPage.setLabel = function(label) {
+    $(ViewPage.currentLabelSelector).html(label);
+  }
+
+  ViewPage.getCurrentLabel = function() {
+    return $(ViewPage.currentLabelSelector).html().trim();
+  }
+
+  ViewPage.persistCurrentPreset = function() {
+    var data = {
+      width: ViewPage.getCurrentWidth(),
+      height: ViewPage.getCurrentHeight(),
+      label: ViewPage.getCurrentLabel()
+    }
+    ViewPage.addToQueue(ViewPage.storagePrefix + 'current', data);
+  }
+
+  ViewPage.persistCustomPreset = function() {
+    var data = {
+      width: ViewPage.getCurrentWidth(),
+      height: ViewPage.getCurrentHeight()
+    }
+    $(ViewPage.customSelector).data("width", data.width);
+    $(ViewPage.customSelector).data("height", data.height);
+    $(ViewPage.customWidthSelector).html(data.width);
+    $(ViewPage.customHeightSelector).html(data.height);
+    ViewPage.addToQueue(ViewPage.storagePrefix + 'custom', data);
+  }
+
+  ViewPage.persistCustomPresetAfterChange = function() {
+    clearTimeout(ViewPage.queueDelayTimer);
+    ViewPage.queueDelayTimer = setTimeout(function() {
+      ViewPage.persistCustomPreset();
+    }, 1000);
+  };
+
+  /**
+   * Initialize
+   */
+  ViewPage.initialize = function() {
+
+    ViewPage.$iframe = $('#tx_viewpage_iframe');
+    ViewPage.$resizableContainer = $(ViewPage.resizableContainerIdentifier);
+    ViewPage.$sizeSelector = $(ViewPage.sizeIdentifier);
+
+    // Change orientation
+    $(document).on('click', ViewPage.changeOrientationSelector, function() {
+      var width = $(ViewPage.inputHeightSelector).val();
+      var height = $(ViewPage.inputWidthSelector).val();
+      ViewPage.setSize(width, height);
+      ViewPage.persistCurrentPreset();
+    });
+
+    // On change
+    $(document).on('change', ViewPage.inputWidthSelector, function() {
+      var width = $(ViewPage.inputWidthSelector).val();
+      var height = $(ViewPage.inputHeightSelector).val();
+      ViewPage.setSize(width, height);
+      ViewPage.setLabel(ViewPage.defaultLabel);
+      ViewPage.persistCustomPresetAfterChange();
+    });
+    $(document).on('change', ViewPage.inputHeightSelector, function() {
+      var width = $(ViewPage.inputWidthSelector).val();
+      var height = $(ViewPage.inputHeightSelector).val();
+      ViewPage.setSize(width, height);
+      ViewPage.setLabel(ViewPage.defaultLabel);
+      ViewPage.persistCustomPresetAfterChange();
+    });
+
+    // Add event to width selector so the container is resized
+    $(document).on('click', ViewPage.changePresetSelector, function() {
+      var data = $(this).data();
+      ViewPage.setSize(parseInt(data.width), parseInt(data.height));
+      ViewPage.setLabel(data.label);
+      ViewPage.persistCurrentPreset();
+    });
+
+    // Initialize the jQuery UI Resizable plugin
+    ViewPage.$resizableContainer.resizable({
+      handles: 'w, sw, s, se, e'
+    });
+
+    ViewPage.$resizableContainer.on('resizestart', function() {
+      // Add iframe overlay to prevent losing the mouse focus to the iframe while resizing fast
+      $(this).append('<div id="viewpage-iframe-cover" style="z-index:99;position:absolute;width:100%;top:0;left:0;height:100%;"></div>');
+    });
+
+    ViewPage.$resizableContainer.on('resize', function(evt, ui) {
+      ui.size.width = ui.originalSize.width + ((ui.size.width - ui.originalSize.width) * 2);
+      if (ui.size.height < ViewPage.minimalHeight) {
+        ui.size.height = ViewPage.minimalHeight;
+      }
+      if (ui.size.width < ViewPage.minimalWidth) {
+        ui.size.width = ViewPage.minimalWidth;
+      }
+      $(ViewPage.inputWidthSelector).val(ui.size.width);
+      $(ViewPage.inputHeightSelector).val(ui.size.height);
+      ViewPage.$resizableContainer.css({
+        left: 0
+      });
+      ViewPage.setLabel(ViewPage.defaultLabel);
+    });
+
+    ViewPage.$resizableContainer.on('resizestop', function() {
+      $('#viewpage-iframe-cover').remove();
+      ViewPage.persistCurrentPreset();
+      ViewPage.persistCustomPreset();
+    });
+  };
+
+  /**
+   * @returns {Number}
+   */
+  ViewPage.calculateContainerMaxHeight = function() {
+    ViewPage.$resizableContainer.hide();
+    var $moduleBody = $(ViewPage.moduleBodySelector);
+    var padding = $moduleBody.outerHeight() - $moduleBody.height(),
+      documentHeight = $(document).height(),
+      topbarHeight = $(ViewPage.topbarContainerSelector).outerHeight();
+    ViewPage.$resizableContainer.show();
+    return documentHeight - padding - topbarHeight - 8;
+  };
+
+  /**
+   * @returns {Number}
+   */
+  ViewPage.calculateContainerMaxWidth = function() {
+    ViewPage.$resizableContainer.hide();
+    var $moduleBody = $(ViewPage.moduleBodySelector);
+    var padding = $moduleBody.outerWidth() - $moduleBody.width(),
+      documentWidth = $(document).width();
+    ViewPage.$resizableContainer.show();
+    return parseInt(documentWidth - padding);
+  };
+
+  /**
+   * @param {String} url
+   * @returns {{}}
+   */
+  ViewPage.getUrlVars = function(url) {
+    var vars = {};
+    var hash;
+    var hashes = url.slice(url.indexOf('?') + 1).split('&');
+    for (var i = 0; i < hashes.length; i++) {
+      hash = hashes[i].split('=');
+      vars[hash[0]] = hash[1];
+    }
+    return vars;
+  };
+
+  $(ViewPage.initialize);
+
+  return ViewPage;
+});

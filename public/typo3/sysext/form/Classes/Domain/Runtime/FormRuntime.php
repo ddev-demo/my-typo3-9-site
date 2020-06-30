@@ -19,6 +19,7 @@ namespace TYPO3\CMS\Form\Domain\Runtime;
 
 use Psr\Http\Message\ServerRequestInterface;
 use TYPO3\CMS\Core\Context\Context;
+use TYPO3\CMS\Core\Error\Http\BadRequestException;
 use TYPO3\CMS\Core\ExpressionLanguage\Resolver;
 use TYPO3\CMS\Core\Http\ServerRequest;
 use TYPO3\CMS\Core\Site\Entity\Site;
@@ -33,6 +34,8 @@ use TYPO3\CMS\Extbase\Mvc\Web\Request;
 use TYPO3\CMS\Extbase\Mvc\Web\Response;
 use TYPO3\CMS\Extbase\Mvc\Web\Routing\UriBuilder;
 use TYPO3\CMS\Extbase\Property\Exception as PropertyException;
+use TYPO3\CMS\Extbase\Security\Exception\InvalidArgumentForHashGenerationException;
+use TYPO3\CMS\Extbase\Security\Exception\InvalidHashException;
 use TYPO3\CMS\Form\Domain\Exception\RenderingException;
 use TYPO3\CMS\Form\Domain\Finishers\FinisherContext;
 use TYPO3\CMS\Form\Domain\Finishers\FinisherInterface;
@@ -145,14 +148,14 @@ class FormRuntime implements RootRenderableInterface, \ArrayAccess
      *
      * @var SiteLanguage
      */
-    protected $currentSiteLanguage;
+    protected $currentSiteLanguage = null;
 
     /**
      * Reference to the current running finisher
      *
      * @var \TYPO3\CMS\Form\Domain\Finishers\FinisherInterface
      */
-    protected $currentFinisher;
+    protected $currentFinisher = null;
 
     /**
      * @param \TYPO3\CMS\Extbase\Security\Cryptography\HashService $hashService
@@ -210,6 +213,7 @@ class FormRuntime implements RootRenderableInterface, \ArrayAccess
 
     /**
      * Initializes the current state of the form, based on the request
+     * @throws BadRequestException
      */
     protected function initializeFormStateFromRequest()
     {
@@ -217,7 +221,11 @@ class FormRuntime implements RootRenderableInterface, \ArrayAccess
         if ($serializedFormStateWithHmac === null) {
             $this->formState = GeneralUtility::makeInstance(FormState::class);
         } else {
-            $serializedFormState = $this->hashService->validateAndStripHmac($serializedFormStateWithHmac);
+            try {
+                $serializedFormState = $this->hashService->validateAndStripHmac($serializedFormStateWithHmac);
+            } catch (InvalidHashException | InvalidArgumentForHashGenerationException $e) {
+                throw new BadRequestException('The HMAC of the form could not be validated.', 1581862823);
+            }
             $this->formState = unserialize(base64_decode($serializedFormState));
         }
     }
@@ -229,6 +237,7 @@ class FormRuntime implements RootRenderableInterface, \ArrayAccess
     {
         if (!$this->formState->isFormSubmitted()) {
             $this->currentPage = $this->formDefinition->getPageByIndex(0);
+            $renderingOptions = $this->currentPage->getRenderingOptions();
 
             if (!$this->currentPage->isEnabled()) {
                 throw new FormException('Disabling the first page is not allowed', 1527186844);
@@ -266,6 +275,7 @@ class FormRuntime implements RootRenderableInterface, \ArrayAccess
             $this->currentPage = null;
         } else {
             $this->currentPage = $this->formDefinition->getPageByIndex($currentPageIndex);
+            $renderingOptions = $this->currentPage->getRenderingOptions();
 
             if (!$this->currentPage->isEnabled()) {
                 if ($currentPageIndex === 0) {
@@ -418,6 +428,8 @@ class FormRuntime implements RootRenderableInterface, \ArrayAccess
             ->getPropertyFromAspect('frontend.user', 'isLoggedIn', false);
     }
 
+    /**
+     */
     protected function processVariants()
     {
         $conditionResolver = $this->getConditionResolver();
@@ -889,7 +901,7 @@ class FormRuntime implements RootRenderableInterface, \ArrayAccess
     }
 
     /**
-     * @return array|Page[] The Form's pages in the correct order
+     * @return array<Page> The Form's pages in the correct order
      */
     public function getPages(): array
     {

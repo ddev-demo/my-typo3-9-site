@@ -44,7 +44,8 @@ class ContentLayoutPagePositionMap extends PagePositionMap
      */
     public function wrapRecordTitle($str, $row)
     {
-        return '<a href="' . htmlspecialchars($this->linkToCurrentModule(['edit_record' => 'tt_content:' . $row['uid']])) . '">' . $str . '</a>';
+        $aOnClick = 'jumpToUrl(' . GeneralUtility::quoteJSvalue($this->linkToCurrentModule(['edit_record' => 'tt_content:' . $row['uid']])) . ');return false;';
+        return '<a href="#" onclick="' . htmlspecialchars($aOnClick) . '">' . $str . '</a>';
     }
 
     /**
@@ -57,7 +58,8 @@ class ContentLayoutPagePositionMap extends PagePositionMap
      */
     public function wrapColumnHeader($str, $vv)
     {
-        return '<a href="' . htmlspecialchars($this->linkToCurrentModule(['edit_record' => '_EDIT_COL:' . $vv])) . '">' . $str . '</a>';
+        $aOnClick = 'jumpToUrl(' . GeneralUtility::quoteJSvalue($this->linkToCurrentModule(['edit_record' => '_EDIT_COL:' . $vv])) . ');return false;';
+        return '<a href="#" onclick="' . htmlspecialchars($aOnClick) . '">' . $str . '</a>';
     }
 
     /**
@@ -70,14 +72,15 @@ class ContentLayoutPagePositionMap extends PagePositionMap
      * @param int $sys_lang System language
      * @return string
      */
-    public function getInsertRecordLink($row, $vv, $moveUid, $pid, $sys_lang = 0)
+    public function onClickInsertRecord($row, $vv, $moveUid, $pid, $sys_lang = 0)
     {
         if (is_array($row)) {
             $linkInformation = 'tt_content:new/-' . $row['uid'] . '/' . $row['colPos'];
         } else {
             $linkInformation = 'tt_content:new/' . $pid . '/' . $vv;
         }
-        return $this->linkToCurrentModule(['edit_record' => $linkInformation]);
+        $location = $this->linkToCurrentModule(['edit_record' => $linkInformation]);
+        return 'jumpToUrl(' . GeneralUtility::quoteJSvalue($location) . ');return false;';
     }
 
     /**

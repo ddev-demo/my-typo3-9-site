@@ -15,7 +15,6 @@ namespace TYPO3\CMS\Backend\Controller;
  * The TYPO3 project - inspiring people to share!
  */
 
-use TYPO3\CMS\Core\Localization\LanguageService;
 use TYPO3\CMS\Core\Localization\LocalizationFactory;
 use TYPO3\CMS\Core\Utility\ArrayUtility;
 use TYPO3\CMS\Core\Utility\GeneralUtility;
@@ -52,8 +51,11 @@ abstract class AbstractFormEngineAjaxController
                 $callback = null;
             } elseif (is_array($module)) {
                 // if $module is an array, callback is possible
-                $callback = reset($module);
-                $moduleName = key($module);
+                foreach ($module as $key => $value) {
+                    $moduleName = $key;
+                    $callback = $value;
+                    break;
+                }
             }
             if ($moduleName !== null) {
                 $inlineCodeKey = $moduleName;
@@ -98,7 +100,7 @@ abstract class AbstractFormEngineAjaxController
     {
         /** @var LocalizationFactory $languageFactory */
         $languageFactory = GeneralUtility::makeInstance(LocalizationFactory::class);
-        $language = $this->getLanguageService()->lang;
+        $language = $GLOBALS['LANG']->lang;
         $localizationArray = $languageFactory->getParsedData($file, $language);
         if (is_array($localizationArray) && !empty($localizationArray)) {
             if (!empty($localizationArray[$language])) {
@@ -119,13 +121,5 @@ abstract class AbstractFormEngineAjaxController
             }
         }
         return $labelArray;
-    }
-
-    /**
-     * @return LanguageService|null
-     */
-    protected function getLanguageService(): ?LanguageService
-    {
-        return $GLOBALS['LANG'] ?? null;
     }
 }

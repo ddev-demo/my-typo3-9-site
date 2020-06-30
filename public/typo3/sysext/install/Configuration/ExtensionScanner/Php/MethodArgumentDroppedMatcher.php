@@ -103,19 +103,12 @@ return [
         'maximumNumberOfArguments' => 3,
         'restFiles' => [
             'Deprecation-81218-NoWSOLArgumentInPageRepository-getRawRecord.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
         ],
     ],
     'TYPO3\CMS\Backend\History\RecordHistory->performRollback' => [
         'maximumNumberOfArguments' => 0,
         'restFiles' => [
             'Breaking-55298-DecoupledHistoryFunctionality.rst',
-        ],
-    ],
-    'TYPO3\CMS\Frontend\Controller\TypoScriptFrontendController->__construct' => [
-        'maximumNumberOfArguments' => 7,
-        'restFiles' => [
-            'Breaking-82572-RDCTFunctionalityRemoved.rst',
         ],
     ],
     'TYPO3\CMS\Core\DataHandling\DataHandler->printLogErrorMessages' => [
@@ -139,22 +132,19 @@ return [
     'TYPO3\CMS\Impexp\Controller\ImportExportController->addRecordsForPid' => [
         'maximumNumberOfArguments' => 2,
         'restFiles' => [
-            'Deprecation-83592-ImpexpRemovedMaximumNumberOfRecordsRestriction.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
+            'Deprecation-83592-ImpexpRemovedMaximumNumberOfRecordsRestriction.rst'
         ],
     ],
     'TYPO3\CMS\Impexp\Controller\ImportExportController->exec_listQueryPid' => [
         'maximumNumberOfArguments' => 2,
         'restFiles' => [
-            'Deprecation-83592-ImpexpRemovedMaximumNumberOfRecordsRestriction.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
+            'Deprecation-83592-ImpexpRemovedMaximumNumberOfRecordsRestriction.rst'
         ],
     ],
     'TYPO3\CMS\core\Authentication\BackendUserAuthentication->getTSConfig' => [
         'maximumNumberOfArguments' => 0,
         'restFiles' => [
-            'Deprecation-84993-DeprecateSomeTSconfigRelatedMethods.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
+            'Deprecation-84993-DeprecateSomeTSconfigRelatedMethods.rst'
         ],
     ],
     'TYPO3\CMS\Backend\Domain\Repository\Localization\LocalizationRepository->fetchOriginLanguage' => [
@@ -185,66 +175,36 @@ return [
         'maximumNumberOfArguments' => 1,
         'restFiles' => [
             'Deprecation-85804-SaltedPasswordHashClassDeprecations.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
         ],
     ],
     'TYPO3\CMS\Saltedpasswords\Salt\Md5Salt->getHashedPassword' => [
         'maximumNumberOfArguments' => 1,
         'restFiles' => [
             'Deprecation-85804-SaltedPasswordHashClassDeprecations.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
         ],
     ],
     'TYPO3\CMS\Saltedpasswords\Salt\Pbkdf2Salt->getHashedPassword' => [
         'maximumNumberOfArguments' => 1,
         'restFiles' => [
             'Deprecation-85804-SaltedPasswordHashClassDeprecations.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
         ],
     ],
     'TYPO3\CMS\Saltedpasswords\Salt\PhpassSalt->getHashedPassword' => [
         'maximumNumberOfArguments' => 1,
         'restFiles' => [
             'Deprecation-85804-SaltedPasswordHashClassDeprecations.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
         ],
     ],
     'TYPO3\CMS\Core\Page\PageRenderer->addInlineLanguageLabelArray' => [
         'maximumNumberOfArguments' => 1,
         'restFiles' => [
             'Deprecation-85806-SecondArgumentOfPageRendereraddInlineLanguageLabelArray.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
         ],
     ],
     'TYPO3\CMS\Core\Authentication\BackendUserAuthentication->modAccess' => [
         'maximumNumberOfArguments' => 2,
         'restFiles' => [
-            'Deprecation-86441-VariousMethodsAndPropertiesInsideBackendUserAuthentication.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
-        ],
-    ],
-    'TYPO3\CMS\Core\Frontend\Page\PageRepository->enableFields' => [
-        'maximumNumberOfArguments' => 3,
-        'restFiles' => [
-            'Breaking-88574-4thParameterOfPageRepository-enableFieldsRemoved.rst',
-        ],
-    ],
-    'TYPO3\CMS\Core\Localization\LanguageService->includeLLFile' => [
-        'maximumNumberOfArguments' => 1,
-        'restFiles' => [
-            'Deprecation-88567-GLOBALS_LOCAL_LANG.rst',
-        ],
-    ],
-    'TYPO3\CMS\IndexedSearch\Indexer->backend_initIndexer' => [
-        'maximumNumberOfArguments' => 5,
-        'restFiles' => [
-            'Breaking-88741-CHashCalculationInIndexedSearchRemoved.rst',
-        ],
-    ],
-    'TYPO3\CMS\Core\Resource\ResourceCompressor->concatenateCssFiles' => [
-        'maximumNumberOfArguments' => 1,
-        'restFiles' => [
-            'Breaking-88758-SelectiveConcatenationOfCSSFilesInResourceCompressorRemoved.rst',
+            'Deprecation-86441-VariousMethodsAndPropertiesInsideBackendUserAuthentication.rst'
         ],
     ],
 ];

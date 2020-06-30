@@ -118,7 +118,6 @@ $EM_CONF[$_EXTKEY] = ' . $emConf . ';
         unset($emConf['module']);
         unset($emConf['loadOrder']);
         unset($emConf['lockType']);
-        unset($emConf['createDirs']);
         unset($emConf['shy']);
         unset($emConf['priority']);
         unset($emConf['modify_tables']);

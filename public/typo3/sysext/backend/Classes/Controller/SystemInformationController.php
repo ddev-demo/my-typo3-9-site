@@ -27,13 +27,25 @@ use TYPO3\CMS\Core\Utility\GeneralUtility;
 class SystemInformationController
 {
     /**
+     * @var SystemInformationToolbarItem
+     */
+    protected $toolbarItem;
+
+    /**
+     * Set up dependencies
+     */
+    public function __construct()
+    {
+        $this->toolbarItem = GeneralUtility::makeInstance(SystemInformationToolbarItem::class);
+    }
+
+    /**
      * Renders the menu for AJAX calls
      *
      * @return ResponseInterface
      */
     public function renderMenuAction(): ResponseInterface
     {
-        $toolbarItem = GeneralUtility::makeInstance(SystemInformationToolbarItem::class);
-        return new HtmlResponse($toolbarItem->getDropDown());
+        return new HtmlResponse($this->toolbarItem->getDropDown());
     }
 }

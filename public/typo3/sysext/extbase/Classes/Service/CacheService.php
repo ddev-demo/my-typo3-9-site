@@ -1,6 +1,4 @@
 <?php
-declare(strict_types = 1);
-
 namespace TYPO3\CMS\Extbase\Service;
 
 /*
@@ -35,7 +33,7 @@ class CacheService implements \TYPO3\CMS\Core\SingletonInterface
     /**
      * @param \TYPO3\CMS\Core\Cache\CacheManager $cacheManager
      */
-    public function injectCacheManager(\TYPO3\CMS\Core\Cache\CacheManager $cacheManager): void
+    public function injectCacheManager(\TYPO3\CMS\Core\Cache\CacheManager $cacheManager)
     {
         $this->cacheManager = $cacheManager;
     }
@@ -51,7 +49,7 @@ class CacheService implements \TYPO3\CMS\Core\SingletonInterface
     /**
      * @return \SplStack
      */
-    public function getPageIdStack(): \SplStack
+    public function getPageIdStack()
     {
         return $this->pageIdStack;
     }
@@ -59,9 +57,9 @@ class CacheService implements \TYPO3\CMS\Core\SingletonInterface
     /**
      * Clears the page cache
      *
-     * @param int|int[] $pageIdsToClear single or multiple pageIds to clear the cache for
+     * @param mixed $pageIdsToClear (int) single or (array) multiple pageIds to clear the cache for
      */
-    public function clearPageCache($pageIdsToClear = null): void
+    public function clearPageCache($pageIdsToClear = null)
     {
         if ($pageIdsToClear === null) {
             $this->cacheManager->flushCachesInGroup('pages');
@@ -80,7 +78,7 @@ class CacheService implements \TYPO3\CMS\Core\SingletonInterface
      * Walks through the pageIdStack, collects all pageIds
      * as array and passes them on to clearPageCache.
      */
-    public function clearCachesOfRegisteredPageIds(): void
+    public function clearCachesOfRegisteredPageIds()
     {
         if (!$this->pageIdStack->isEmpty()) {
             $pageIds = [];

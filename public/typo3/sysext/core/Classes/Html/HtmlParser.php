@@ -46,8 +46,7 @@ class HtmlParser
      * @param string $content HTML-content
      * @param bool $eliminateExtraEndTags If set, excessive end tags are ignored - you should probably set this in most cases.
      * @return array Even numbers in the array are outside the blocks, Odd numbers are block-content.
-     * @see splitTags()
-     * @see removeFirstAndLastTag()
+     * @see splitTags(), removeFirstAndLastTag()
      */
     public function splitIntoBlock($tag, $content, $eliminateExtraEndTags = false)
     {
@@ -153,8 +152,7 @@ class HtmlParser
      * @param string $tag List of tags
      * @param string $content HTML-content
      * @return array Even numbers in the array are outside the blocks, Odd numbers are block-content.
-     * @see splitIntoBlock()
-     * @see removeFirstAndLastTag()
+     * @see splitIntoBlock(), removeFirstAndLastTag()
      */
     public function splitTags($tag, $content)
     {
@@ -421,7 +419,7 @@ class HtmlParser
                 $tok = substr($tok, $eocPos + 10);
                 $skipTag = true;
             }
-            $firstChar = $tok[0];
+            $firstChar = $tok[0] ?? null;
             // It is a tag... (first char is a-z0-9 or /) (fixed 19/01 2004). This also avoids triggering on <?xml..> and <!DOCTYPE..>
             if (!$skipTag && preg_match('/[[:alnum:]\\/]/', $firstChar) === 1) {
                 $tagEnd = strpos($tok, '>');

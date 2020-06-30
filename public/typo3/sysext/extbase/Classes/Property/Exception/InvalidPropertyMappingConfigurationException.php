@@ -1,6 +1,4 @@
 <?php
-declare(strict_types = 1);
-
 namespace TYPO3\CMS\Extbase\Property\Exception;
 
 /*
@@ -16,11 +14,9 @@ namespace TYPO3\CMS\Extbase\Property\Exception;
  * The TYPO3 project - inspiring people to share!
  */
 
-use TYPO3\CMS\Extbase\Property\Exception;
-
 /**
  * An "Invalid Property Mapping Configuration" Exception
  */
-class InvalidPropertyMappingConfigurationException extends Exception
+class InvalidPropertyMappingConfigurationException extends \TYPO3\CMS\Extbase\Property\Exception
 {
 }

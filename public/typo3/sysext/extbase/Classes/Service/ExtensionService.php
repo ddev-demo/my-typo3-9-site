@@ -1,6 +1,4 @@
 <?php
-declare(strict_types = 1);
-
 namespace TYPO3\CMS\Extbase\Service;
 
 /*
@@ -19,6 +17,7 @@ namespace TYPO3\CMS\Extbase\Service;
 use TYPO3\CMS\Core\Context\Context;
 use TYPO3\CMS\Core\Database\ConnectionPool;
 use TYPO3\CMS\Core\Database\Query\Restriction\FrontendRestrictionContainer;
+use TYPO3\CMS\Core\Utility\ArrayUtility;
 use TYPO3\CMS\Core\Utility\GeneralUtility;
 use TYPO3\CMS\Extbase\Configuration\ConfigurationManagerInterface;
 
@@ -28,16 +27,7 @@ use TYPO3\CMS\Extbase\Configuration\ConfigurationManagerInterface;
  */
 class ExtensionService implements \TYPO3\CMS\Core\SingletonInterface
 {
-    /**
-     * todo: Deprecate this constant in favor of the following one:
-     * @see \TYPO3\CMS\Extbase\Utility\ExtensionUtility::PLUGIN_TYPE_PLUGIN
-     */
     const PLUGIN_TYPE_PLUGIN = 'list_type';
-
-    /**
-     * todo: Deprecate this constant in favor of the following one:
-     * @see \TYPO3\CMS\Extbase\Utility\ExtensionUtility::PLUGIN_TYPE_CONTENT_ELEMENT
-     */
     const PLUGIN_TYPE_CONTENT_ELEMENT = 'CType';
 
     /**
@@ -59,7 +49,7 @@ class ExtensionService implements \TYPO3\CMS\Core\SingletonInterface
     /**
      * @param \TYPO3\CMS\Extbase\Object\ObjectManagerInterface $objectManager
      */
-    public function injectObjectManager(\TYPO3\CMS\Extbase\Object\ObjectManagerInterface $objectManager): void
+    public function injectObjectManager(\TYPO3\CMS\Extbase\Object\ObjectManagerInterface $objectManager)
     {
         $this->objectManager = $objectManager;
     }
@@ -67,7 +57,7 @@ class ExtensionService implements \TYPO3\CMS\Core\SingletonInterface
     /**
      * @param ConfigurationManagerInterface $configurationManager
      */
-    public function injectConfigurationManager(ConfigurationManagerInterface $configurationManager): void
+    public function injectConfigurationManager(ConfigurationManagerInterface $configurationManager)
     {
         $this->configurationManager = $configurationManager;
     }
@@ -77,15 +67,12 @@ class ExtensionService implements \TYPO3\CMS\Core\SingletonInterface
      * If plugin.tx_$pluginSignature.view.pluginNamespace is set, this value is returned
      * If pluginNamespace is not specified "tx_[extensionname]_[pluginname]" is returned.
      *
-     * @param string|null $extensionName name of the extension to retrieve the namespace for
-     * @param string|null $pluginName name of the plugin to retrieve the namespace for
+     * @param string $extensionName name of the extension to retrieve the namespace for
+     * @param string $pluginName name of the plugin to retrieve the namespace for
      * @return string plugin namespace
      */
-    public function getPluginNamespace(?string $extensionName, ?string $pluginName): string
+    public function getPluginNamespace($extensionName, $pluginName)
     {
-        // todo: with $extensionName and $pluginName being null, tx__ will be returned here which is questionable.
-        // todo: find out, if and why this case could happen and maybe avoid this methods being called with null
-        // todo: arguments afterwards.
         $pluginSignature = strtolower($extensionName . '_' . $pluginName);
         $defaultPluginNamespace = 'tx_' . $pluginSignature;
         $frameworkConfiguration = $this->configurationManager->getConfiguration(ConfigurationManagerInterface::CONFIGURATION_TYPE_FRAMEWORK, $extensionName, $pluginName);
@@ -106,14 +93,14 @@ class ExtensionService implements \TYPO3\CMS\Core\SingletonInterface
      * @param string $controllerName name of the target controller (UpperCamelCase)
      * @param string $actionName name of the target action (lowerCamelCase)
      * @throws \TYPO3\CMS\Extbase\Exception
-     * @return string|null name of the target plugin (UpperCamelCase) or NULL if no matching plugin configuration was found
+     * @return string name of the target plugin (UpperCamelCase) or NULL if no matching plugin configuration was found
      */
-    public function getPluginNameByAction(string $extensionName, string $controllerName, string $actionName): ?string
+    public function getPluginNameByAction($extensionName, $controllerName, $actionName)
     {
         $frameworkConfiguration = $this->configurationManager->getConfiguration(ConfigurationManagerInterface::CONFIGURATION_TYPE_FRAMEWORK);
         // check, whether the current plugin is configured to handle the action
         if (!empty($frameworkConfiguration['extensionName']) && $extensionName === $frameworkConfiguration['extensionName']) {
-            if (isset($frameworkConfiguration['controllerConfiguration'][$controllerName]) && in_array($actionName, $frameworkConfiguration['controllerConfiguration'][$controllerName]['actions'], true)) {
+            if (isset($frameworkConfiguration['controllerConfiguration'][$controllerName]) && in_array($actionName, $frameworkConfiguration['controllerConfiguration'][$controllerName]['actions'])) {
                 return $frameworkConfiguration['pluginName'];
             }
         }
@@ -127,7 +114,7 @@ class ExtensionService implements \TYPO3\CMS\Core\SingletonInterface
                 if (strtolower($pluginControllerName) !== strtolower($controllerName)) {
                     continue;
                 }
-                if (in_array($actionName, $pluginControllerActions['actions'], true)) {
+                if (in_array($actionName, $pluginControllerActions['actions'])) {
                     $pluginNames[] = $pluginName;
                 }
             }
@@ -141,27 +128,19 @@ class ExtensionService implements \TYPO3\CMS\Core\SingletonInterface
     /**
      * Checks if the given action is cacheable or not.
      *
-     * @param string|null $extensionName Name of the target extension, without underscores
-     * @param string|null $pluginName Name of the target plugin
-     * @param string $controllerClassName Name of the target controller
+     * @param string $extensionName Name of the target extension, without underscores
+     * @param string $pluginName Name of the target plugin
+     * @param string $controllerName Name of the target controller
      * @param string $actionName Name of the action to be called
      * @return bool TRUE if the specified plugin action is cacheable, otherwise FALSE
      */
-    public function isActionCacheable(?string $extensionName, ?string $pluginName, string $controllerClassName, string $actionName): bool
+    public function isActionCacheable($extensionName, $pluginName, $controllerName, $actionName)
     {
-        $frameworkConfiguration = $this->configurationManager->getConfiguration(
-            ConfigurationManagerInterface::CONFIGURATION_TYPE_FRAMEWORK,
-            $extensionName,
-            $pluginName
-        );
-
-        $nonCacheableActions = $frameworkConfiguration['controllerConfiguration'][$controllerClassName]['nonCacheableActions'] ?? null;
-
-        if (!is_array($nonCacheableActions)) {
-            return true;
+        $frameworkConfiguration = $this->configurationManager->getConfiguration(ConfigurationManagerInterface::CONFIGURATION_TYPE_FRAMEWORK, $extensionName, $pluginName);
+        if (isset($frameworkConfiguration['controllerConfiguration'][$controllerName]) && is_array($frameworkConfiguration['controllerConfiguration'][$controllerName]) && is_array($frameworkConfiguration['controllerConfiguration'][$controllerName]['nonCacheableActions']) && in_array($actionName, $frameworkConfiguration['controllerConfiguration'][$controllerName]['nonCacheableActions'])) {
+            return false;
         }
-
-        return !in_array($actionName, $frameworkConfiguration['controllerConfiguration'][$controllerClassName]['nonCacheableActions'], true);
+        return true;
     }
 
     /**
@@ -174,9 +153,9 @@ class ExtensionService implements \TYPO3\CMS\Core\SingletonInterface
      * @param string $extensionName name of the extension to retrieve the target PID for
      * @param string $pluginName name of the plugin to retrieve the target PID for
      * @throws \TYPO3\CMS\Extbase\Exception
-     * @return int|null uid of the target page or NULL if target page could not be determined
+     * @return int uid of the target page or NULL if target page could not be determined
      */
-    public function getTargetPidByPlugin(string $extensionName, string $pluginName): ?int
+    public function getTargetPidByPlugin($extensionName, $pluginName)
     {
         $frameworkConfiguration = $this->configurationManager->getConfiguration(ConfigurationManagerInterface::CONFIGURATION_TYPE_FRAMEWORK, $extensionName, $pluginName);
         if (!isset($frameworkConfiguration['view']['defaultPid']) || empty($frameworkConfiguration['view']['defaultPid'])) {
@@ -214,7 +193,7 @@ class ExtensionService implements \TYPO3\CMS\Core\SingletonInterface
                 if (count($pages) > 1) {
                     throw new \TYPO3\CMS\Extbase\Exception('There is more than one "' . $pluginSignature . '" plugin in the current page tree. Please remove one plugin or set the TypoScript configuration "plugin.tx_' . $pluginSignature . '.view.defaultPid" to a fixed page id', 1280773643);
                 }
-                $this->targetPidPluginCache[$pluginSignature] = !empty($pages) ? (int)$pages[0]['pid'] : null;
+                $this->targetPidPluginCache[$pluginSignature] = !empty($pages) ? $pages[0]['pid'] : null;
             }
             return $this->targetPidPluginCache[$pluginSignature];
         }
@@ -228,10 +207,8 @@ class ExtensionService implements \TYPO3\CMS\Core\SingletonInterface
      * @param string $pluginName name of the plugin to retrieve the target PID for
      * @return string|null
      */
-    public function getDefaultControllerNameByPlugin(string $extensionName, string $pluginName): ?string
+    public function getDefaultControllerNameByPlugin($extensionName, $pluginName)
     {
-        // todo: using false as a default is fishy.
-        // todo: rather make sure that $controllers is an array and then return the (string) key or null
         $controllers = $GLOBALS['TYPO3_CONF_VARS']['EXTCONF']['extbase']['extensions'][$extensionName]['plugins'][$pluginName]['controllers'] ?? false;
         return $controllers ? key($controllers) : null;
     }
@@ -244,11 +221,8 @@ class ExtensionService implements \TYPO3\CMS\Core\SingletonInterface
      * @param string $controllerName name of the controller to retrieve default action for
      * @return string|null
      */
-    public function getDefaultActionNameByPluginAndController(string $extensionName, string $pluginName, string $controllerName): ?string
+    public function getDefaultActionNameByPluginAndController($extensionName, $pluginName, $controllerName)
     {
-        // todo: using false as a default is fishy.
-        // todo: rather make sure that $actions is an array and then return the (string) key or null
-        // todo: also use reset(), rather than current, as array pointer might have been moved.
         $actions = $GLOBALS['TYPO3_CONF_VARS']['EXTCONF']['extbase']['extensions'][$extensionName]['plugins'][$pluginName]['controllers'][$controllerName]['actions'] ?? false;
         return $actions ? current($actions) : null;
     }
@@ -256,16 +230,23 @@ class ExtensionService implements \TYPO3\CMS\Core\SingletonInterface
     /**
      * Resolve the page type number to use for building a link for a specific format
      *
-     * @param string|null $extensionName name of the extension that has defined the target page type
+     * @param string $extensionName name of the extension that has defined the target page type
      * @param string $format The format for which to look up the page type
      * @return int Page type number for target page
      */
-    public function getTargetPageTypeByFormat(?string $extensionName, string $format): int
+    public function getTargetPageTypeByFormat($extensionName, $format)
     {
+        // Legacy location
+        $settings = $this->configurationManager->getConfiguration(ConfigurationManagerInterface::CONFIGURATION_TYPE_SETTINGS, $extensionName);
+        if (isset($settings['view']['formatToPageTypeMapping']) && is_array($settings['view']['formatToPageTypeMapping'])) {
+            trigger_error('Extension "' . $extensionName . '": Defining settings.view.formatToPageTypeMapping will be removed in TYPO3 10. Move definition to view.formatToPageTypeMapping.', E_USER_DEPRECATED);
+            $formatToPageTypeMapping = $settings['view']['formatToPageTypeMapping'];
+        }
         // Default behaviour
         $settings = $this->configurationManager->getConfiguration(ConfigurationManagerInterface::CONFIGURATION_TYPE_FRAMEWORK, $extensionName);
-        $formatToPageTypeMapping = $settings['view']['formatToPageTypeMapping'] ?? [];
-        $formatToPageTypeMapping = is_array($formatToPageTypeMapping) ? $formatToPageTypeMapping : [];
-        return (int)($formatToPageTypeMapping[$format] ?? 0);
+        if (isset($settings['view']['formatToPageTypeMapping']) && is_array($settings['view']['formatToPageTypeMapping'])) {
+            ArrayUtility::mergeRecursiveWithOverrule($formatToPageTypeMapping, $settings['view']['formatToPageTypeMapping']);
+        }
+        return $formatToPageTypeMapping[$format] ?? 0;
     }
 }

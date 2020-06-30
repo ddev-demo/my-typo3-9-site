@@ -67,15 +67,7 @@ class GenericObjectValidator extends AbstractValidator implements ObjectValidato
         if (ObjectAccess::isPropertyGettable($object, $propertyName)) {
             return ObjectAccess::getProperty($object, $propertyName);
         }
-        throw new \RuntimeException(
-            sprintf(
-                'Could not get value of property "%s::%s", make sure the property is either public or has a getter get%3$s(), a hasser has%3$s() or an isser is%3$s().',
-                get_class($object),
-                $propertyName,
-                ucfirst($propertyName)
-            ),
-            1546632293
-        );
+        return ObjectAccess::getProperty($object, $propertyName, true);
     }
 
     /**

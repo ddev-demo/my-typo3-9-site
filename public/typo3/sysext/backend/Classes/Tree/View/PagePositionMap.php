@@ -17,6 +17,7 @@ namespace TYPO3\CMS\Backend\Tree\View;
 use TYPO3\CMS\Backend\Routing\UriBuilder;
 use TYPO3\CMS\Backend\Utility\BackendUtility;
 use TYPO3\CMS\Core\Authentication\BackendUserAuthentication;
+use TYPO3\CMS\Core\Compatibility\PublicPropertyDeprecationTrait;
 use TYPO3\CMS\Core\Database\ConnectionPool;
 use TYPO3\CMS\Core\Database\Query\Restriction\BackendWorkspaceRestriction;
 use TYPO3\CMS\Core\Database\Query\Restriction\EndTimeRestriction;
@@ -34,6 +35,18 @@ use TYPO3\CMS\Core\Utility\GeneralUtility;
  */
 class PagePositionMap
 {
+    use PublicPropertyDeprecationTrait;
+
+    /**
+     * Properties which have been moved to protected status from public
+     *
+     * @var array
+     */
+    protected $deprecatedPublicProperties = [
+        'getModConfigCache' => 'Using $getModConfigCache of class PagePositionMap is discouraged. This property will be removed in TYPO3 v10.0.',
+        'modConfigStr' => 'Using $$modConfigStr of class PagePositionMap is discouraged. This property will be removed in TYPO3 v10.0.',
+    ];
+
     // EXTERNAL, static:
     /**
      * @var string
@@ -76,6 +89,12 @@ class PagePositionMap
      */
     public $moveUid = '';
 
+    // Caching arrays:
+    /**
+     * @deprecated since TYPO3 v9, will be removed in TYPO3 v10.0
+     */
+    protected $getModConfigCache = [];
+
     /**
      * @var array
      */
@@ -91,6 +110,11 @@ class PagePositionMap
      * @var string
      */
     public $l_insertNewRecordHere = 'insertNewRecordHere';
+
+    /**
+     * @deprecated since TYPO3 v9, will be removed in TYPO3 v10.0
+     */
+    protected $modConfigStr = 'mod.web_list.newPageWiz';
 
     /**
      * Page tree implementation class name
@@ -171,7 +195,7 @@ class PagePositionMap
                     if (!$this->dontPrintPageInsertIcons && $this->checkNewPageInPid($id) && !($prev_dat['invertedDepth'] > $pageTree->tree[$cc]['invertedDepth'])) {
                         end($lines);
                         $margin = 'style="margin-left: ' . (($dat['invertedDepth'] - 1) * 16 + 9) . 'px;"';
-                        $lines[] = '<ul class="list-tree" ' . $margin . '><li><span class="text-nowrap"><a href="' . htmlspecialchars($this->getActionLink($id, $id)) . '"><i class="t3-icon fa fa-long-arrow-left" title="' . $this->insertlabel() . '"></i></a></span></li></ul>';
+                        $lines[] = '<ul class="list-tree" ' . $margin . '><li><span class="text-nowrap"><a href="#" onclick="' . htmlspecialchars($this->onClickEvent($id, $id)) . '"><i class="t3-icon fa fa-long-arrow-left" title="' . $this->insertlabel() . '"></i></a></span></li></ul>';
                     }
                 }
                 // If going down
@@ -183,7 +207,7 @@ class PagePositionMap
                     if (!$this->dontPrintPageInsertIcons && $this->checkNewPageInPid($prev_dat['row']['pid'])) {
                         $prevPid = -$prev_dat['row']['uid'];
                         end($lines);
-                        $lines[] = '<li><span class="text-nowrap"><a href="' . htmlspecialchars($this->getActionLink($prevPid, $prev_dat['row']['pid'])) . '"><i class="t3-icon fa fa-long-arrow-left" title="' . $this->insertlabel() . '"></i></a></span></li>';
+                        $lines[] = '<li><span class="text-nowrap"><a href="#" onclick="' . htmlspecialchars($this->onClickEvent($prevPid, $prev_dat['row']['pid'])) . '"><i class="t3-icon fa fa-long-arrow-left" title="' . $this->insertlabel() . '"></i></a></span></li>';
                     }
                     // Then set the current prevPid
                     $prevPid = -$prev_dat['row']['pid'];
@@ -200,7 +224,7 @@ class PagePositionMap
             }
             // print arrow on the same level
             if (!$this->dontPrintPageInsertIcons && $this->checkNewPageInPid($dat['row']['pid'])) {
-                $lines[] = '<span class="text-nowrap"><a href="' . htmlspecialchars($this->getActionLink($prevPid, $dat['row']['pid'])) . '"><i class="t3-icon fa fa-long-arrow-left" title="' . $this->insertlabel() . '"></i></a></span>';
+                $lines[] = '<span class="text-nowrap"><a href="#" onclick="' . htmlspecialchars($this->onClickEvent($prevPid, $dat['row']['pid'])) . '"><i class="t3-icon fa fa-long-arrow-left" title="' . $this->insertlabel() . '"></i></a></span>';
             }
             // The line with the icon and title:
             $toolTip = BackendUtility::getRecordToolTip($dat['row'], 'pages');
@@ -212,7 +236,7 @@ class PagePositionMap
         $prev_dat = end($pageTree->tree);
         if ($prev_dat['row']['uid'] == $id) {
             if (!$this->dontPrintPageInsertIcons && $this->checkNewPageInPid($id)) {
-                $lines[] = '<ul class="list-tree" style="margin-left: 25px"><li><span class="text-nowrap"><a href="' . htmlspecialchars($this->getActionLink($id, $id)) . '"><i class="t3-icon fa fa-long-arrow-left" title="' . $this->insertlabel() . '"></i></a></span></li></ul>';
+                $lines[] = '<ul class="list-tree" style="margin-left: 25px"><li><span class="text-nowrap"><a href="#" onclick="' . htmlspecialchars($this->onClickEvent($id, $id)) . '"><i class="t3-icon fa fa-long-arrow-left" title="' . $this->insertlabel() . '"></i></a></span></li></ul>';
             }
         }
         for ($a = $latestInvDepth; $a <= $this->depth; $a++) {
@@ -222,7 +246,7 @@ class PagePositionMap
                 if ($latestInvDepth < $dat['invertedDepth']) {
                     $lines[] = '</ul>';
                 }
-                $lines[] = '<span class="text-nowrap"><a href="' . htmlspecialchars($this->getActionLink($prevPid, $dat['row']['pid'])) . '"><i class="t3-icon fa fa-long-arrow-left" title="' . $this->insertlabel() . '"></i></a></span>';
+                $lines[] = '<span class="text-nowrap"><a href="#" onclick="' . htmlspecialchars($this->onClickEvent($prevPid, $dat['row']['pid'])) . '"><i class="t3-icon fa fa-long-arrow-left" title="' . $this->insertlabel() . '"></i></a></span>';
             }
         }
 
@@ -266,11 +290,11 @@ class PagePositionMap
      * @param int $newPagePID New page id.
      * @return string Onclick attribute content
      */
-    public function getActionLink($pid, $newPagePID): string
+    public function onClickEvent($pid, $newPagePID)
     {
-        $uriBuilder = GeneralUtility::makeInstance(UriBuilder::class);
         $TSconfig = BackendUtility::getPagesTSconfig($newPagePID)['mod.']['newPageWizard.'] ?? [];
         if (isset($TSconfig['override']) && !empty($TSconfig['override'])) {
+            $uriBuilder = GeneralUtility::makeInstance(UriBuilder::class);
             $url = $uriBuilder->buildUriFromRoute(
                 $TSconfig['override'],
                 [
@@ -280,18 +304,10 @@ class PagePositionMap
                     'returnUrl'   => GeneralUtility::getIndpEnv('REQUEST_URI')
                 ]
             );
-            return (string)$url;
+            return $this->clientContext . '.location.href=' . GeneralUtility::quoteJSvalue((string)$url) . ';';
         }
-
-        return (string)$uriBuilder->buildUriFromRoute('record_edit', [
-            'edit' => [
-                'pages' => [
-                    $pid => 'new',
-                ],
-            ],
-            'returnNewPageId' => '1',
-            'returnUrl' => $this->R_URI
-        ]);
+        $params = '&edit[pages][' . $pid . ']=new&returnNewPageId=1';
+        return BackendUtility::editOnClick($params, '', $this->R_URI);
     }
 
     /**
@@ -330,6 +346,24 @@ class PagePositionMap
             $this->checkNewPageCache[$pid] = $this->getBackendUser()->isAdmin() || $this->getBackendUser()->doesUserHaveAccess($pidInfo, 8);
         }
         return $this->checkNewPageCache[$pid];
+    }
+
+    /**
+     * Returns module configuration for a pid.
+     *
+     * @param int $pid Page id for which to get the module configuration.
+     * @return array The properties of the module configuration for the page id.
+     * @see onClickEvent()
+     * @deprecated since TYPO3 v9, will be removed in TYPO3 v10.0
+     */
+    public function getModConfig($pid)
+    {
+        trigger_error('PagePositionMap->getModConfig() will be removed in TYPO3 v10.0.', E_USER_DEPRECATED);
+        if (!isset($this->getModConfigCache[$pid])) {
+            // Acquiring TSconfig for this PID:
+            $this->getModConfigCache[$pid]['properties'] = BackendUtility::getPagesTSconfig($pid)['mod.']['web_list.']['newPageWiz.'] ?? [];
+        }
+        return $this->getModConfigCache[$pid]['properties'];
     }
 
     /*************************************
@@ -535,7 +569,7 @@ class PagePositionMap
             $uid = '';
         }
         $cc = hexdec(substr(md5($uid . '-' . $vv . '-' . $kk), 0, 4));
-        return '<a href="#" onclick="' . htmlspecialchars($this->onClickInsertRecord($row, $vv, $moveUid, $pid, $this->cur_sys_language)) . '" data-dismiss="modal"><i class="t3-icon fa fa-long-arrow-left" name="mImgEnd' . $cc . '" title="' . htmlspecialchars($this->getLanguageService()->getLL($this->l_insertNewRecordHere)) . '"></i></a>';
+        return '<a href="#" onclick="' . htmlspecialchars($this->onClickInsertRecord($row, $vv, $moveUid, $pid, $this->cur_sys_language)) . '" data-dismiss="modal">' . '<i class="t3-icon fa fa-long-arrow-left" name="mImgEnd' . $cc . '" title="' . htmlspecialchars($this->getLanguageService()->getLL($this->l_insertNewRecordHere)) . '"></i></a>';
     }
 
     /**

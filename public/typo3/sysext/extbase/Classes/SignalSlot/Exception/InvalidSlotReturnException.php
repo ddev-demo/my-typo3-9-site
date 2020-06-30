@@ -1,6 +1,4 @@
 <?php
-declare(strict_types = 1);
-
 namespace TYPO3\CMS\Extbase\SignalSlot\Exception;
 
 /*
@@ -16,11 +14,9 @@ namespace TYPO3\CMS\Extbase\SignalSlot\Exception;
  * The TYPO3 project - inspiring people to share!
  */
 
-use TYPO3\CMS\Extbase\Object\Exception;
-
 /**
  * "Invalid Slot Return" Exception
  */
-class InvalidSlotReturnException extends Exception
+class InvalidSlotReturnException extends \TYPO3\CMS\Extbase\Object\Exception
 {
 }

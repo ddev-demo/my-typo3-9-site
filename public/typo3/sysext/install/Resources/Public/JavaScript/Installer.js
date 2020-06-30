@@ -10,4 +10,466 @@
  *
  * The TYPO3 project - inspiring people to share!
  */
-define(["require","exports","jquery","./Renderable/InfoBox","./Renderable/Severity","./Renderable/ProgressBar","./Module/PasswordStrength"],function(e,t,s,a,r,n,c){"use strict";return new class{constructor(){this.selectorBody=".t3js-body",this.selectorModuleContent=".t3js-module-content",this.selectorMainContent=".t3js-installer-content",this.selectorProgressBar=".t3js-installer-progress",this.selectorDatabaseConnectOutput=".t3js-installer-databaseConnect-output",this.selectorDatabaseSelectOutput=".t3js-installer-databaseSelect-output",this.selectorDatabaseDataOutput=".t3js-installer-databaseData-output",this.initializeEvents(),s(()=>{this.initialize()})}initializeEvents(){s(document).on("click",".t3js-installer-environmentFolders-retry",e=>{e.preventDefault(),this.showEnvironmentAndFolders()}),s(document).on("click",".t3js-installer-environmentFolders-execute",e=>{e.preventDefault(),this.executeEnvironmentAndFolders()}),s(document).on("click",".t3js-installer-databaseConnect-execute",e=>{e.preventDefault(),this.executeDatabaseConnect()}),s(document).on("click",".t3js-installer-databaseSelect-execute",e=>{e.preventDefault(),this.executeDatabaseSelect()}),s(document).on("click",".t3js-installer-databaseData-execute",e=>{e.preventDefault(),this.executeDatabaseData()}),s(document).on("click",".t3js-installer-defaultConfiguration-execute",e=>{e.preventDefault(),this.executeDefaultConfiguration()}),s(document).on("keyup",".t3-install-form-password-strength",()=>{c.initialize(".t3-install-form-password-strength")}),s(document).on("change","#t3js-connect-database-driver",e=>{let t=s(e.currentTarget).val();s(".t3-install-driver-data").hide(),s(".t3-install-driver-data input").attr("disabled","disabled"),s("#"+t+" input").attr("disabled",null),s("#"+t).show()})}initialize(){this.setProgress(0),this.getMainLayout()}getUrl(e){let t=location.href;return t=t.replace(location.search,""),void 0!==e&&(t=t+"?install[action]="+e),t}setProgress(e){let t=s(this.selectorProgressBar),a=0;0!==e&&(a=e/5*100,t.find(".progress-bar").empty().text(e+" / 5 - "+a+"% Complete")),t.find(".progress-bar").css("width",a+"%").attr("aria-valuenow",a)}getMainLayout(){s.ajax({url:this.getUrl("mainLayout"),cache:!1,success:e=>{s(this.selectorBody).empty().append(e.html),this.checkInstallerAvailable()}})}checkInstallerAvailable(){s.ajax({url:this.getUrl("checkInstallerAvailable"),cache:!1,success:e=>{e.success?this.checkEnvironmentAndFolders():this.showInstallerNotAvailable()}})}showInstallerNotAvailable(){let e=s(this.selectorMainContent);s.ajax({url:this.getUrl("showInstallerNotAvailable"),cache:!1,success:t=>{!0===t.success&&e.empty().append(t.html)}})}checkEnvironmentAndFolders(){this.setProgress(1),s.ajax({url:this.getUrl("checkEnvironmentAndFolders"),cache:!1,success:e=>{!0===e.success?this.checkTrustedHostsPattern():this.showEnvironmentAndFolders()}})}showEnvironmentAndFolders(){let e=s(this.selectorMainContent);s.ajax({url:this.getUrl("showEnvironmentAndFolders"),cache:!1,success:t=>{if(!0===t.success){e.empty().html(t.html);let r=s(".t3js-installer-environment-details"),n=!1;Array.isArray(t.environmentStatusErrors)&&t.environmentStatusErrors.forEach(e=>{n=!0;let t=a.render(e.severity,e.title,e.message);r.append(t)}),Array.isArray(t.environmentStatusWarnings)&&t.environmentStatusWarnings.forEach(e=>{n=!0;let t=a.render(e.severity,e.title,e.message);r.append(t)}),Array.isArray(t.structureErrors)&&t.structureErrors.forEach(e=>{n=!0;let t=a.render(e.severity,e.title,e.message);r.append(t)}),n?(r.show(),s(".t3js-installer-environmentFolders-bad").show()):s(".t3js-installer-environmentFolders-good").show()}}})}executeEnvironmentAndFolders(){s.ajax({url:this.getUrl("executeEnvironmentAndFolders"),cache:!1,success:e=>{!0===e.success&&this.checkTrustedHostsPattern()}})}checkTrustedHostsPattern(){s.ajax({url:this.getUrl("checkTrustedHostsPattern"),cache:!1,success:e=>{!0===e.success?this.executeSilentConfigurationUpdate():this.executeAdjustTrustedHostsPattern()}})}executeAdjustTrustedHostsPattern(){s.ajax({url:this.getUrl("executeAdjustTrustedHostsPattern"),cache:!1,success:()=>{this.executeSilentConfigurationUpdate()}})}executeSilentConfigurationUpdate(){s.ajax({url:this.getUrl("executeSilentConfigurationUpdate"),cache:!1,success:e=>{!0===e.success?this.checkDatabaseConnect():this.executeSilentConfigurationUpdate()}})}checkDatabaseConnect(){this.setProgress(2),s.ajax({url:this.getUrl("checkDatabaseConnect"),cache:!1,success:e=>{!0===e.success?this.checkDatabaseSelect():this.showDatabaseConnect()}})}showDatabaseConnect(){let e=s(this.selectorMainContent);s.ajax({url:this.getUrl("showDatabaseConnect"),cache:!1,success:t=>{!0===t.success&&(e.empty().html(t.html),s("#t3js-connect-database-driver").trigger("change"))}})}executeDatabaseConnect(){let e=s(this.selectorDatabaseConnectOutput),t={"install[action]":"executeDatabaseConnect","install[token]":s(this.selectorModuleContent).data("installer-database-connect-execute-token")};s(s(this.selectorBody+" form").serializeArray()).each((e,s)=>{t[s.name]=s.value}),s.ajax({url:this.getUrl(),cache:!1,method:"POST",data:t,success:t=>{!0===t.success?this.checkDatabaseSelect():Array.isArray(t.status)&&t.status.forEach(t=>{let s=a.render(t.severity,t.title,t.message);e.empty().append(s)})}})}checkDatabaseSelect(){this.setProgress(3),s.ajax({url:this.getUrl("checkDatabaseSelect"),cache:!1,success:e=>{!0===e.success?this.checkDatabaseData():this.showDatabaseSelect()}})}showDatabaseSelect(){let e=s(this.selectorMainContent);s.ajax({url:this.getUrl("showDatabaseSelect"),cache:!1,success:t=>{!0===t.success&&e.empty().html(t.html)}})}executeDatabaseSelect(){let e=s(this.selectorDatabaseSelectOutput),t={"install[action]":"executeDatabaseSelect","install[token]":s(this.selectorModuleContent).data("installer-database-select-execute-token")};s(s(this.selectorBody+" form").serializeArray()).each((e,s)=>{t[s.name]=s.value}),s.ajax({url:this.getUrl(),cache:!1,method:"POST",data:t,success:t=>{!0===t.success?this.checkDatabaseData():Array.isArray(t.status)&&t.status.forEach(t=>{let s=a.render(t.severity,t.title,t.message);e.empty().append(s)})}})}checkDatabaseData(){this.setProgress(4),s.ajax({url:this.getUrl("checkDatabaseData"),cache:!1,success:e=>{!0===e.success?this.showDefaultConfiguration():this.showDatabaseData()}})}showDatabaseData(){let e=s(this.selectorMainContent);s.ajax({url:this.getUrl("showDatabaseData"),cache:!1,success:t=>{!0===t.success&&e.empty().html(t.html)}})}executeDatabaseData(){let e=s(this.selectorDatabaseDataOutput),t={"install[action]":"executeDatabaseData","install[token]":s(this.selectorModuleContent).data("installer-database-data-execute-token")};s(s(this.selectorBody+" form").serializeArray()).each((e,s)=>{t[s.name]=s.value});let c=n.render(r.loading,"Loading...","");e.empty().html(c),s.ajax({url:this.getUrl(),cache:!1,method:"POST",data:t,success:t=>{!0===t.success?this.showDefaultConfiguration():Array.isArray(t.status)&&t.status.forEach(t=>{let s=a.render(t.severity,t.title,t.message);e.empty().append(s)})}})}showDefaultConfiguration(){let e=s(this.selectorMainContent);this.setProgress(5),s.ajax({url:this.getUrl("showDefaultConfiguration"),cache:!1,success:t=>{!0===t.success&&e.empty().html(t.html)}})}executeDefaultConfiguration(){let e={"install[action]":"executeDefaultConfiguration","install[token]":s(this.selectorModuleContent).data("installer-default-configuration-execute-token")};s(s(this.selectorBody+" form").serializeArray()).each((t,s)=>{e[s.name]=s.value}),s.ajax({url:this.getUrl(),cache:!1,method:"POST",data:e,success:e=>{top.location.href=e.redirect}})}}});
+
+/**
+ * Walk through the installation process of TYPO3
+ */
+require([
+  'jquery',
+  'TYPO3/CMS/Install/InfoBox',
+  'TYPO3/CMS/Install/Severity',
+  'TYPO3/CMS/Install/ProgressBar',
+  'TYPO3/CMS/Install/PasswordStrength'
+], function($, InfoBox, Severity, ProgressBar, PasswordStrength) {
+  'use strict';
+
+  $(function() {
+    Installer.initialize();
+  });
+
+  var Installer = {
+    selectorBody: '.t3js-body',
+    selectorModuleContent: '.t3js-module-content',
+    selectorMainContent: '.t3js-installer-content',
+    selectorProgressBar: '.t3js-installer-progress',
+    selectorDatabaseConnectOutput: '.t3js-installer-databaseConnect-output',
+    selectorDatabaseSelectOutput: '.t3js-installer-databaseSelect-output',
+    selectorDatabaseDataOutput: '.t3js-installer-databaseData-output',
+    selectorDefaultConfigurationOutput: '.t3js-installer-defaultConfiguration-output',
+
+    initialize: function() {
+      var self = this;
+
+      $(document).on('click', '.t3js-installer-environmentFolders-retry', function(e) {
+        e.preventDefault();
+        self.showEnvironmentAndFolders();
+      });
+      $(document).on('click', '.t3js-installer-environmentFolders-execute', function(e) {
+        e.preventDefault();
+        self.executeEnvironmentAndFolders();
+      });
+      $(document).on('click', '.t3js-installer-databaseConnect-execute', function(e) {
+        e.preventDefault();
+        self.executeDatabaseConnect();
+      });
+      $(document).on('click', '.t3js-installer-databaseSelect-execute', function(e) {
+        e.preventDefault();
+        self.executeDatabaseSelect();
+      });
+      $(document).on('click', '.t3js-installer-databaseData-execute', function(e) {
+        e.preventDefault();
+        self.executeDatabaseData();
+      });
+      $(document).on('click', '.t3js-installer-defaultConfiguration-execute', function(e) {
+        e.preventDefault();
+        self.executeDefaultConfiguration();
+      });
+
+      $(document).on('keyup', '.t3-install-form-password-strength', function() {
+        PasswordStrength.initialize('.t3-install-form-password-strength');
+      });
+
+      // Database connect db driver selection
+      $(document).on('change', '#t3js-connect-database-driver', function() {
+        var driver = $(this).val();
+        $('.t3-install-driver-data').hide();
+        $('.t3-install-driver-data input').attr('disabled', 'disabled');
+        $('#' + driver + ' input').attr('disabled', false);
+        $('#' + driver).show();
+      });
+
+      this.setProgress(0);
+      this.getMainLayout();
+    },
+
+    getUrl: function(action) {
+      var url = location.href;
+      url = url.replace(location.search, '');
+      if (action !== undefined) {
+        url = url + '?install[action]=' + action;
+      }
+      return url;
+    },
+
+    setProgress: function(done) {
+      var $progressBar = $(this.selectorProgressBar);
+      var percent = 0;
+      if (done !== 0) {
+        percent = (done / 5) * 100;
+        $progressBar.find('.progress-bar').empty().text(done + ' / 5 - ' + percent + '% Complete');
+      }
+      $progressBar
+        .find('.progress-bar')
+        .css('width', percent + '%')
+        .attr('aria-valuenow', percent);
+    },
+
+    getMainLayout: function() {
+      var self = this;
+      $.ajax({
+        url: this.getUrl('mainLayout'),
+        cache: false,
+        success: function(data) {
+          $(self.selectorBody).empty().append(data.html);
+          self.checkInstallerAvailable();
+        }
+      })
+    },
+
+    checkInstallerAvailable: function() {
+      var self = this;
+      $.ajax({
+        url: this.getUrl('checkInstallerAvailable'),
+        cache: false,
+        success: function(data) {
+          if (data.success === true) {
+            self.checkEnvironmentAndFolders();
+          } else {
+            self.showInstallerNotAvailable();
+          }
+        }
+      });
+    },
+
+    showInstallerNotAvailable: function() {
+      var $outputContainer = $(this.selectorMainContent);
+      $.ajax({
+        url: this.getUrl('showInstallerNotAvailable'),
+        cache: false,
+        success: function(data) {
+          if (data.success === true) {
+            $outputContainer.empty().append(data.html);
+          }
+        }
+      });
+    },
+
+    checkEnvironmentAndFolders: function() {
+      var self = this;
+      this.setProgress(1);
+      $.ajax({
+        url: this.getUrl('checkEnvironmentAndFolders'),
+        cache: false,
+        success: function(data) {
+          if (data.success === true) {
+            self.checkTrustedHostsPattern();
+          } else {
+            self.showEnvironmentAndFolders();
+          }
+        }
+      });
+    },
+
+    showEnvironmentAndFolders: function() {
+      var $outputContainer = $(this.selectorMainContent);
+      $.ajax({
+        url: this.getUrl('showEnvironmentAndFolders'),
+        cache: false,
+        success: function(data) {
+          if (data.success === true) {
+            $outputContainer.empty().html(data.html);
+            var $detailContainer = $('.t3js-installer-environment-details');
+            var hasMessage = false;
+            if (Array.isArray(data.environmentStatusErrors)) {
+              data.environmentStatusErrors.forEach(function(element) {
+                hasMessage = true;
+                var message = InfoBox.render(element.severity, element.title, element.message);
+                $detailContainer.append(message);
+              });
+            }
+            if (Array.isArray(data.environmentStatusWarnings)) {
+              data.environmentStatusWarnings.forEach(function(element) {
+                hasMessage = true;
+                var message = InfoBox.render(element.severity, element.title, element.message);
+                $detailContainer.append(message);
+              });
+            }
+            if (Array.isArray(data.structureErrors)) {
+              data.structureErrors.forEach(function(element) {
+                hasMessage = true;
+                var message = InfoBox.render(element.severity, element.title, element.message);
+                $detailContainer.append(message);
+              });
+            }
+            if (hasMessage === true) {
+              $detailContainer.show();
+              $('.t3js-installer-environmentFolders-bad').show();
+            } else {
+              $('.t3js-installer-environmentFolders-good').show();
+            }
+          }
+        }
+      });
+    },
+
+    executeEnvironmentAndFolders: function() {
+      var self = this;
+      $.ajax({
+        url: this.getUrl('executeEnvironmentAndFolders'),
+        cache: false,
+        success: function(data) {
+          if (data.success === true) {
+            self.checkTrustedHostsPattern();
+          } else {
+            // @todo message output handling
+          }
+        }
+      });
+    },
+
+    checkTrustedHostsPattern: function() {
+      var self = this;
+      $.ajax({
+        url: this.getUrl('checkTrustedHostsPattern'),
+        cache: false,
+        success: function(data) {
+          if (data.success === true) {
+            self.executeSilentConfigurationUpdate();
+          } else {
+            self.executeAdjustTrustedHostsPattern();
+          }
+        }
+      });
+    },
+
+    executeAdjustTrustedHostsPattern: function() {
+      var self = this;
+      $.ajax({
+        url: this.getUrl('executeAdjustTrustedHostsPattern'),
+        cache: false,
+        success: function(data) {
+          self.executeSilentConfigurationUpdate();
+        }
+      });
+    },
+
+    executeSilentConfigurationUpdate: function() {
+      var self = this;
+      $.ajax({
+        url: this.getUrl('executeSilentConfigurationUpdate'),
+        cache: false,
+        success: function(data) {
+          if (data.success === true) {
+            self.checkDatabaseConnect();
+          } else {
+            self.executeSilentConfigurationUpdate();
+          }
+        }
+      });
+    },
+
+    checkDatabaseConnect: function() {
+      this.setProgress(2);
+      var self = this;
+      $.ajax({
+        url: this.getUrl('checkDatabaseConnect'),
+        cache: false,
+        success: function(data) {
+          if (data.success === true) {
+            self.checkDatabaseSelect();
+          } else {
+            self.showDatabaseConnect();
+          }
+        }
+      });
+    },
+
+    showDatabaseConnect: function() {
+      var $outputContainer = $(this.selectorMainContent);
+      $.ajax({
+        url: this.getUrl('showDatabaseConnect'),
+        cache: false,
+        success: function(data) {
+          if (data.success === true) {
+            $outputContainer.empty().html(data.html);
+            $('#t3js-connect-database-driver').trigger('change');
+          }
+        }
+      });
+    },
+
+    executeDatabaseConnect: function() {
+      var self = this;
+      var $outputContainer = $(this.selectorDatabaseConnectOutput);
+      var postData = {
+        'install[action]': 'executeDatabaseConnect',
+        'install[token]': $(self.selectorModuleContent).data('installer-database-connect-execute-token')
+      };
+      $($(this.selectorBody + ' form').serializeArray()).each(function() {
+        postData[this.name] = this.value;
+      });
+      $.ajax({
+        url: this.getUrl(),
+        cache: false,
+        method: 'POST',
+        data: postData,
+        success: function(data) {
+          if (data.success === true) {
+            self.checkDatabaseSelect();
+          } else {
+            if (Array.isArray(data.status)) {
+              data.status.forEach(function(element) {
+                var message = InfoBox.render(element.severity, element.title, element.message);
+                $outputContainer.empty().append(message);
+              });
+            }
+          }
+        }
+      });
+    },
+
+    checkDatabaseSelect: function() {
+      var self = this;
+      this.setProgress(3);
+      $.ajax({
+        url: this.getUrl('checkDatabaseSelect'),
+        cache: false,
+        success: function(data) {
+          if (data.success === true) {
+            self.checkDatabaseData();
+          } else {
+            self.showDatabaseSelect();
+          }
+        }
+      });
+    },
+
+    showDatabaseSelect: function() {
+      var $outputContainer = $(this.selectorMainContent);
+      $.ajax({
+        url: this.getUrl('showDatabaseSelect'),
+        cache: false,
+        success: function(data) {
+          if (data.success === true) {
+            $outputContainer.empty().html(data.html);
+          }
+        }
+      });
+    },
+
+    executeDatabaseSelect: function() {
+      var self = this;
+      var $outputContainer = $(this.selectorDatabaseSelectOutput);
+      var postData = {
+        'install[action]': 'executeDatabaseSelect',
+        'install[token]': $(self.selectorModuleContent).data('installer-database-select-execute-token')
+      };
+      $($(this.selectorBody + ' form').serializeArray()).each(function() {
+        postData[this.name] = this.value;
+      });
+      $.ajax({
+        url: this.getUrl(),
+        cache: false,
+        method: 'POST',
+        data: postData,
+        success: function(data) {
+          if (data.success === true) {
+            self.checkDatabaseData();
+          } else {
+            if (Array.isArray(data.status)) {
+              data.status.forEach(function(element) {
+                var message = InfoBox.render(element.severity, element.title, element.message);
+                $outputContainer.empty().append(message);
+              });
+            }
+          }
+        }
+      });
+    },
+
+    checkDatabaseData: function() {
+      var self = this;
+      this.setProgress(4);
+      $.ajax({
+        url: this.getUrl('checkDatabaseData'),
+        cache: false,
+        success: function(data) {
+          if (data.success === true) {
+            self.showDefaultConfiguration();
+          } else {
+            self.showDatabaseData();
+          }
+        }
+      });
+    },
+
+    showDatabaseData: function() {
+      var $outputContainer = $(this.selectorMainContent);
+      $.ajax({
+        url: this.getUrl('showDatabaseData'),
+        cache: false,
+        success: function(data) {
+          if (data.success === true) {
+            $outputContainer.empty().html(data.html);
+          }
+        }
+      });
+    },
+
+    executeDatabaseData: function() {
+      var self = this;
+      var $outputContainer = $(this.selectorDatabaseDataOutput);
+      var postData = {
+        'install[action]': 'executeDatabaseData',
+        'install[token]': $(self.selectorModuleContent).data('installer-database-data-execute-token')
+      };
+      $($(this.selectorBody + ' form').serializeArray()).each(function() {
+        postData[this.name] = this.value;
+      });
+      var message = ProgressBar.render(Severity.loading, 'Loading...', '');
+      $outputContainer.empty().html(message);
+      $.ajax({
+        url: this.getUrl(),
+        cache: false,
+        method: 'POST',
+        data: postData,
+        success: function(data) {
+          if (data.success === true) {
+            self.showDefaultConfiguration();
+          } else {
+            if (Array.isArray(data.status)) {
+              data.status.forEach(function(element) {
+                var message = InfoBox.render(element.severity, element.title, element.message);
+                $outputContainer.empty().append(message);
+              });
+            }
+          }
+        }
+      });
+    },
+
+    showDefaultConfiguration: function() {
+      var $outputContainer = $(this.selectorMainContent);
+      this.setProgress(5);
+      $.ajax({
+        url: this.getUrl('showDefaultConfiguration'),
+        cache: false,
+        success: function(data) {
+          if (data.success === true) {
+            $outputContainer.empty().html(data.html);
+          }
+        }
+      });
+    },
+
+    executeDefaultConfiguration: function() {
+      var self = this;
+      var postData = {
+        'install[action]': 'executeDefaultConfiguration',
+        'install[token]': $(self.selectorModuleContent).data('installer-default-configuration-execute-token')
+      };
+      $($(this.selectorBody + ' form').serializeArray()).each(function() {
+        postData[this.name] = this.value;
+      });
+      $.ajax({
+        url: this.getUrl(),
+        cache: false,
+        method: 'POST',
+        data: postData,
+        success: function(data) {
+          top.location.href = data.redirect;
+        }
+      });
+    }
+  };
+});

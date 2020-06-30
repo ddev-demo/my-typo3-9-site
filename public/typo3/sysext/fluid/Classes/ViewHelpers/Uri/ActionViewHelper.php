@@ -14,7 +14,6 @@ namespace TYPO3\CMS\Fluid\ViewHelpers\Uri;
  * The TYPO3 project - inspiring people to share!
  */
 
-use TYPO3\CMS\Extbase\Mvc\Web\Routing\UriBuilder;
 use TYPO3Fluid\Fluid\Core\Rendering\RenderingContextInterface;
 use TYPO3Fluid\Fluid\Core\ViewHelper\AbstractViewHelper;
 use TYPO3Fluid\Fluid\Core\ViewHelper\Traits\CompileWithRenderStatic;
@@ -49,9 +48,8 @@ class ActionViewHelper extends AbstractViewHelper
         $this->registerArgument('pluginName', 'string', 'Target plugin. If empty, the current plugin name is used');
         $this->registerArgument('pageUid', 'int', 'Target page. See TypoLink destination');
         $this->registerArgument('pageType', 'int', 'Type of the target page. See typolink.parameter', false, 0);
-        $this->registerArgument('noCache', 'bool', 'Set this to disable caching for the target page. You should not need this.', false, null);
-        // @deprecated
-        $this->registerArgument('noCacheHash', 'bool', 'Deprecated: Set this to suppress the cHash query parameter created by TypoLink. You should not need this.', false, null);
+        $this->registerArgument('noCache', 'bool', 'Set this to disable caching for the target page. You should not need this.', false, false);
+        $this->registerArgument('noCacheHash', 'bool', 'Set this to suppress the cHash query parameter created by TypoLink. You should not need this.', false, false);
         $this->registerArgument('section', 'string', 'The anchor to be added to the URI', false, '');
         $this->registerArgument('format', 'string', 'The requested format, e.g. ".html', false, '');
         $this->registerArgument('linkAccessRestrictedPages', 'bool', 'If set, links pointing to access restricted pages will still link to the page even though the page cannot be accessed.', false, false);
@@ -70,90 +68,39 @@ class ActionViewHelper extends AbstractViewHelper
      */
     public static function renderStatic(array $arguments, \Closure $renderChildrenClosure, RenderingContextInterface $renderingContext)
     {
-        /** @var int $pageUid */
-        $pageUid = $arguments['pageUid'] ?? 0;
-        /** @var int $pageType */
-        $pageType = $arguments['pageType'] ?? 0;
-        /** @var bool $noCache */
-        $noCache = $arguments['noCache'] ?? false;
-        if (isset($arguments['noCacheHash'])) {
-            trigger_error('Using the argument "noCacheHash" in <f:uri.action> ViewHelper has no effect anymore. Remove the argument in your fluid template, as it will result in a fatal error.', E_USER_DEPRECATED);
-        }
-        /** @var string|null $section */
-        $section = $arguments['section'] ?? null;
-        /** @var string|null $format */
-        $format = $arguments['format'] ?? null;
-        /** @var bool $linkAccessRestrictedPages */
-        $linkAccessRestrictedPages = $arguments['linkAccessRestrictedPages'] ?? false;
-        /** @var array|null $additionalParams */
-        $additionalParams = $arguments['additionalParams'] ?? null;
-        /** @var bool $absolute */
-        $absolute = $arguments['absolute'] ?? false;
-        /** @var bool $addQueryString */
-        $addQueryString = $arguments['addQueryString'] ?? false;
-        /** @var array|null $argumentsToBeExcludedFromQueryString */
-        $argumentsToBeExcludedFromQueryString = $arguments['argumentsToBeExcludedFromQueryString'] ?? null;
-        /** @var string $addQueryStringMethod */
-        $addQueryStringMethod = $arguments['addQueryStringMethod'] ?? '';
-        /** @var string|null $action */
-        $action = $arguments['action'] ?? null;
-        /** @var string|null $controller */
-        $controller = $arguments['controller'] ?? null;
-        /** @var string|null $extensionName */
-        $extensionName = $arguments['extensionName'] ?? null;
-        /** @var string|null $pluginName */
-        $pluginName = $arguments['pluginName'] ?? null;
-        /** @var array|null $arguments */
-        $arguments = $arguments['arguments'] ?? [];
+        $pageUid = $arguments['pageUid'];
+        $pageType = $arguments['pageType'];
+        $noCache = $arguments['noCache'];
+        $noCacheHash = $arguments['noCacheHash'];
+        $section = $arguments['section'];
+        $format = $arguments['format'];
+        $linkAccessRestrictedPages = $arguments['linkAccessRestrictedPages'];
+        $additionalParams = $arguments['additionalParams'];
+        $absolute = $arguments['absolute'];
+        $addQueryString = $arguments['addQueryString'];
+        $argumentsToBeExcludedFromQueryString = $arguments['argumentsToBeExcludedFromQueryString'];
+        $addQueryStringMethod = $arguments['addQueryStringMethod'];
+        $action = $arguments['action'];
+        $controller = $arguments['controller'];
+        $extensionName = $arguments['extensionName'];
+        $pluginName = $arguments['pluginName'];
+        $arguments = $arguments['arguments'];
 
-        /** @var UriBuilder $uriBuilder */
-        $uriBuilder = $renderingContext->getControllerContext()->getUriBuilder();
-        $uriBuilder->reset();
-
-        if ($pageUid > 0) {
-            $uriBuilder->setTargetPageUid($pageUid);
-        }
-
-        if ($pageType > 0) {
-            $uriBuilder->setTargetPageType($pageType);
-        }
-
-        if ($noCache === true) {
-            $uriBuilder->setNoCache($noCache);
-        }
-
-        if (is_string($section)) {
-            $uriBuilder->setSection($section);
-        }
-
-        if (is_string($format)) {
-            $uriBuilder->setFormat($format);
-        }
-
-        if (is_array($additionalParams)) {
-            $uriBuilder->setArguments($additionalParams);
-        }
-
-        if ($absolute === true) {
-            $uriBuilder->setCreateAbsoluteUri($absolute);
-        }
-
-        if ($addQueryString === true) {
-            $uriBuilder->setAddQueryString($addQueryString);
-        }
-
-        if (is_array($argumentsToBeExcludedFromQueryString)) {
-            $uriBuilder->setArgumentsToBeExcludedFromQueryString($argumentsToBeExcludedFromQueryString);
-        }
-
-        if ($addQueryStringMethod !== '') {
-            $uriBuilder->setAddQueryStringMethod($addQueryStringMethod);
-        }
-
-        if ($linkAccessRestrictedPages === true) {
-            $uriBuilder->setLinkAccessRestrictedPages($linkAccessRestrictedPages);
-        }
-
-        return $uriBuilder->uriFor($action, $arguments, $controller, $extensionName, $pluginName);
+        $uri = $renderingContext->getControllerContext()->getUriBuilder()
+            ->reset()
+            ->setTargetPageUid($pageUid)
+            ->setTargetPageType($pageType)
+            ->setNoCache($noCache)
+            ->setUseCacheHash(!$noCacheHash)
+            ->setSection($section)
+            ->setFormat($format)
+            ->setLinkAccessRestrictedPages($linkAccessRestrictedPages)
+            ->setArguments($additionalParams)
+            ->setCreateAbsoluteUri($absolute)
+            ->setAddQueryString($addQueryString)
+            ->setArgumentsToBeExcludedFromQueryString($argumentsToBeExcludedFromQueryString)
+            ->setAddQueryStringMethod($addQueryStringMethod)
+            ->uriFor($action, $arguments, $controller, $extensionName, $pluginName);
+        return $uri;
     }
 }

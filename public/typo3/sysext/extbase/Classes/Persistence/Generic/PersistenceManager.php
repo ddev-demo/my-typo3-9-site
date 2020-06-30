@@ -58,21 +58,38 @@ class PersistenceManager implements \TYPO3\CMS\Extbase\Persistence\PersistenceMa
     protected $persistenceSession;
 
     /**
+     * @param \TYPO3\CMS\Extbase\Persistence\Generic\QueryFactoryInterface $queryFactory
+     * @internal only to be used within Extbase, not part of TYPO3 Core API.
+     */
+    public function injectQueryFactory(\TYPO3\CMS\Extbase\Persistence\Generic\QueryFactoryInterface $queryFactory)
+    {
+        $this->queryFactory = $queryFactory;
+    }
+
+    /**
+     * @param \TYPO3\CMS\Extbase\Persistence\Generic\BackendInterface $backend
+     * @internal only to be used within Extbase, not part of TYPO3 Core API.
+     */
+    public function injectBackend(\TYPO3\CMS\Extbase\Persistence\Generic\BackendInterface $backend)
+    {
+        $this->backend = $backend;
+    }
+
+    /**
+     * @param \TYPO3\CMS\Extbase\Persistence\Generic\Session $persistenceSession
+     * @internal only to be used within Extbase, not part of TYPO3 Core API.
+     */
+    public function injectPersistenceSession(\TYPO3\CMS\Extbase\Persistence\Generic\Session $persistenceSession)
+    {
+        $this->persistenceSession = $persistenceSession;
+    }
+
+    /**
      * Create new instance
      * @internal only to be used within Extbase, not part of TYPO3 Core API.
-     * @param QueryFactoryInterface $queryFactory
-     * @param BackendInterface $backend
-     * @param Session $persistenceSession
      */
-    public function __construct(
-        \TYPO3\CMS\Extbase\Persistence\Generic\QueryFactoryInterface $queryFactory,
-        \TYPO3\CMS\Extbase\Persistence\Generic\BackendInterface $backend,
-        \TYPO3\CMS\Extbase\Persistence\Generic\Session $persistenceSession
-    ) {
-        $this->queryFactory = $queryFactory;
-        $this->backend = $backend;
-        $this->persistenceSession = $persistenceSession;
-
+    public function __construct()
+    {
         $this->addedObjects = new ObjectStorage();
         $this->removedObjects = new ObjectStorage();
         $this->changedObjects = new ObjectStorage();
@@ -315,7 +332,7 @@ class PersistenceManager implements \TYPO3\CMS\Extbase\Persistence\PersistenceMa
      * The implementation is optional and depends on the underlying persistence backend.
      * @internal only to be used within Extbase, not part of TYPO3 Core API.
      */
-    public function tearDown(): void
+    public function tearDown()
     {
         if (method_exists($this->backend, 'tearDown')) {
             $this->backend->tearDown();

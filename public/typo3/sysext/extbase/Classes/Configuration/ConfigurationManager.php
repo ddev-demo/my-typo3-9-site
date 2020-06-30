@@ -1,6 +1,4 @@
 <?php
-declare(strict_types = 1);
-
 namespace TYPO3\CMS\Extbase\Configuration;
 
 /*
@@ -18,7 +16,7 @@ namespace TYPO3\CMS\Extbase\Configuration;
 
 /**
  * A configuration manager following the strategy pattern (GoF315). It hides the concrete
- * implementation of the configuration manager and provides an unified access point.
+ * implementation of the configuration manager and provides an unified acccess point.
  *
  * Use the shutdown() method to drop the concrete implementation.
  * @internal only to be used within Extbase, not part of TYPO3 Core API.
@@ -42,19 +40,31 @@ class ConfigurationManager implements \TYPO3\CMS\Extbase\Configuration\Configura
 
     /**
      * @param \TYPO3\CMS\Extbase\Object\ObjectManagerInterface $objectManager
+     */
+    public function injectObjectManager(\TYPO3\CMS\Extbase\Object\ObjectManagerInterface $objectManager)
+    {
+        $this->objectManager = $objectManager;
+    }
+
+    /**
      * @param \TYPO3\CMS\Extbase\Service\EnvironmentService $environmentService
      */
-    public function __construct(
-        \TYPO3\CMS\Extbase\Object\ObjectManagerInterface $objectManager,
-        \TYPO3\CMS\Extbase\Service\EnvironmentService $environmentService
-    ) {
-        $this->objectManager = $objectManager;
+    public function injectEnvironmentService(\TYPO3\CMS\Extbase\Service\EnvironmentService $environmentService)
+    {
         $this->environmentService = $environmentService;
+    }
 
+    /**
+     * Initializes the object
+     */
+    public function initializeObject()
+    {
         $this->initializeConcreteConfigurationManager();
     }
 
-    protected function initializeConcreteConfigurationManager(): void
+    /**
+     */
+    protected function initializeConcreteConfigurationManager()
     {
         if ($this->environmentService->isEnvironmentInFrontendMode()) {
             $this->concreteConfigurationManager = $this->objectManager->get(\TYPO3\CMS\Extbase\Configuration\FrontendConfigurationManager::class);
@@ -66,15 +76,15 @@ class ConfigurationManager implements \TYPO3\CMS\Extbase\Configuration\Configura
     /**
      * @param \TYPO3\CMS\Frontend\ContentObject\ContentObjectRenderer $contentObject
      */
-    public function setContentObject(\TYPO3\CMS\Frontend\ContentObject\ContentObjectRenderer $contentObject): void
+    public function setContentObject(\TYPO3\CMS\Frontend\ContentObject\ContentObjectRenderer $contentObject = null)
     {
         $this->concreteConfigurationManager->setContentObject($contentObject);
     }
 
     /**
-     * @return \TYPO3\CMS\Frontend\ContentObject\ContentObjectRenderer|null
+     * @return \TYPO3\CMS\Frontend\ContentObject\ContentObjectRenderer
      */
-    public function getContentObject(): ?\TYPO3\CMS\Frontend\ContentObject\ContentObjectRenderer
+    public function getContentObject()
     {
         return $this->concreteConfigurationManager->getContentObject();
     }
@@ -85,7 +95,7 @@ class ConfigurationManager implements \TYPO3\CMS\Extbase\Configuration\Configura
      *
      * @param array $configuration The new configuration
      */
-    public function setConfiguration(array $configuration = []): void
+    public function setConfiguration(array $configuration = [])
     {
         $this->concreteConfigurationManager->setConfiguration($configuration);
     }
@@ -107,7 +117,7 @@ class ConfigurationManager implements \TYPO3\CMS\Extbase\Configuration\Configura
      * @throws Exception\InvalidConfigurationTypeException
      * @return array The configuration
      */
-    public function getConfiguration(string $configurationType, string $extensionName = null, string $pluginName = null): array
+    public function getConfiguration($configurationType, $extensionName = null, $pluginName = null)
     {
         switch ($configurationType) {
             case self::CONFIGURATION_TYPE_SETTINGS:
@@ -132,7 +142,7 @@ class ConfigurationManager implements \TYPO3\CMS\Extbase\Configuration\Configura
      * @param string $featureName
      * @return bool
      */
-    public function isFeatureEnabled(string $featureName): bool
+    public function isFeatureEnabled($featureName)
     {
         $configuration = $this->getConfiguration(self::CONFIGURATION_TYPE_FRAMEWORK);
         return (bool)(isset($configuration['features'][$featureName]) && $configuration['features'][$featureName]);

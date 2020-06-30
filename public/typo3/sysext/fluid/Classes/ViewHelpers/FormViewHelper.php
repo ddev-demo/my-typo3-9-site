@@ -14,8 +14,6 @@ namespace TYPO3\CMS\Fluid\ViewHelpers;
  * The TYPO3 project - inspiring people to share!
  */
 
-use TYPO3\CMS\Extbase\Mvc\Web\Routing\UriBuilder;
-
 /**
  * Form ViewHelper. Generates a :html:`<form>` Tag.
  *
@@ -119,15 +117,14 @@ class FormViewHelper extends \TYPO3\CMS\Fluid\ViewHelpers\Form\AbstractFormViewH
         $this->registerArgument('object', 'mixed', 'Object to use for the form. Use in conjunction with the "property" attribute on the sub tags');
         $this->registerArgument('pageType', 'int', 'Target page type', false, 0);
         $this->registerArgument('noCache', 'bool', 'set this to disable caching for the target page. You should not need this.', false, false);
-        // @deprecated
-        $this->registerArgument('noCacheHash', 'bool', 'Deprecated: Set this to suppress the cHash query parameter created by TypoLink. You should not need this.', false, null);
+        $this->registerArgument('noCacheHash', 'bool', 'set this to suppress the cHash query parameter created by TypoLink. You should not need this.', false, false);
         $this->registerArgument('section', 'string', 'The anchor to be added to the action URI (only active if $actionUri is not set)', false, '');
         $this->registerArgument('format', 'string', 'The requested format (e.g. ".html") of the target page (only active if $actionUri is not set)', false, '');
         $this->registerArgument('additionalParams', 'array', 'additional action URI query parameters that won\'t be prefixed like $arguments (overrule $arguments) (only active if $actionUri is not set)', false, []);
         $this->registerArgument('absolute', 'bool', 'If set, an absolute action URI is rendered (only active if $actionUri is not set)', false, false);
         $this->registerArgument('addQueryString', 'bool', 'If set, the current query parameters will be kept in the action URI (only active if $actionUri is not set)', false, false);
         $this->registerArgument('argumentsToBeExcludedFromQueryString', 'array', 'arguments to be removed from the action URI. Only active if $addQueryString = TRUE and $actionUri is not set', false, []);
-        $this->registerArgument('addQueryStringMethod', 'string', 'Method to use when keeping query parameters (only active if $actionUri is not set)', false, 'GET');
+        $this->registerArgument('addQueryStringMethod', 'string', 'Method to use when keeping query parameters (GET or POST, only active if $actionUri is not set', false, 'GET');
         $this->registerArgument('fieldNamePrefix', 'string', 'Prefix that will be added to all field names within this form. If not set the prefix will be tx_yourExtension_plugin');
         $this->registerArgument('actionUri', 'string', 'can be used to overwrite the "action" attribute of the form tag');
         $this->registerArgument('objectName', 'string', 'name of the object that is bound to this form. If this argument is not specified, the name attribute of this form is used to determine the FormObjectName');
@@ -198,40 +195,28 @@ class FormViewHelper extends \TYPO3\CMS\Fluid\ViewHelpers\Form\AbstractFormViewH
         if ($this->hasArgument('actionUri')) {
             $formActionUri = $this->arguments['actionUri'];
         } else {
-            if (isset($this->arguments['noCacheHash'])) {
-                trigger_error('Using the argument "noCacheHash" in <f:form> ViewHelper has no effect anymore. Remove the argument in your fluid template, as it will result in a fatal error.', E_USER_DEPRECATED);
-            }
-            /** @var UriBuilder $uriBuilder */
+            $pageUid = (isset($this->arguments['pageUid']) && (int)$this->arguments['pageUid'] > 0) ? (int)$this->arguments['pageUid'] : null;
             $uriBuilder = $this->renderingContext->getControllerContext()->getUriBuilder();
-            $uriBuilder
+            $formActionUri = $uriBuilder
                 ->reset()
+                ->setTargetPageUid($pageUid)
                 ->setTargetPageType($this->arguments['pageType'] ?? 0)
                 ->setNoCache($this->arguments['noCache'] ?? false)
+                ->setUseCacheHash(isset($this->arguments['noCacheHash']) ? !$this->arguments['noCacheHash'] : true)
                 ->setSection($this->arguments['section'] ?? '')
                 ->setCreateAbsoluteUri($this->arguments['absolute'] ?? false)
                 ->setArguments(isset($this->arguments['additionalParams']) ? (array)$this->arguments['additionalParams'] : [])
                 ->setAddQueryString($this->arguments['addQueryString'] ?? false)
+                ->setAddQueryStringMethod($this->arguments['addQueryStringMethod'] ?? null)
                 ->setArgumentsToBeExcludedFromQueryString(isset($this->arguments['argumentsToBeExcludedFromQueryString']) ? (array)$this->arguments['argumentsToBeExcludedFromQueryString'] : [])
                 ->setFormat($this->arguments['format'] ?? '')
-            ;
-
-            $addQueryStringMethod = $this->arguments['addQueryStringMethod'] ?? null;
-            if (is_string($addQueryStringMethod)) {
-                $uriBuilder->setAddQueryStringMethod($addQueryStringMethod);
-            }
-
-            $pageUid = (int)($this->arguments['pageUid'] ?? 0);
-            if ($pageUid > 0) {
-                $uriBuilder->setTargetPageUid($pageUid);
-            }
-
-            $formActionUri = $uriBuilder->uriFor(
-                $this->arguments['action'] ?? null,
-                $this->arguments['arguments'] ?? [],
-                $this->arguments['controller'] ?? null,
-                $this->arguments['extensionName'] ?? null,
-                $this->arguments['pluginName'] ?? null
-            );
+                ->uriFor(
+                    $this->arguments['action'] ?? null,
+                    $this->arguments['arguments'] ?? [],
+                    $this->arguments['controller'] ?? null,
+                    $this->arguments['extensionName'] ?? null,
+                    $this->arguments['pluginName'] ?? null
+                );
             $this->formActionUriArguments = $uriBuilder->getArguments();
         }
         $this->tag->addAttribute('action', $formActionUri);
@@ -245,8 +230,9 @@ class FormViewHelper extends \TYPO3\CMS\Fluid\ViewHelpers\Form\AbstractFormViewH
      */
     protected function renderAdditionalIdentityFields()
     {
-        if ($this->viewHelperVariableContainer->exists(\TYPO3\CMS\Fluid\ViewHelpers\FormViewHelper::class, 'additionalIdentityProperties')) {
-            $additionalIdentityProperties = $this->viewHelperVariableContainer->get(\TYPO3\CMS\Fluid\ViewHelpers\FormViewHelper::class, 'additionalIdentityProperties');
+        $viewHelperVariableContainer = $this->renderingContext->getViewHelperVariableContainer();
+        if ($viewHelperVariableContainer->exists(\TYPO3\CMS\Fluid\ViewHelpers\FormViewHelper::class, 'additionalIdentityProperties')) {
+            $additionalIdentityProperties = $viewHelperVariableContainer->get(\TYPO3\CMS\Fluid\ViewHelpers\FormViewHelper::class, 'additionalIdentityProperties');
             $output = '';
             foreach ($additionalIdentityProperties as $identity) {
                 $output .= LF . $identity;
@@ -267,6 +253,7 @@ class FormViewHelper extends \TYPO3\CMS\Fluid\ViewHelpers\Form\AbstractFormViewH
     {
         $request = $this->renderingContext->getControllerContext()->getRequest();
         $extensionName = $request->getControllerExtensionName();
+        $vendorName = $request->getControllerVendorName();
         $controllerName = $request->getControllerName();
         $actionName = $request->getControllerActionName();
         $actionRequest = [
@@ -277,9 +264,14 @@ class FormViewHelper extends \TYPO3\CMS\Fluid\ViewHelpers\Form\AbstractFormViewH
 
         $result = LF;
         $result .= '<input type="hidden" name="' . $this->prefixFieldName('__referrer[@extension]') . '" value="' . $extensionName . '" />' . LF;
+        if ($vendorName !== null) {
+            $result .= '<input type="hidden" name="' . $this->prefixFieldName('__referrer[@vendor]') . '" value="' . $vendorName . '" />' . LF;
+            $actionRequest['@vendor'] = $vendorName;
+        }
         $result .= '<input type="hidden" name="' . $this->prefixFieldName('__referrer[@controller]') . '" value="' . $controllerName . '" />' . LF;
         $result .= '<input type="hidden" name="' . $this->prefixFieldName('__referrer[@action]') . '" value="' . $actionName . '" />' . LF;
-        $result .= '<input type="hidden" name="' . $this->prefixFieldName('__referrer[@request]') . '" value="' . htmlspecialchars($this->hashService->appendHmac(json_encode($actionRequest))) . '" />' . LF;
+        $result .= '<input type="hidden" name="' . $this->prefixFieldName('__referrer[arguments]') . '" value="' . htmlspecialchars($this->hashService->appendHmac(base64_encode(serialize($request->getArguments())))) . '" />' . LF;
+        $result .= '<input type="hidden" name="' . $this->prefixFieldName('__referrer[@request]') . '" value="' . htmlspecialchars($this->hashService->appendHmac(serialize($actionRequest))) . '" />' . LF;
 
         return $result;
     }
@@ -291,7 +283,7 @@ class FormViewHelper extends \TYPO3\CMS\Fluid\ViewHelpers\Form\AbstractFormViewH
     {
         $formObjectName = $this->getFormObjectName();
         if ($formObjectName !== null) {
-            $this->viewHelperVariableContainer->add(\TYPO3\CMS\Fluid\ViewHelpers\FormViewHelper::class, 'formObjectName', $formObjectName);
+            $this->renderingContext->getViewHelperVariableContainer()->add(\TYPO3\CMS\Fluid\ViewHelpers\FormViewHelper::class, 'formObjectName', $formObjectName);
         }
     }
 
@@ -302,7 +294,7 @@ class FormViewHelper extends \TYPO3\CMS\Fluid\ViewHelpers\Form\AbstractFormViewH
     {
         $formObjectName = $this->getFormObjectName();
         if ($formObjectName !== null) {
-            $this->viewHelperVariableContainer->remove(\TYPO3\CMS\Fluid\ViewHelpers\FormViewHelper::class, 'formObjectName');
+            $this->renderingContext->getViewHelperVariableContainer()->remove(\TYPO3\CMS\Fluid\ViewHelpers\FormViewHelper::class, 'formObjectName');
         }
     }
 
@@ -330,8 +322,9 @@ class FormViewHelper extends \TYPO3\CMS\Fluid\ViewHelpers\Form\AbstractFormViewH
     protected function addFormObjectToViewHelperVariableContainer()
     {
         if ($this->hasArgument('object')) {
-            $this->viewHelperVariableContainer->add(\TYPO3\CMS\Fluid\ViewHelpers\FormViewHelper::class, 'formObject', $this->arguments['object']);
-            $this->viewHelperVariableContainer->add(\TYPO3\CMS\Fluid\ViewHelpers\FormViewHelper::class, 'additionalIdentityProperties', []);
+            $viewHelperVariableContainer = $this->renderingContext->getViewHelperVariableContainer();
+            $viewHelperVariableContainer->add(\TYPO3\CMS\Fluid\ViewHelpers\FormViewHelper::class, 'formObject', $this->arguments['object']);
+            $viewHelperVariableContainer->add(\TYPO3\CMS\Fluid\ViewHelpers\FormViewHelper::class, 'additionalIdentityProperties', []);
         }
     }
 
@@ -341,8 +334,9 @@ class FormViewHelper extends \TYPO3\CMS\Fluid\ViewHelpers\Form\AbstractFormViewH
     protected function removeFormObjectFromViewHelperVariableContainer()
     {
         if ($this->hasArgument('object')) {
-            $this->viewHelperVariableContainer->remove(\TYPO3\CMS\Fluid\ViewHelpers\FormViewHelper::class, 'formObject');
-            $this->viewHelperVariableContainer->remove(\TYPO3\CMS\Fluid\ViewHelpers\FormViewHelper::class, 'additionalIdentityProperties');
+            $viewHelperVariableContainer = $this->renderingContext->getViewHelperVariableContainer();
+            $viewHelperVariableContainer->remove(\TYPO3\CMS\Fluid\ViewHelpers\FormViewHelper::class, 'formObject');
+            $viewHelperVariableContainer->remove(\TYPO3\CMS\Fluid\ViewHelpers\FormViewHelper::class, 'additionalIdentityProperties');
         }
     }
 
@@ -352,7 +346,7 @@ class FormViewHelper extends \TYPO3\CMS\Fluid\ViewHelpers\Form\AbstractFormViewH
     protected function addFieldNamePrefixToViewHelperVariableContainer()
     {
         $fieldNamePrefix = $this->getFieldNamePrefix();
-        $this->viewHelperVariableContainer->add(\TYPO3\CMS\Fluid\ViewHelpers\FormViewHelper::class, 'fieldNamePrefix', $fieldNamePrefix);
+        $this->renderingContext->getViewHelperVariableContainer()->add(\TYPO3\CMS\Fluid\ViewHelpers\FormViewHelper::class, 'fieldNamePrefix', $fieldNamePrefix);
     }
 
     /**
@@ -373,7 +367,7 @@ class FormViewHelper extends \TYPO3\CMS\Fluid\ViewHelpers\Form\AbstractFormViewH
      */
     protected function removeFieldNamePrefixFromViewHelperVariableContainer()
     {
-        $this->viewHelperVariableContainer->remove(\TYPO3\CMS\Fluid\ViewHelpers\FormViewHelper::class, 'fieldNamePrefix');
+        $this->renderingContext->getViewHelperVariableContainer()->remove(\TYPO3\CMS\Fluid\ViewHelpers\FormViewHelper::class, 'fieldNamePrefix');
     }
 
     /**
@@ -381,7 +375,7 @@ class FormViewHelper extends \TYPO3\CMS\Fluid\ViewHelpers\Form\AbstractFormViewH
      */
     protected function addFormFieldNamesToViewHelperVariableContainer()
     {
-        $this->viewHelperVariableContainer->add(\TYPO3\CMS\Fluid\ViewHelpers\FormViewHelper::class, 'formFieldNames', []);
+        $this->renderingContext->getViewHelperVariableContainer()->add(\TYPO3\CMS\Fluid\ViewHelpers\FormViewHelper::class, 'formFieldNames', []);
     }
 
     /**
@@ -389,9 +383,10 @@ class FormViewHelper extends \TYPO3\CMS\Fluid\ViewHelpers\Form\AbstractFormViewH
      */
     protected function removeFormFieldNamesFromViewHelperVariableContainer()
     {
-        $this->viewHelperVariableContainer->remove(\TYPO3\CMS\Fluid\ViewHelpers\FormViewHelper::class, 'formFieldNames');
-        if ($this->viewHelperVariableContainer->exists(\TYPO3\CMS\Fluid\ViewHelpers\FormViewHelper::class, 'renderedHiddenFields')) {
-            $this->viewHelperVariableContainer->remove(\TYPO3\CMS\Fluid\ViewHelpers\FormViewHelper::class, 'renderedHiddenFields');
+        $viewHelperVariableContainer = $this->renderingContext->getViewHelperVariableContainer();
+        $viewHelperVariableContainer->remove(\TYPO3\CMS\Fluid\ViewHelpers\FormViewHelper::class, 'formFieldNames');
+        if ($viewHelperVariableContainer->exists(\TYPO3\CMS\Fluid\ViewHelpers\FormViewHelper::class, 'renderedHiddenFields')) {
+            $viewHelperVariableContainer->remove(\TYPO3\CMS\Fluid\ViewHelpers\FormViewHelper::class, 'renderedHiddenFields');
         }
     }
 
@@ -458,8 +453,9 @@ class FormViewHelper extends \TYPO3\CMS\Fluid\ViewHelpers\Form\AbstractFormViewH
      */
     protected function removeCheckboxFieldNamesFromViewHelperVariableContainer()
     {
-        if ($this->viewHelperVariableContainer->exists(\TYPO3\CMS\Fluid\ViewHelpers\Form\CheckboxViewHelper::class, 'checkboxFieldNames')) {
-            $this->viewHelperVariableContainer->remove(\TYPO3\CMS\Fluid\ViewHelpers\Form\CheckboxViewHelper::class, 'checkboxFieldNames');
+        $viewHelperVariableContainer = $this->renderingContext->getViewHelperVariableContainer();
+        if ($viewHelperVariableContainer->exists(\TYPO3\CMS\Fluid\ViewHelpers\Form\CheckboxViewHelper::class, 'checkboxFieldNames')) {
+            $viewHelperVariableContainer->remove(\TYPO3\CMS\Fluid\ViewHelpers\Form\CheckboxViewHelper::class, 'checkboxFieldNames');
         }
     }
 
@@ -470,7 +466,7 @@ class FormViewHelper extends \TYPO3\CMS\Fluid\ViewHelpers\Form\AbstractFormViewH
      */
     protected function renderTrustedPropertiesField()
     {
-        $formFieldNames = $this->viewHelperVariableContainer->get(\TYPO3\CMS\Fluid\ViewHelpers\FormViewHelper::class, 'formFieldNames');
+        $formFieldNames = $this->renderingContext->getViewHelperVariableContainer()->get(\TYPO3\CMS\Fluid\ViewHelpers\FormViewHelper::class, 'formFieldNames');
         $requestHash = $this->mvcPropertyMappingConfigurationService->generateTrustedPropertiesToken($formFieldNames, $this->getFieldNamePrefix());
         return '<input type="hidden" name="' . $this->prefixFieldName('__trustedProperties') . '" value="' . htmlspecialchars($requestHash) . '" />';
     }

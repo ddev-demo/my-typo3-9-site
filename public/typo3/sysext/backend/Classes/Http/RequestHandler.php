@@ -17,10 +17,11 @@ namespace TYPO3\CMS\Backend\Http;
 
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
-use Psr\Http\Server\RequestHandlerInterface;
+use Psr\Http\Server\RequestHandlerInterface as PsrRequestHandlerInterface;
 use TYPO3\CMS\Backend\Routing\Exception\InvalidRequestTokenException;
-use TYPO3\CMS\Backend\Routing\UriBuilder;
 use TYPO3\CMS\Core\Http\RedirectResponse;
+use TYPO3\CMS\Core\Http\RequestHandlerInterface;
+use TYPO3\CMS\Core\Http\Response;
 use TYPO3\CMS\Core\Utility\GeneralUtility;
 
 /**
@@ -33,45 +34,17 @@ use TYPO3\CMS\Core\Utility\GeneralUtility;
  *   - route
  *   - token
  */
-class RequestHandler implements RequestHandlerInterface
+class RequestHandler implements RequestHandlerInterface, PsrRequestHandlerInterface
 {
     /**
-     * @var RouteDispatcher
-     */
-    protected $dispatcher;
-
-    /**
-     * @param RouteDispatcher $dispatcher
-     */
-    public function __construct(RouteDispatcher $dispatcher)
-    {
-        $this->dispatcher = $dispatcher;
-    }
-
-    /**
-     * Sets the global GET and POST to the values, so if people access $_GET and $_POST
-     * Within hooks starting NOW (e.g. cObject), they get the "enriched" data from query params.
-     *
-     * This needs to be run after the request object has been enriched with modified GET/POST variables.
+     * Handles any backend request
      *
      * @param ServerRequestInterface $request
-     * @internal this safety net will be removed in TYPO3 v11.0.
+     * @return ResponseInterface
      */
-    protected function resetGlobalsToCurrentRequest(ServerRequestInterface $request)
+    public function handleRequest(ServerRequestInterface $request): ResponseInterface
     {
-        if ($request->getQueryParams() !== $_GET) {
-            $queryParams = $request->getQueryParams();
-            $_GET = $queryParams;
-            $GLOBALS['HTTP_GET_VARS'] = $_GET;
-        }
-        if ($request->getMethod() === 'POST') {
-            $parsedBody = $request->getParsedBody();
-            if (is_array($parsedBody) && $parsedBody !== $_POST) {
-                $_POST = $parsedBody;
-                $GLOBALS['HTTP_POST_VARS'] = $_POST;
-            }
-        }
-        $GLOBALS['TYPO3_REQUEST'] = $request;
+        return $this->handle($request);
     }
 
     /**
@@ -84,16 +57,46 @@ class RequestHandler implements RequestHandlerInterface
      */
     public function handle(ServerRequestInterface $request): ResponseInterface
     {
-        // safety net to have the fully-added request object globally available as long as
-        // there are Core classes that need the Request object but do not get it handed in
-        $this->resetGlobalsToCurrentRequest($request);
+        // Use a custom pre-created response for AJAX calls
+        // @deprecated since TYPO3 v9, will be removed in TYPO3 v10.0: No prepared $response to RouteDispatcher any longer
+        if (TYPO3_REQUESTTYPE & TYPO3_REQUESTTYPE_AJAX) {
+            $response = new Response('php://temp', 200, [
+                'Content-Type' => 'application/json; charset=utf-8',
+                'X-JSON' => 'true'
+            ]);
+        } else {
+            $response = new Response();
+        }
         try {
             // Check if the router has the available route and dispatch.
-            return $this->dispatcher->dispatch($request);
+            $dispatcher = GeneralUtility::makeInstance(RouteDispatcher::class);
+            return $dispatcher->dispatch($request, $response);
         } catch (InvalidRequestTokenException $e) {
             // When token was invalid redirect to login
-            $loginPage = GeneralUtility::makeInstance(UriBuilder::class)->buildUriFromRoute('login');
-            return new RedirectResponse((string)$loginPage);
+            $url = GeneralUtility::getIndpEnv('TYPO3_SITE_URL') . TYPO3_mainDir;
+            return new RedirectResponse($url);
         }
+    }
+
+    /**
+     * This request handler can handle any backend request.
+     *
+     * @param ServerRequestInterface $request
+     * @return bool If the request is BE request TRUE otherwise FALSE
+     */
+    public function canHandleRequest(ServerRequestInterface $request): bool
+    {
+        return (bool)(TYPO3_REQUESTTYPE & TYPO3_REQUESTTYPE_BE);
+    }
+
+    /**
+     * Returns the priority - how eager the handler is to actually handle the
+     * request.
+     *
+     * @return int The priority of the request handler.
+     */
+    public function getPriority(): int
+    {
+        return 50;
     }
 }

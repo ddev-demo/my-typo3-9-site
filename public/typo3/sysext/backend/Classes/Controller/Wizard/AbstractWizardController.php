@@ -14,6 +14,7 @@ namespace TYPO3\CMS\Backend\Controller\Wizard;
  * The TYPO3 project - inspiring people to share!
  */
 
+use TYPO3\CMS\Backend\Template\DocumentTemplate;
 use TYPO3\CMS\Backend\Utility\BackendUtility;
 use TYPO3\CMS\Core\Authentication\BackendUserAuthentication;
 use TYPO3\CMS\Core\Localization\LanguageService;
@@ -76,5 +77,15 @@ class AbstractWizardController
     protected function getLanguageService()
     {
         return $GLOBALS['LANG'];
+    }
+
+    /**
+     * Returns an instance of DocumentTemplate
+     *
+     * @return DocumentTemplate
+     */
+    protected function getDocumentTemplate()
+    {
+        return $GLOBALS['TBE_TEMPLATE'];
     }
 }

@@ -10,4 +10,26 @@
  *
  * The TYPO3 project - inspiring people to share!
  */
-define(["require","exports","jquery","TYPO3/CMS/Backend/Input/Clearable"],function(e,t,l){"use strict";return new class{constructor(){l(()=>{let e;if(null!==(e=document.querySelector('input[name="tx_filelist_file_filelistlist[searchWord]"]'))){const t=""!==e.value;e.clearable({onClear:e=>{t&&e.closest("form").submit()}})}})}}});
+
+/**
+ * Module: TYPO3/CMS/Filelist/FileSearch
+ * JavaScript for file search
+ * @exports TYPO3/CMS/Filelist/FileSearch
+ */
+define(['jquery', 'TYPO3/CMS/Backend/jquery.clearable'], function($) {
+
+  $(function() {
+    var $searchFields = $('input[name="tx_filelist_file_filelistlist[searchWord]"]');
+    var searchResultShown = ('' !== $searchFields.first().val());
+
+    // make search field clearable
+    $searchFields.clearable({
+      onClear: function() {
+        if (searchResultShown) {
+          $(this).closest('form').submit();
+        }
+      }
+    });
+  });
+
+});

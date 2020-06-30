@@ -24,6 +24,13 @@ class Request implements RequestInterface
     const PATTERN_MATCH_FORMAT = '/^[a-z0-9]{1,5}$/';
 
     /**
+     * Pattern after which the namespaced controller object name is built
+     *
+     * @var string
+     */
+    protected $namespacedControllerObjectNamePattern = '@vendor\@extension\@subpackage\Controller\@controllerController';
+
+    /**
      * @var string Key of the plugin which identifies the plugin. It must be a string containing [a-z0-9]
      */
     protected $pluginName = '';
@@ -34,16 +41,16 @@ class Request implements RequestInterface
     protected $controllerExtensionName;
 
     /**
+     * @var string vendor prefix
+     */
+    protected $controllerVendorName;
+
+    /**
      * Subpackage key of the controller which is supposed to handle this request.
      *
      * @var string
      */
     protected $controllerSubpackageKey;
-
-    /**
-     * @var string
-     */
-    protected $controllerObjectName;
 
     /**
      * @var string Object name of the controller which is supposed to handle this request.
@@ -119,19 +126,37 @@ class Request implements RequestInterface
     }
 
     /**
-     * @param string $controllerClassName
+     * Returns the object name of the controller defined by the extension name and
+     * controller name
+     *
+     * @return string The controller's Object Name
+     * @throws \TYPO3\CMS\Extbase\Mvc\Exception\NoSuchControllerException if the controller does not exist
      */
-    public function __construct(string $controllerClassName = '')
+    public function getControllerObjectName()
     {
-        $this->controllerObjectName = $controllerClassName;
-    }
+        $objectName = str_replace(
+            [
+                '@extension',
+                '@subpackage',
+                '@controller',
+                '@vendor',
+                '\\\\'
+            ],
+            [
+                $this->controllerExtensionName,
+                $this->controllerSubpackageKey,
+                $this->controllerName,
+                $this->controllerVendorName,
+                '\\'
+            ],
+            $this->namespacedControllerObjectNamePattern
+        );
 
-    /**
-     * @return string
-     */
-    public function getControllerObjectName(): string
-    {
-        return $this->controllerObjectName;
+        // @todo implement getCaseSensitiveObjectName()
+        if ($objectName === false) {
+            throw new \TYPO3\CMS\Extbase\Mvc\Exception\NoSuchControllerException('The controller object "' . $objectName . '" does not exist.', 1220884009);
+        }
+        return $objectName;
     }
 
     /**
@@ -143,6 +168,7 @@ class Request implements RequestInterface
     public function setControllerObjectName($controllerObjectName)
     {
         $nameParts = ClassNamingUtility::explodeObjectControllerName($controllerObjectName);
+        $this->controllerVendorName = $nameParts['vendorName'] ?? null;
         $this->controllerExtensionName = $nameParts['extensionName'];
         $this->controllerSubpackageKey = $nameParts['subpackageKey'] ?? null;
         $this->controllerName = $nameParts['controllerName'];
@@ -229,21 +255,6 @@ class Request implements RequestInterface
     }
 
     /**
-     * @var array
-     */
-    protected $controllerAliasToClassNameMapping = [];
-
-    /**
-     * @param array $controllerAliasToClassNameMapping
-     */
-    public function setControllerAliasToClassNameMapping(array $controllerAliasToClassNameMapping)
-    {
-        // this is only needed as long as forwarded requests are altered and unless there
-        // is no new request object created by the request builder.
-        $this->controllerAliasToClassNameMapping = $controllerAliasToClassNameMapping;
-    }
-
-    /**
      * Sets the name of the controller which is supposed to handle the request.
      * Note: This is not the object name of the controller!
      *
@@ -258,8 +269,6 @@ class Request implements RequestInterface
         }
         if ($controllerName !== null) {
             $this->controllerName = $controllerName;
-            $this->controllerObjectName = $this->controllerAliasToClassNameMapping[$controllerName] ?? '';
-            // There might be no Controller Class, for example for Fluid Templates.
         }
     }
 
@@ -305,9 +314,6 @@ class Request implements RequestInterface
     {
         $controllerObjectName = $this->getControllerObjectName();
         if ($controllerObjectName !== '' && $this->controllerActionName === strtolower($this->controllerActionName)) {
-            // todo: this is nonsense! We can detect a non existing method in
-            // todo: \TYPO3\CMS\Extbase\Utility\ExtensionUtility::configurePlugin, if necessary.
-            // todo: At this point, we want to have a getter for a fixed value.
             $actionMethodName = $this->controllerActionName . 'Action';
             $classMethods = get_class_methods($controllerObjectName);
             if (is_array($classMethods)) {
@@ -339,9 +345,31 @@ class Request implements RequestInterface
             $this->internalArguments[$argumentName] = $value;
             return;
         }
-        if (!in_array($argumentName, ['@extension', '@subpackage', '@controller', '@action', '@format'], true)) {
+        if (!in_array($argumentName, ['@extension', '@subpackage', '@controller', '@action', '@format', '@vendor'], true)) {
             $this->arguments[$argumentName] = $value;
         }
+    }
+
+    /**
+     * sets the VendorName
+     *
+     * @param string $vendorName
+     * @internal only to be used within Extbase, not part of TYPO3 Core API.
+     */
+    public function setControllerVendorName($vendorName)
+    {
+        $this->controllerVendorName = $vendorName;
+    }
+
+    /**
+     * get the VendorName
+     *
+     * @return string
+     * @internal only to be used within Extbase, not part of TYPO3 Core API.
+     */
+    public function getControllerVendorName()
+    {
+        return $this->controllerVendorName;
     }
 
     /**
@@ -374,7 +402,7 @@ class Request implements RequestInterface
      *
      * @param string $argumentName Name of the argument
      *
-     * @return string Value of the argument
+     * @return string|array Value of the argument
      * @throws \TYPO3\CMS\Extbase\Mvc\Exception\NoSuchArgumentException if such an argument does not exist
      */
     public function getArgument($argumentName)

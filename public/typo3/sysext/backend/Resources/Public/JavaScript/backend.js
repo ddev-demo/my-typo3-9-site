@@ -11,6 +11,11 @@
  * The TYPO3 project - inspiring people to share!
  */
 
+// Reset the current window name in case it was a preview before
+window.name = '';
+
+// Remove window.opener from backend
+window.opener = undefined;
 
 /**
  * common storage and global object, could later hold more information about the current user etc.
@@ -36,7 +41,6 @@ function jump(url, modName, mainModName, pageId) {
  * Function similar to PHPs  rawurlencode();
  */
 function rawurlencode(str) {
-  console.warn('top.rawurlencode() has been marked as deprecated, consider using encodeURIComponent() instead.');
   var output = encodeURIComponent(str);
   output = str_replace("*", "%2A", output);
   output = str_replace("+", "%2B", output);
@@ -50,7 +54,6 @@ function rawurlencode(str) {
  * String-replace function
  */
 function str_replace(match, replace, string) {	//
-  console.warn('top.str_replace() has been marked as deprecated, consider using .replace() instead.');
   var input = "" + string;
   var matchStr = "" + match;
   if (!matchStr) {
@@ -68,11 +71,24 @@ function str_replace(match, replace, string) {	//
   return output;
 }
 
+
+/**
+ * Launcing information window for records/files (fileref as "table" argument)
+ */
+function launchView(table, uid) {
+  console.warn('Calling launchView() has been deprecated in v9 and will be removed in v10.0');
+  var thePreviewWindow = window.open(TYPO3.settings.ShowItem.moduleUrl + '&table=' + encodeURIComponent(table) + "&uid=" + encodeURIComponent(uid),
+    "ShowItem" + Math.random().toString(16).slice(2),
+    "width=650,height=600,status=0,menubar=0,resizable=0,location=0,directories=0,scrollbars=1,toolbar=0");
+  if (thePreviewWindow && thePreviewWindow.focus) {
+    thePreviewWindow.focus();
+  }
+}
+
 /**
  * Opens plain window with url
  */
 function openUrlInWindow(url, windowName) {	//
-  console.warn('top.openUrlInWindow() has been marked as deprecated.');
   regularWindow = window.open(
     url,
     windowName,

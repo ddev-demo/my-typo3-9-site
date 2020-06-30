@@ -15,7 +15,7 @@
  * Module: TYPO3/CMS/Backend/FormEngineLinkBrowserAdapter
  * LinkBrowser communication with parent window
  */
-define(['jquery', 'TYPO3/CMS/Recordlist/LinkBrowser', 'TYPO3/CMS/Backend/Modal'], function($, LinkBrowser, Modal) {
+define(['jquery', 'TYPO3/CMS/Recordlist/LinkBrowser'], function($, LinkBrowser) {
   'use strict';
 
   /**
@@ -34,12 +34,10 @@ define(['jquery', 'TYPO3/CMS/Recordlist/LinkBrowser', 'TYPO3/CMS/Backend/Modal']
    */
   FormEngineLinkBrowserAdapter.checkReference = function() {
     var selector = 'form[name="' + LinkBrowser.parameters.formName + '"] [data-formengine-input-name="' + LinkBrowser.parameters.itemName + '"]';
-    let opener = FormEngineLinkBrowserAdapter.getParent();
-
-    if (opener && opener.document && opener.document.querySelector(selector)) {
-      return opener.document.querySelector(selector);
+    if (window.opener && window.opener.document && window.opener.document.querySelector(selector)) {
+      return window.opener.document.querySelector(selector);
     } else {
-      Modal.dismiss();
+      close();
     }
   };
 
@@ -61,51 +59,17 @@ define(['jquery', 'TYPO3/CMS/Recordlist/LinkBrowser', 'TYPO3/CMS/Backend/Modal']
         method: 'GET'
       }).done(function(data) {
         if (data.typoLink) {
-          let opener = FormEngineLinkBrowserAdapter.getParent();
-          $('#' + field.id, opener.document).val(data.typoLink);
+          $('#' + field.id, parent.opener.document).val(data.typoLink);
           if (typeof field.onchange === 'function') {
             field.onchange();
           }
 
-          if (typeof FormEngineLinkBrowserAdapter.updateFunctions === 'function') {
-            FormEngineLinkBrowserAdapter.updateFunctions();
-          }
+          FormEngineLinkBrowserAdapter.updateFunctions();
 
-          Modal.dismiss();
+          close();
         }
       });
     }
-  };
-
-  /**
-   * Returns the parent document object
-   */
-  FormEngineLinkBrowserAdapter.getParent = function() {
-    let opener;
-    if (
-      typeof window.parent !== 'undefined' &&
-      typeof window.parent.document.list_frame !== 'undefined' &&
-      window.parent.document.list_frame.parent.document.querySelector('.t3js-modal-iframe') !== null
-    ) {
-      opener = window.parent.document.list_frame;
-    } else if (
-      typeof window.parent !== 'undefined' &&
-      typeof window.parent.frames.list_frame !== 'undefined' &&
-      window.parent.frames.list_frame.parent.document.querySelector('.t3js-modal-iframe') !== null
-    ) {
-      opener = window.parent.frames.list_frame;
-    } else if (
-      typeof window.frames !== 'undefined' &&
-      typeof window.frames.frameElement !== 'undefined' &&
-      window.frames.frameElement !== null &&
-      window.frames.frameElement.classList.contains('t3js-modal-iframe')
-    ) {
-      opener = window.frames.frameElement.contentWindow.parent;
-    } else if (window.opener) {
-      opener = window.opener;
-    }
-
-    return opener;
   };
 
   return FormEngineLinkBrowserAdapter;

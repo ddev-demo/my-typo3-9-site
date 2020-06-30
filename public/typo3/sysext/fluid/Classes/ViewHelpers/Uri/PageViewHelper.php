@@ -14,8 +14,6 @@ namespace TYPO3\CMS\Fluid\ViewHelpers\Uri;
  * The TYPO3 project - inspiring people to share!
  */
 
-use TYPO3\CMS\Core\Utility\MathUtility;
-use TYPO3\CMS\Extbase\Mvc\Web\Routing\UriBuilder;
 use TYPO3Fluid\Fluid\Core\Rendering\RenderingContextInterface;
 use TYPO3Fluid\Fluid\Core\ViewHelper\AbstractViewHelper;
 use TYPO3Fluid\Fluid\Core\ViewHelper\Traits\CompileWithRenderStatic;
@@ -72,8 +70,7 @@ class PageViewHelper extends AbstractViewHelper
         $this->registerArgument('additionalParams', 'array', 'query parameters to be attached to the resulting URI', false, []);
         $this->registerArgument('pageType', 'int', 'type of the target page. See typolink.parameter', false, 0);
         $this->registerArgument('noCache', 'bool', 'set this to disable caching for the target page. You should not need this.', false, false);
-        // @deprecated
-        $this->registerArgument('noCacheHash', 'bool', 'Deprecated: Set this to suppress the cHash query parameter created by TypoLink. You should not need this.', false, null);
+        $this->registerArgument('noCacheHash', 'bool', 'set this to suppress the cHash query parameter created by TypoLink. You should not need this.', false, false);
         $this->registerArgument('section', 'string', 'the anchor to be added to the URI', false, '');
         $this->registerArgument('linkAccessRestrictedPages', 'bool', 'If set, links pointing to access restricted pages will still link to the page even though the page cannot be accessed.', false, false);
         $this->registerArgument('absolute', 'bool', 'If set, the URI of the rendered link is absolute', false, false);
@@ -94,9 +91,7 @@ class PageViewHelper extends AbstractViewHelper
         $additionalParams = $arguments['additionalParams'];
         $pageType = $arguments['pageType'];
         $noCache = $arguments['noCache'];
-        if (isset($arguments['noCacheHash'])) {
-            trigger_error('Using the argument "noCacheHash" in <f:uri.page> ViewHelper has no effect anymore. Remove the argument in your fluid template, as it will result in a fatal error.', E_USER_DEPRECATED);
-        }
+        $noCacheHash = $arguments['noCacheHash'];
         $section = $arguments['section'];
         $linkAccessRestrictedPages = $arguments['linkAccessRestrictedPages'];
         $absolute = $arguments['absolute'];
@@ -104,28 +99,8 @@ class PageViewHelper extends AbstractViewHelper
         $argumentsToBeExcludedFromQueryString = $arguments['argumentsToBeExcludedFromQueryString'];
         $addQueryStringMethod = $arguments['addQueryStringMethod'];
 
-        /** @var UriBuilder $uriBuilder */
         $uriBuilder = $renderingContext->getControllerContext()->getUriBuilder();
-        $uri = $uriBuilder
-            ->reset()
-            ->setTargetPageType($pageType)
-            ->setNoCache($noCache)
-            ->setSection($section)
-            ->setLinkAccessRestrictedPages($linkAccessRestrictedPages)
-            ->setArguments($additionalParams)
-            ->setCreateAbsoluteUri($absolute)
-            ->setAddQueryString($addQueryString)
-            ->setArgumentsToBeExcludedFromQueryString($argumentsToBeExcludedFromQueryString)
-        ;
-
-        if (MathUtility::canBeInterpretedAsInteger($pageUid)) {
-            $uriBuilder->setTargetPageUid((int)$pageUid);
-        }
-
-        if (is_string($addQueryStringMethod)) {
-            $uriBuilder->setAddQueryStringMethod($addQueryStringMethod);
-        }
-
-        return $uri->build();
+        $uri = $uriBuilder->setTargetPageUid($pageUid)->setTargetPageType($pageType)->setNoCache($noCache)->setUseCacheHash(!$noCacheHash)->setSection($section)->setLinkAccessRestrictedPages($linkAccessRestrictedPages)->setArguments($additionalParams)->setCreateAbsoluteUri($absolute)->setAddQueryString($addQueryString)->setArgumentsToBeExcludedFromQueryString($argumentsToBeExcludedFromQueryString)->setAddQueryStringMethod($addQueryStringMethod)->build();
+        return $uri;
     }
 }

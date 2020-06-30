@@ -60,7 +60,34 @@ class PageLinkHandler extends AbstractLinkHandler implements LinkHandlerInterfac
         if (!$linkParts['url']) {
             return false;
         }
+
         $data = $linkParts['url'];
+        // Checking if the id-parameter is an alias.
+        if (isset($data['pagealias'])) {
+            $queryBuilder = GeneralUtility::makeInstance(ConnectionPool::class)
+                ->getQueryBuilderForTable('pages');
+            $queryBuilder->getRestrictions()
+                ->removeAll()
+                ->add(GeneralUtility::makeInstance(DeletedRestriction::class))
+                ->add(GeneralUtility::makeInstance(BackendWorkspaceRestriction::class));
+
+            $pageUid = $queryBuilder->select('uid')
+                ->from('pages')
+                ->where(
+                    $queryBuilder->expr()->eq(
+                        'alias',
+                        $queryBuilder->createNamedParameter($data['pagealias'], \PDO::PARAM_STR)
+                    )
+                )
+                ->setMaxResults(1)
+                ->execute()
+                ->fetchColumn(0);
+
+            if ($pageUid === false) {
+                return false;
+            }
+            $data['pageuid'] = (int)$pageUid;
+        }
         // Check if the page still exists
         if ((int)$data['pageuid'] > 0) {
             $pageRow = BackendUtility::getRecordWSOL('pages', $data['pageuid']);
@@ -88,8 +115,8 @@ class PageLinkHandler extends AbstractLinkHandler implements LinkHandlerInterfac
         $id = (int)$this->linkParts['url']['pageuid'];
         $pageRow = BackendUtility::getRecordWSOL('pages', $id);
 
-        return htmlspecialchars($lang->getLL('page'))
-            . ' \'' . htmlspecialchars(GeneralUtility::fixed_lgd_cs($pageRow['title'], $titleLen)) . '\''
+        return $lang->getLL('page')
+            . ' \'' . GeneralUtility::fixed_lgd_cs($pageRow['title'], $titleLen) . '\''
             . ' (ID: ' . $id . ($this->linkParts['url']['fragment'] ? ', #' . $this->linkParts['url']['fragment'] : '') . ')';
     }
 
@@ -256,7 +283,8 @@ class PageLinkHandler extends AbstractLinkHandler implements LinkHandlerInterfac
     public function modifyLinkAttributes(array $fieldDefinitions)
     {
         $configuration = $this->linkBrowser->getConfiguration();
-        if (!empty($configuration['pageIdSelector.']['enabled'])) {
+        // Depending where the configuration is set it can be 'pageIdSelector' (CKEditor yaml) or 'pageIdSelector.' (TSconfig)
+        if (!empty($configuration['pageIdSelector']['enabled']) || !empty($configuration['pageIdSelector.']['enabled'])) {
             $this->linkAttributes[] = 'pageIdSelector';
             $fieldDefinitions['pageIdSelector'] = '
 				<form class="form-horizontal"><div class="form-group form-group-sm">

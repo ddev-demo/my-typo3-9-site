@@ -10,4 +10,133 @@
  *
  * The TYPO3 project - inspiring people to share!
  */
-define(["require","exports","jquery","TYPO3/CMS/Recordlist/LinkBrowser","TYPO3/CMS/Backend/Modal","ckeditor"],function(t,e,i,n,s){"use strict";class l{constructor(){this.plugin=null,this.CKEditor=null,this.siteUrl=""}initialize(t){let e=s.currentModal.data("ckeditor");if(void 0!==e)this.CKEditor=e;else{let e;e=void 0!==top.TYPO3.Backend&&void 0!==top.TYPO3.Backend.ContentContainer.get()?top.TYPO3.Backend.ContentContainer.get():window.parent,i.each(e.CKEDITOR.instances,(e,i)=>{i.id===t&&(this.CKEditor=i)})}i.extend(l,i("body").data()),i(".t3js-class-selector").on("change",()=>{i("option:selected",this).data("linkTitle")&&i(".t3js-linkTitle").val(i("option:selected",this).data("linkTitle"))}),i(".t3js-removeCurrentLink").on("click",t=>{t.preventDefault(),this.CKEditor.execCommand("unlink"),s.dismiss()})}finalizeFunction(t){const e=this.CKEditor.document.createElement("a"),l=n.getLinkAttributeValues(),r=l.params?l.params:"";l.target&&e.setAttribute("target",l.target),l.class&&e.setAttribute("class",l.class),l.title&&e.setAttribute("title",l.title),delete l.title,delete l.class,delete l.target,delete l.params,i.each(l,(t,i)=>{e.setAttribute(t,i)}),e.setAttribute("href",t+r);const a=this.CKEditor.getSelection();a&&""===a.getSelectedText()&&a.selectElement(a.getStartElement()),a&&a.getSelectedText()?e.setText(a.getSelectedText()):e.setText(e.getAttribute("href")),this.CKEditor.insertElement(e),s.dismiss()}}let r=new l;return n.finalizeFunction=(t=>{r.finalizeFunction(t)}),r});
+
+/**
+ * Module: TYPO3/CMS/RteCkeditor/RteLinkBrowser
+ * LinkBrowser communication with parent window
+ */
+define(['jquery', 'TYPO3/CMS/Recordlist/LinkBrowser', 'TYPO3/CMS/Backend/Modal'], function($, LinkBrowser, Modal) {
+  'use strict';
+
+  /**
+   *
+   * @type {{plugin: null, CKEditor: null, ranges: null, siteUrl: string}}
+   * @exports TYPO3/CMS/RteCkeditor/RteLinkBrowser
+   */
+  var RteLinkBrowser = {
+    plugin: null,
+    CKEditor: null,
+    ranges: [],
+    siteUrl: ''
+  };
+
+  /**
+   * @param {String} editorId Id of CKEditor
+   */
+  RteLinkBrowser.initialize = function(editorId) {
+    var editor = Modal.currentModal.data('ckeditor');
+    if (typeof editor !== 'undefined') {
+      RteLinkBrowser.CKEditor = editor;
+    } else {
+      var callerWindow;
+      if (typeof top.TYPO3.Backend !== 'undefined' && typeof top.TYPO3.Backend.ContentContainer.get() !== 'undefined') {
+        callerWindow = top.TYPO3.Backend.ContentContainer.get();
+      } else {
+        callerWindow = window.parent;
+      }
+
+      $.each(callerWindow.CKEDITOR.instances, function(name, editor) {
+        if (editor.id === editorId) {
+          RteLinkBrowser.CKEditor = editor;
+        }
+      });
+    }
+
+    window.addEventListener('beforeunload', function () {
+      RteLinkBrowser.CKEditor.getSelection().selectRanges(RteLinkBrowser.ranges);
+    });
+
+    // Backup all ranges that are active when the Link Browser is requested
+    RteLinkBrowser.ranges = RteLinkBrowser.CKEditor.getSelection().getRanges();
+
+    // siteUrl etc are added as data attributes to the body tag
+    $.extend(RteLinkBrowser, $('body').data());
+
+    $('.t3js-class-selector').on('change', function() {
+      if ($('option:selected', this).data('linkTitle')) {
+        $('.t3js-linkTitle').val($('option:selected', this).data('linkTitle'));
+      }
+    });
+
+    $('.t3js-removeCurrentLink').on('click', function(event) {
+      event.preventDefault();
+      RteLinkBrowser.CKEditor.execCommand('unlink');
+      Modal.dismiss();
+    });
+  };
+
+  /**
+   * Store the final link
+   *
+   * @param {String} link The select element or anything else which identifies the link (e.g. "page:<pageUid>" or "file:<uid>")
+   */
+  LinkBrowser.finalizeFunction = function(link) {
+
+    var linkElement = RteLinkBrowser.CKEditor.document.createElement('a');
+    var attributes = LinkBrowser.getLinkAttributeValues();
+    var params = attributes.params ? attributes.params : '';
+
+    if (attributes.target) {
+      linkElement.setAttribute('target', attributes.target);
+    }
+    if (attributes.class) {
+      linkElement.setAttribute('class', attributes.class);
+    }
+    if (attributes.title) {
+      linkElement.setAttribute('title', attributes.title);
+    }
+    delete attributes.title;
+    delete attributes.class;
+    delete attributes.target;
+    delete attributes.params;
+
+    $.each(attributes, function(attrName, attrValue) {
+      linkElement.setAttribute(attrName, attrValue);
+    });
+
+    // Make sure, parameters and anchor are in correct order
+    var linkMatch = link.match(/^([a-z0-9]+:\/\/[^:\/?#]+(?:\/?[^?#]*)?)(\??[^#]*)(#?.*)$/)
+    if (linkMatch && linkMatch.length > 0) {
+      link = linkMatch[1] + linkMatch[2];
+      var paramsPrefix = linkMatch[2].length > 0 ? '&' : '?';
+      if (params.length > 0) {
+        if (params[0] === '&') {
+          params = params.substr(1)
+        }
+        // If params is set, append it
+        if (params.length > 0) {
+          link = link + paramsPrefix + params;
+        }
+      }
+      link = link + linkMatch[3];
+    }
+
+    linkElement.setAttribute('href', link);
+
+    var selection = RteLinkBrowser.CKEditor.getSelection();
+    selection.selectRanges(RteLinkBrowser.ranges);
+    if (selection && selection.getSelectedText() === '') {
+      selection.selectElement(selection.getStartElement());
+    }
+    if (selection && selection.getSelectedText()) {
+      linkElement.setText(selection.getSelectedText());
+    } else {
+      linkElement.setText(linkElement.getAttribute('href'));
+    }
+    RteLinkBrowser.CKEditor.insertElement(linkElement);
+
+    Modal.dismiss();
+  };
+
+  return RteLinkBrowser;
+});

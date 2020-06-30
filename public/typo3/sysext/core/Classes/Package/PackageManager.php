@@ -17,6 +17,7 @@ namespace TYPO3\CMS\Core\Package;
 use Symfony\Component\Finder\Finder;
 use Symfony\Component\Finder\SplFileInfo;
 use TYPO3\CMS\Core\Cache\Frontend\FrontendInterface;
+use TYPO3\CMS\Core\Compatibility\LoadedExtensionArrayElement;
 use TYPO3\CMS\Core\Core\ClassLoadingInformation;
 use TYPO3\CMS\Core\Core\Environment;
 use TYPO3\CMS\Core\Service\DependencyOrderingService;
@@ -104,10 +105,14 @@ class PackageManager implements SingletonInterface
     /**
      * @param DependencyOrderingService $dependencyOrderingService
      */
-    public function __construct(DependencyOrderingService $dependencyOrderingService)
+    public function __construct(DependencyOrderingService $dependencyOrderingService = null)
     {
         $this->packagesBasePath = Environment::getPublicPath() . '/';
         $this->packageStatesPathAndFilename = Environment::getLegacyConfigPath() . '/PackageStates.php';
+        if ($dependencyOrderingService === null) {
+            trigger_error(self::class . ' without constructor based dependency injection will stop working in TYPO3 v10.0.', E_USER_DEPRECATED);
+            $dependencyOrderingService = GeneralUtility::makeInstance(DependencyOrderingService::class);
+        }
         $this->dependencyOrderingService = $dependencyOrderingService;
     }
 
@@ -121,6 +126,16 @@ class PackageManager implements SingletonInterface
     }
 
     /**
+     * @param DependencyResolver $dependencyResolver
+     * @deprecated since TYPO3 v9, will be removed in TYPO3 v10.0.
+     * @internal
+     */
+    public function injectDependencyResolver(DependencyResolver $dependencyResolver)
+    {
+        trigger_error(self::class . '::injectDependencyResolver() will be removed in TYPO3 v10.0.', E_USER_DEPRECATED);
+    }
+
+    /**
      * Initializes the package manager
      * @internal
      */
@@ -131,6 +146,8 @@ class PackageManager implements SingletonInterface
         } catch (Exception\PackageManagerCacheUnavailableException $exception) {
             $this->loadPackageStates();
             $this->initializePackageObjects();
+            // @deprecated will be removed in TYPO3 v10.0
+            $this->initializeCompatibilityLoadedExtArray();
             $this->saveToPackageCache();
         }
     }
@@ -171,6 +188,8 @@ class PackageManager implements SingletonInterface
             $packageCache = [
                 'packageStatesConfiguration' => $this->packageStatesConfiguration,
                 'packageAliasMap' => $this->packageAliasMap,
+                // @deprecated will be removed in TYPO3 v10.0
+                'loadedExtArray' => $GLOBALS['TYPO3_LOADED_EXT'],
                 'composerNameToPackageKeyMap' => $this->composerNameToPackageKeyMap,
                 'packageObjects' => serialize($this->packages),
             ];
@@ -206,6 +225,8 @@ class PackageManager implements SingletonInterface
                 \stdClass::class,
             ]
         ]);
+        // @deprecated will be removed in TYPO3 v10.0
+        $GLOBALS['TYPO3_LOADED_EXT'] = $packageCache['loadedExtArray'];
     }
 
     /**
@@ -216,11 +237,29 @@ class PackageManager implements SingletonInterface
      */
     protected function loadPackageStates()
     {
+        $forcePackageStatesRewrite = false;
         $this->packageStatesConfiguration = @include $this->packageStatesPathAndFilename ?: [];
-        if (!isset($this->packageStatesConfiguration['version']) || $this->packageStatesConfiguration['version'] < 5) {
+        if (!isset($this->packageStatesConfiguration['version']) || $this->packageStatesConfiguration['version'] < 4) {
+            $this->packageStatesConfiguration = [];
+        } elseif ($this->packageStatesConfiguration['version'] === 4) {
+            // Convert to v5 format which only includes a list of active packages.
+            // Deprecated since version 8, will be removed in version 10.
+            $activePackages = [];
+            foreach ($this->packageStatesConfiguration['packages'] as $packageKey => $packageConfiguration) {
+                if ($packageConfiguration['state'] !== 'active') {
+                    continue;
+                }
+                $activePackages[$packageKey] = ['packagePath' => $packageConfiguration['packagePath']];
+            }
+            $this->packageStatesConfiguration['packages'] = $activePackages;
+            $this->packageStatesConfiguration['version'] = 5;
+            $forcePackageStatesRewrite = true;
+        }
+        if ($this->packageStatesConfiguration !== []) {
+            $this->registerPackagesFromConfiguration($this->packageStatesConfiguration['packages'], false, $forcePackageStatesRewrite);
+        } else {
             throw new Exception\PackageStatesUnavailableException('The PackageStates.php file is either corrupt or unavailable.', 1381507733);
         }
-        $this->registerPackagesFromConfiguration($this->packageStatesConfiguration['packages'], false);
     }
 
     /**
@@ -259,6 +298,16 @@ class PackageManager implements SingletonInterface
         // reset the active packages so they are rebuilt.
         $this->activePackages = [];
         $this->packageStatesConfiguration['packages'][$package->getPackageKey()] = ['packagePath' => str_replace($this->packagesBasePath, '', $package->getPackagePath())];
+    }
+
+    /**
+     * Initializes a backwards compatibility $GLOBALS['TYPO3_LOADED_EXT'] array
+     */
+    protected function initializeCompatibilityLoadedExtArray()
+    {
+        // @deprecated will be removed in TYPO3 v10.0
+        $loadedExtObj = new \TYPO3\CMS\Core\Compatibility\LoadedExtensionsArray($this);
+        $GLOBALS['TYPO3_LOADED_EXT'] = $loadedExtObj->toArray();
     }
 
     /**
@@ -349,12 +398,12 @@ class PackageManager implements SingletonInterface
      *
      * @param array $packages
      * @param bool $registerOnlyNewPackages
+     * @param bool $packageStatesHasChanged
      * @throws Exception\InvalidPackageStateException
      * @throws Exception\PackageStatesFileNotWritableException
      */
-    protected function registerPackagesFromConfiguration(array $packages, $registerOnlyNewPackages = false)
+    protected function registerPackagesFromConfiguration(array $packages, $registerOnlyNewPackages = false, $packageStatesHasChanged = false)
     {
-        $packageStatesHasChanged = false;
         foreach ($packages as $packageKey => $stateConfiguration) {
             if ($registerOnlyNewPackages && $this->isPackageRegistered($packageKey)) {
                 continue;
@@ -567,6 +616,11 @@ class PackageManager implements SingletonInterface
     {
         $package = $this->registerPackageDuringRuntime($packageKey);
         $this->runtimeActivatedPackages[$package->getPackageKey()] = $package;
+        // @deprecated will be removed in TYPO3 v10.0
+        if (!isset($GLOBALS['TYPO3_LOADED_EXT'][$package->getPackageKey()])) {
+            $loadedExtArrayElement = new LoadedExtensionArrayElement($package);
+            $GLOBALS['TYPO3_LOADED_EXT'][$package->getPackageKey()] = $loadedExtArrayElement->toArray();
+        }
         $this->registerTransientClassLoadingInformationForPackage($package);
     }
 
@@ -742,6 +796,9 @@ class PackageManager implements SingletonInterface
         }
         $packageStatesCode = "<?php\n$fileDescription\nreturn " . ArrayUtility::arrayExport($this->packageStatesConfiguration) . ";\n";
         GeneralUtility::writeFile($this->packageStatesPathAndFilename, $packageStatesCode, true);
+
+        // @deprecated will be removed in TYPO3 v10.0
+        $this->initializeCompatibilityLoadedExtArray();
 
         GeneralUtility::makeInstance(OpcodeCacheService::class)->clearAllActive($this->packageStatesPathAndFilename);
     }

@@ -191,8 +191,7 @@ class MarkerBasedTemplateService
      * @param bool $deleteUnused If set, all unused marker are deleted.
      *
      * @return string The processed output stream
-     * @see substituteMarker()
-     * @see substituteMarkerInObject()
+     * @see substituteMarker(), substituteMarkerInObject(), TEMPLATE()
      */
     public function substituteMarkerArray($content, $markContentArray, $wrap = '', $uppercase = false, $deleteUnused = false)
     {
@@ -347,9 +346,7 @@ class MarkerBasedTemplateService
      * @param array $subpartContentArray Exactly like markContentArray only is whole subparts substituted and not only a single marker.
      * @param array $wrappedSubpartContentArray An array of arrays with 0/1 keys where the subparts pointed to by the main key is wrapped with the 0/1 value alternating.
      * @return string The output content stream
-     * @see substituteSubpart()
-     * @see substituteMarker()
-     * @see substituteMarkerInObject()
+     * @see substituteSubpart(), substituteMarker(), substituteMarkerInObject(), TEMPLATE()
      */
     public function substituteMarkerArrayCached($content, array $markContentArray = null, array $subpartContentArray = null, array $wrappedSubpartContentArray = null)
     {
@@ -513,7 +510,7 @@ class MarkerBasedTemplateService
      */
     protected function getCache()
     {
-        return GeneralUtility::makeInstance(CacheManager::class)->getCache('hash');
+        return GeneralUtility::makeInstance(CacheManager::class)->getCache('cache_hash');
     }
 
     /**
@@ -523,6 +520,6 @@ class MarkerBasedTemplateService
      */
     protected function getRuntimeCache()
     {
-        return GeneralUtility::makeInstance(CacheManager::class)->getCache('runtime');
+        return GeneralUtility::makeInstance(CacheManager::class)->getCache('cache_runtime');
     }
 }

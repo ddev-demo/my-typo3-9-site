@@ -11,12 +11,12 @@ defined('TYPO3_MODE') or die();
 
 // Module Tools->Log
 \TYPO3\CMS\Extbase\Utility\ExtensionUtility::registerModule(
-    'Belog',
+    'TYPO3.CMS.Belog',
     'system',
     'log',
     '',
     [
-        \TYPO3\CMS\Belog\Controller\BackendLogController::class => 'list,deleteMessage',
+        'BackendLog' => 'list,deleteMessage',
     ],
     [
         'access' => 'admin',

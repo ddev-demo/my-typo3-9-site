@@ -1,6 +1,4 @@
 <?php
-declare(strict_types = 1);
-
 namespace TYPO3\CMS\Extbase\Configuration;
 
 /*
@@ -25,6 +23,8 @@ use TYPO3\CMS\Core\TypoScript\TemplateService;
 use TYPO3\CMS\Core\Utility\ArrayUtility;
 use TYPO3\CMS\Core\Utility\GeneralUtility;
 use TYPO3\CMS\Core\Utility\RootlineUtility;
+use TYPO3\CMS\Extbase\Mvc\Web\BackendRequestHandler;
+use TYPO3\CMS\Extbase\Mvc\Web\FrontendRequestHandler;
 
 /**
  * A general purpose configuration manager used in backend mode.
@@ -48,7 +48,7 @@ class BackendConfigurationManager extends AbstractConfigurationManager
      *
      * @return array the raw TypoScript setup
      */
-    public function getTypoScriptSetup(): array
+    public function getTypoScriptSetup()
     {
         $pageId = $this->getCurrentPageId();
 
@@ -84,7 +84,7 @@ class BackendConfigurationManager extends AbstractConfigurationManager
      * @param string $pluginName in BE mode this is actually the module signature. But we're using it just like the plugin name in FE
      * @return array
      */
-    protected function getPluginConfiguration(string $extensionName, string $pluginName = null): array
+    protected function getPluginConfiguration($extensionName, $pluginName = null)
     {
         $setup = $this->getTypoScriptSetup();
         $pluginConfiguration = [];
@@ -102,7 +102,7 @@ class BackendConfigurationManager extends AbstractConfigurationManager
     }
 
     /**
-     * Returns the configured controller/action configuration of the specified module in the format
+     * Returns the configured controller/action pairs of the specified module in the format
      * array(
      * 'Controller1' => array('action1', 'action2'),
      * 'Controller2' => array('action3', 'action4')
@@ -112,13 +112,13 @@ class BackendConfigurationManager extends AbstractConfigurationManager
      * @param string $pluginName in BE mode this is actually the module signature. But we're using it just like the plugin name in FE
      * @return array
      */
-    protected function getControllerConfiguration(string $extensionName, string $pluginName): array
+    protected function getSwitchableControllerActions($extensionName, $pluginName)
     {
-        $controllerConfiguration = $GLOBALS['TYPO3_CONF_VARS']['EXTCONF']['extbase']['extensions'][$extensionName]['modules'][$pluginName]['controllers'] ?? false;
-        if (!is_array($controllerConfiguration)) {
-            $controllerConfiguration = [];
+        $switchableControllerActions = $GLOBALS['TYPO3_CONF_VARS']['EXTCONF']['extbase']['extensions'][$extensionName]['modules'][$pluginName]['controllers'] ?? false;
+        if (!is_array($switchableControllerActions)) {
+            $switchableControllerActions = [];
         }
-        return $controllerConfiguration;
+        return $switchableControllerActions;
     }
 
     /**
@@ -127,7 +127,7 @@ class BackendConfigurationManager extends AbstractConfigurationManager
      *
      * @return int current page id. If no page is selected current root page id is returned
      */
-    protected function getCurrentPageId(): int
+    protected function getCurrentPageId()
     {
         if ($this->currentPageId !== null) {
             return $this->currentPageId;
@@ -145,7 +145,7 @@ class BackendConfigurationManager extends AbstractConfigurationManager
      *
      * @return int the page UID, will be 0 if none has been set
      */
-    protected function getCurrentPageIdFromGetPostData(): int
+    protected function getCurrentPageIdFromGetPostData()
     {
         return (int)GeneralUtility::_GP('id');
     }
@@ -155,7 +155,7 @@ class BackendConfigurationManager extends AbstractConfigurationManager
      *
      * @return int the page UID, will be 0 if none has been set
      */
-    protected function getCurrentPageIdFromCurrentSiteRoot(): int
+    protected function getCurrentPageIdFromCurrentSiteRoot()
     {
         $queryBuilder = GeneralUtility::makeInstance(ConnectionPool::class)
             ->getQueryBuilderForTable('pages');
@@ -170,7 +170,8 @@ class BackendConfigurationManager extends AbstractConfigurationManager
             ->select('uid')
             ->from('pages')
             ->where(
-                $queryBuilder->expr()->eq('is_siteroot', $queryBuilder->createNamedParameter(1, \PDO::PARAM_INT))
+                $queryBuilder->expr()->eq('is_siteroot', $queryBuilder->createNamedParameter(1, \PDO::PARAM_INT)),
+                $queryBuilder->expr()->eq('sys_language_uid', $queryBuilder->createNamedParameter(0, \PDO::PARAM_INT))
             )
             ->orderBy('sorting')
             ->execute()
@@ -188,7 +189,7 @@ class BackendConfigurationManager extends AbstractConfigurationManager
      *
      * @return int the page UID, will be 0 if none has been set
      */
-    protected function getCurrentPageIdFromRootTemplate(): int
+    protected function getCurrentPageIdFromRootTemplate()
     {
         $queryBuilder = GeneralUtility::makeInstance(ConnectionPool::class)
             ->getQueryBuilderForTable('sys_template');
@@ -219,11 +220,10 @@ class BackendConfigurationManager extends AbstractConfigurationManager
     /**
      * Returns the default backend storage pid
      *
-     * @return int
+     * @return string
      */
-    public function getDefaultBackendStoragePid(): int
+    public function getDefaultBackendStoragePid()
     {
-        // todo: fallback to parent::getDefaultBackendStoragePid() would make sense here.
         return $this->getCurrentPageId();
     }
 
@@ -235,43 +235,48 @@ class BackendConfigurationManager extends AbstractConfigurationManager
      * @param array $frameworkConfiguration
      * @return array
      */
-    protected function getContextSpecificFrameworkConfiguration(array $frameworkConfiguration): array
+    protected function getContextSpecificFrameworkConfiguration(array $frameworkConfiguration)
     {
+        if (!isset($frameworkConfiguration['mvc']['requestHandlers'])) {
+            $frameworkConfiguration['mvc']['requestHandlers'] = [
+                FrontendRequestHandler::class => FrontendRequestHandler::class,
+                BackendRequestHandler::class => BackendRequestHandler::class
+            ];
+        }
         return $frameworkConfiguration;
     }
 
     /**
-     * Returns an array of storagePIDs that are below a certain storage pid.
+     * Returns a comma separated list of storagePid that are below a certain storage pid.
      *
-     * @param array|int[] $storagePids Storage PIDs to start at; multiple PIDs possible as comma-separated list
+     * @param string $storagePid Storage PID to start at; multiple PIDs possible as comma-separated list
      * @param int $recursionDepth Maximum number of levels to search, 0 to disable recursive lookup
-     * @return array|int[] storage PIDs
+     * @return string storage PIDs
      */
-    protected function getRecursiveStoragePids(array $storagePids, $recursionDepth = 0): array
+    protected function getRecursiveStoragePids($storagePid, $recursionDepth = 0)
     {
-        array_map('intval', $storagePids);
-
         if ($recursionDepth <= 0) {
-            return $storagePids;
+            return $storagePid;
         }
 
-        $recursiveStoragePids = [];
+        $recursiveStoragePids = '';
+        $storagePids = GeneralUtility::intExplode(',', $storagePid);
         $permsClause = $this->getBackendUser()->getPagePermsClause(Permission::PAGE_SHOW);
         $queryGenerator = GeneralUtility::makeInstance(QueryGenerator::class);
         foreach ($storagePids as $startPid) {
             $pids = $queryGenerator->getTreeList($startPid, $recursionDepth, 0, $permsClause);
-            foreach (GeneralUtility::intExplode(',', $pids, true) as $pid) {
-                $recursiveStoragePids[] = $pid;
+            if ((string)$pids !== '') {
+                $recursiveStoragePids .= $pids . ',';
             }
         }
 
-        return array_unique($recursiveStoragePids);
+        return rtrim($recursiveStoragePids, ',');
     }
 
     /**
      * @return \TYPO3\CMS\Core\Authentication\BackendUserAuthentication
      */
-    protected function getBackendUser(): \TYPO3\CMS\Core\Authentication\BackendUserAuthentication
+    protected function getBackendUser()
     {
         return $GLOBALS['BE_USER'];
     }

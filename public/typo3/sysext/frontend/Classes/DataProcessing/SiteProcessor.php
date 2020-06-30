@@ -16,8 +16,8 @@ namespace TYPO3\CMS\Frontend\DataProcessing;
  */
 
 use TYPO3\CMS\Core\Exception\SiteNotFoundException;
+use TYPO3\CMS\Core\Routing\SiteMatcher;
 use TYPO3\CMS\Core\Site\Entity\SiteInterface;
-use TYPO3\CMS\Core\Site\SiteFinder;
 use TYPO3\CMS\Core\Utility\GeneralUtility;
 use TYPO3\CMS\Frontend\ContentObject\ContentObjectRenderer;
 use TYPO3\CMS\Frontend\ContentObject\DataProcessorInterface;
@@ -59,7 +59,7 @@ class SiteProcessor implements DataProcessorInterface
     protected function getCurrentSite(): ?SiteInterface
     {
         try {
-            return $this->getSiteFinder()->getSiteByPageId($this->getCurrentPageId());
+            return $this->getMatcher()->matchByPageId($this->getCurrentPageId());
         } catch (SiteNotFoundException $e) {
             // Do nothing
         }
@@ -68,11 +68,11 @@ class SiteProcessor implements DataProcessorInterface
     }
 
     /**
-     * @return SiteFinder
+     * @return SiteMatcher
      */
-    protected function getSiteFinder(): SiteFinder
+    protected function getMatcher(): SiteMatcher
     {
-        return GeneralUtility::makeInstance(SiteFinder::class);
+        return GeneralUtility::makeInstance(SiteMatcher::class);
     }
 
     /**

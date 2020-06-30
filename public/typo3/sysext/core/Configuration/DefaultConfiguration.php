@@ -74,13 +74,18 @@ return [
         'features' => [
             'redirects.hitCount' => false,
             'unifiedPageTranslationHandling' => false,
+            'TypoScript.strictSyntax' => true,
+            'simplifiedControllerActionDispatching' => false,
             'security.frontend.keepSessionDataOnLogout' => false,
+            'security.backend.enforceReferrer' => true,
+            'newTranslationServer' => false,
         ],
         'createGroup' => '',
         'sitename' => 'TYPO3',
         'encryptionKey' => '',
         'cookieDomain' => '',
         'cookieSecure' => 0,
+        'recursiveDomainSearch' => false,
         'trustedHostsPattern' => 'SERVER_NAME',
         'devIPmask' => '127.0.0.1,::1',
         'ddmmyy' => 'd-m-y',
@@ -131,7 +136,7 @@ return [
             'cacheConfigurations' => [
                 // The cache_core cache is is for core php code only and must
                 // not be abused by third party extensions.
-                'core' => [
+                'cache_core' => [
                     'frontend' => \TYPO3\CMS\Core\Cache\Frontend\PhpFrontend::class,
                     'backend' => \TYPO3\CMS\Core\Cache\Backend\SimpleFileBackend::class,
                     'options' => [
@@ -139,13 +144,13 @@ return [
                     ],
                     'groups' => ['system']
                 ],
-                'hash' => [
+                'cache_hash' => [
                     'frontend' => \TYPO3\CMS\Core\Cache\Frontend\VariableFrontend::class,
                     'backend' => \TYPO3\CMS\Core\Cache\Backend\Typo3DatabaseBackend::class,
                     'options' => [],
                     'groups' => ['pages']
                 ],
-                'pages' => [
+                'cache_pages' => [
                     'frontend' => \TYPO3\CMS\Core\Cache\Frontend\VariableFrontend::class,
                     'backend' => \TYPO3\CMS\Core\Cache\Backend\Typo3DatabaseBackend::class,
                     'options' => [
@@ -153,7 +158,7 @@ return [
                     ],
                     'groups' => ['pages']
                 ],
-                'pagesection' => [
+                'cache_pagesection' => [
                     'frontend' => \TYPO3\CMS\Core\Cache\Frontend\VariableFrontend::class,
                     'backend' => \TYPO3\CMS\Core\Cache\Backend\Typo3DatabaseBackend::class,
                     'options' => [
@@ -162,13 +167,13 @@ return [
                     ],
                     'groups' => ['pages']
                 ],
-                'runtime' => [
+                'cache_runtime' => [
                     'frontend' => \TYPO3\CMS\Core\Cache\Frontend\VariableFrontend::class,
                     'backend' => \TYPO3\CMS\Core\Cache\Backend\TransientMemoryBackend::class,
                     'options' => [],
                     'groups' => []
                 ],
-                'rootline' => [
+                'cache_rootline' => [
                     'frontend' => \TYPO3\CMS\Core\Cache\Frontend\VariableFrontend::class,
                     'backend' => \TYPO3\CMS\Core\Cache\Backend\Typo3DatabaseBackend::class,
                     'options' => [
@@ -176,7 +181,7 @@ return [
                     ],
                     'groups' => ['pages']
                 ],
-                'imagesizes' => [
+                'cache_imagesizes' => [
                     'frontend' => \TYPO3\CMS\Core\Cache\Frontend\VariableFrontend::class,
                     'backend' => \TYPO3\CMS\Core\Cache\Backend\Typo3DatabaseBackend::class,
                     'options' => [
@@ -205,13 +210,18 @@ return [
                     'frontend' => \TYPO3\CMS\Fluid\Core\Cache\FluidTemplateCache::class,
                     'groups' => ['system'],
                 ],
-                'extbase' => [
+                'extbase_reflection' => [
                     'frontend' => \TYPO3\CMS\Core\Cache\Frontend\VariableFrontend::class,
                     'backend' => \TYPO3\CMS\Core\Cache\Backend\SimpleFileBackend::class,
                     'options' => [
                         'defaultLifetime' => 0,
                     ],
                     'groups' => ['system']
+                ],
+                'extbase_datamapfactory_datamap' => [
+                    'frontend' => \TYPO3\CMS\Core\Cache\Frontend\VariableFrontend::class,
+                    'backend' => \TYPO3\CMS\Core\Cache\Backend\Typo3DatabaseBackend::class,
+                    'groups' => ['system'],
                 ],
             ],
         ],
@@ -241,11 +251,6 @@ return [
                     \TYPO3\CMS\Core\Resource\Filter\FileNameFilter::class,
                     'filterHiddenFilesAndFolders'
                 ]
-            ],
-            'processors' => [
-                'LocalImageProcessor' => [
-                    'className' => \TYPO3\CMS\Core\Resource\Processing\LocalImageProcessor::class,
-                ],
             ],
             'processingTaskTypes' => [
                 'Image.Preview' => \TYPO3\CMS\Core\Resource\Processing\ImagePreviewTask::class,
@@ -322,7 +327,6 @@ return [
             'url'    => \TYPO3\CMS\Core\LinkHandling\UrlLinkHandler::class,
             'email'  => \TYPO3\CMS\Core\LinkHandling\EmailLinkHandler::class,
             'record' => \TYPO3\CMS\Core\LinkHandling\RecordLinkHandler::class,
-            'telephone' => \TYPO3\CMS\Core\LinkHandling\TelephoneLinkHandler::class,
         ],
         'livesearch' => [],  // Array: keywords used for commands to search for specific tables
         'formEngine' => [
@@ -385,13 +389,18 @@ return [
                             \TYPO3\CMS\Backend\Form\FormDataProvider\PageTsConfig::class,
                         ],
                     ],
+                    \TYPO3\CMS\Backend\Form\FormDataProvider\ParentPageTca::class => [
+                        'depends' => [
+                            \TYPO3\CMS\Backend\Form\FormDataProvider\InlineOverrideChildTca::class
+                        ],
+                    ],
                     \TYPO3\CMS\Backend\Form\FormDataProvider\DatabaseRowInitializeNew::class => [
                         'depends' => [
                             \TYPO3\CMS\Backend\Form\FormDataProvider\DatabaseUserPermissionCheck::class,
                             \TYPO3\CMS\Backend\Form\FormDataProvider\UserTsConfig::class,
                             \TYPO3\CMS\Backend\Form\FormDataProvider\PageTsConfig::class,
                             \TYPO3\CMS\Backend\Form\FormDataProvider\InitializeProcessedTca::class,
-                            \TYPO3\CMS\Backend\Form\FormDataProvider\InlineOverrideChildTca::class,
+                            \TYPO3\CMS\Backend\Form\FormDataProvider\ParentPageTca::class,
                         ],
                     ],
                     \TYPO3\CMS\Backend\Form\FormDataProvider\DatabaseUniqueUidNewRow::class => [
@@ -634,11 +643,17 @@ return [
                             \TYPO3\CMS\Backend\Form\FormDataProvider\UserTsConfig::class
                         ],
                     ],
+                    \TYPO3\CMS\Backend\Form\FormDataProvider\ParentPageTca::class => [
+                        'depends' => [
+                            \TYPO3\CMS\Backend\Form\FormDataProvider\PageTsConfig::class,
+                        ],
+                    ],
                     \TYPO3\CMS\Backend\Form\FormDataProvider\DatabaseRowInitializeNew::class => [
                         'depends' => [
                             \TYPO3\CMS\Backend\Form\FormDataProvider\DatabaseUserPermissionCheck::class,
                             \TYPO3\CMS\Backend\Form\FormDataProvider\UserTsConfig::class,
                             \TYPO3\CMS\Backend\Form\FormDataProvider\PageTsConfig::class,
+                            \TYPO3\CMS\Backend\Form\FormDataProvider\ParentPageTca::class,
                         ],
                     ],
                     \TYPO3\CMS\Backend\Form\FormDataProvider\DatabaseUniqueUidNewRow::class => [
@@ -724,6 +739,11 @@ return [
                     \TYPO3\CMS\Backend\Form\FormDataProvider\TcaRadioItems::class => [
                         'depends' => [
                             \TYPO3\CMS\Backend\Form\FormDataProvider\DatabaseRowDefaultValues::class,
+                        ],
+                    ],
+                    \TYPO3\CMS\Backend\Form\FormDataProvider\DatabasePageRootline::class => [
+                        'depends' => [
+                            \TYPO3\CMS\Backend\Form\FormDataProvider\DatabaseEffectivePid::class,
                         ],
                     ],
                     \TYPO3\CMS\Backend\Form\FormDataProvider\TcaCheckboxItems::class => [
@@ -879,13 +899,18 @@ return [
                             \TYPO3\CMS\Backend\Form\FormDataProvider\PageTsConfig::class,
                         ],
                     ],
+                    \TYPO3\CMS\Backend\Form\FormDataProvider\ParentPageTca::class => [
+                        'depends' => [
+                            \TYPO3\CMS\Backend\Form\FormDataProvider\InlineOverrideChildTca::class
+                        ],
+                    ],
                     \TYPO3\CMS\Backend\Form\FormDataProvider\DatabaseRowInitializeNew::class => [
                         'depends' => [
                             \TYPO3\CMS\Backend\Form\FormDataProvider\DatabaseUserPermissionCheck::class,
                             \TYPO3\CMS\Backend\Form\FormDataProvider\UserTsConfig::class,
                             \TYPO3\CMS\Backend\Form\FormDataProvider\PageTsConfig::class,
                             \TYPO3\CMS\Backend\Form\FormDataProvider\InitializeProcessedTca::class,
-                            \TYPO3\CMS\Backend\Form\FormDataProvider\InlineOverrideChildTca::class,
+                            \TYPO3\CMS\Backend\Form\FormDataProvider\ParentPageTca::class,
                         ],
                     ],
                     \TYPO3\CMS\Backend\Form\FormDataProvider\DatabaseUniqueUidNewRow::class => [
@@ -1058,13 +1083,14 @@ return [
     'EXT' => [ // Options related to the Extension Management
         'allowGlobalInstall' => false,
         'allowLocalInstall' => true,
-        'excludeForPackaging' => '(?:\\..*(?!htaccess)|.*~|.*\\.swp|.*\\.bak|\\.sass-cache|node_modules|bower_components)',
+        'excludeForPackaging' => '(?:\\.(?!htaccess$).*|.*~|.*\\.swp|.*\\.bak|node_modules|bower_components)',
         'runtimeActivatedPackages' => [],
     ],
     'BE' => [
         // Backend Configuration.
         'languageDebug' => false,
         'fileadminDir' => 'fileadmin/',
+        'RTE_imageStorageDir' => 'uploads/',
         'lockRootPath' => '',
         'userHomePath' => '',
         'groupHomePath' => '',
@@ -1072,7 +1098,6 @@ return [
         'warning_email_addr' => '',
         'warning_mode' => 0,
         'lockIP' => 4,
-        'lockIPv6' => 2,
         'sessionTimeout' => 28800,  // a backend user logged in for 8 hours
         'IPmaskList' => '',
         'lockBeUserToDBmounts' => true,
@@ -1081,7 +1106,8 @@ return [
         'enabledBeUserIPLock' => true,
         'cookieDomain' => '',
         'cookieName' => 'be_typo_user',
-        'loginSecurityLevel' => 'normal',
+        'cookieSameSite' => 'strict',
+        'loginSecurityLevel' => '',
         'showRefreshLoginPopup' => false,
         'adminOnly' => 0,
         'disable_exec_function' => false,
@@ -1131,6 +1157,7 @@ return [
                 fe_users.before = pages
                 sys_template.after = pages
                 backend_layout.after = pages
+                sys_domain.after = sys_template
                 tt_content.after = pages,backend_layout,sys_template
                 sys_category.after = tt_content
             }
@@ -1211,7 +1238,7 @@ return [
             mod.web_info.fieldDefinitions {
                 0 {
                     label = LLL:EXT:info/Resources/Private/Language/locallang_webinfo.xlf:pages_0
-                    fields = title,uid,slug,starttime,endtime,fe_group,target,url,shortcut,shortcut_mode
+                    fields = title,uid,slug,alias,starttime,endtime,fe_group,target,url,shortcut,shortcut_mode
                 }
                 1 {
                     label = LLL:EXT:info/Resources/Private/Language/locallang_webinfo.xlf:pages_1
@@ -1248,19 +1275,24 @@ return [
         'addAllowedPaths' => '',
         'debug' => false,
         'compressionLevel' => 0,
+        'pageNotFound_handling' => '',
+        'pageNotFound_handling_statheader' => 'HTTP/1.0 404 Not Found',
+        'pageNotFound_handling_accessdeniedheader' => 'HTTP/1.0 403 Access denied',
         'pageNotFoundOnCHashError' => true,
+        'pageUnavailable_handling' => '',
+        'pageUnavailable_handling_statheader' => 'HTTP/1.0 503 Service Temporarily Unavailable',
         'pageUnavailable_force' => false,
         'addRootLineFields' => '',
         'checkFeUserPid' => true,
         'lockIP' => 2,
-        'lockIPv6' => 2,
-        'loginSecurityLevel' => 'normal',
+        'loginSecurityLevel' => '',
         'lifetime' => 0,
         'sessionTimeout' => 6000,
         'sessionDataLifetime' => 86400,
         'permalogin' => 0,
         'cookieDomain' => '',
         'cookieName' => 'fe_typo_user',
+        'cookieSameSite' => 'lax',
         'defaultUserTSconfig' => '',
         'defaultTypoScript_constants' => '',
         'defaultTypoScript_constants.' => [], // Lines of TS to include after a static template with the uid = the index in the array (Constants)
@@ -1270,6 +1302,7 @@ return [
         'IPmaskMountGroups' => [ // This allows you to specify an array of IPmaskLists/fe_group-uids. If the REMOTE_ADDR of the user matches an IPmaskList,
             // array('IPmaskList_1','fe_group uid'), array('IPmaskList_2','fe_group uid')
         ],
+        'get_url_id_token' => '#get_URL_ID_TOK#',
         'enable_mount_pids' => true,
         'hidePagesIfNotTranslatedByDefault' => false,
         'eID_include' => [], // Array of key/value pairs where key is "tx_[ext]_[optional suffix]" and value is relative filename of class to include. Key is used as "?eID=" for \TYPO3\CMS\Frontend\Http\RequestHandlerRequestHandler to include the code file which renders the page from that point. (Useful for functionality that requires a low initialization footprint, eg. frontend ajax applications)
@@ -1293,7 +1326,6 @@ return [
             'url' => \TYPO3\CMS\Frontend\Typolink\ExternalUrlLinkBuilder::class,
             'email' => \TYPO3\CMS\Frontend\Typolink\EmailLinkBuilder::class,
             'record' => \TYPO3\CMS\Frontend\Typolink\DatabaseRecordLinkBuilder::class,
-            'telephone' => \TYPO3\CMS\Frontend\Typolink\TelephoneLinkBuilder::class,
             'unknown' => \TYPO3\CMS\Frontend\Typolink\LegacyLinkBuilder::class,
         ],
         'passwordHashing' => [
@@ -1302,7 +1334,7 @@ return [
         ],
     ],
     'MAIL' => [ // Mail configurations to tune how \TYPO3\CMS\Core\Mail\ classes will send their mails.
-        'transport' => 'sendmail',
+        'transport' => 'mail',
         'transport_smtp_server' => 'localhost:25',
         'transport_smtp_encrypt' => '',
         'transport_smtp_username' => '',
@@ -1328,7 +1360,6 @@ return [
         'timeout' => 0,
         'verify' => true,
         'version' => '1.1',
-        'handler' => [], // Array of callables
         'headers' => [ // Additional HTTP headers sent by every request TYPO3 executes.
             'User-Agent' => 'TYPO3' // String: Default user agent. Defaults to TYPO3.
         ]
@@ -1357,7 +1388,8 @@ return [
                     'writerConfiguration' => [
                         \TYPO3\CMS\Core\Log\LogLevel::NOTICE => [
                             \TYPO3\CMS\Core\Log\Writer\FileWriter::class => [
-                                'logFileInfix' => 'deprecations'
+                                'logFileInfix' => 'deprecations',
+                                'disabled' => true,
                             ],
                         ]
                     ]
@@ -1371,6 +1403,7 @@ return [
             'softRefParser' => [
                 'substitute' => \TYPO3\CMS\Core\Database\SoftReferenceIndex::class,
                 'notify' => \TYPO3\CMS\Core\Database\SoftReferenceIndex::class,
+                'images' => \TYPO3\CMS\Core\Database\SoftReferenceIndex::class,
                 'typolink' => \TYPO3\CMS\Core\Database\SoftReferenceIndex::class,
                 'typolink_tag' => \TYPO3\CMS\Core\Database\SoftReferenceIndex::class,
                 'ext_fileref' => \TYPO3\CMS\Core\Database\SoftReferenceIndex::class,

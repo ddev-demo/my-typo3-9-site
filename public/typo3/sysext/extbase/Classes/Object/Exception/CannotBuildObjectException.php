@@ -1,6 +1,4 @@
 <?php
-declare(strict_types = 1);
-
 namespace TYPO3\CMS\Extbase\Object\Exception;
 
 /*
@@ -16,11 +14,9 @@ namespace TYPO3\CMS\Extbase\Object\Exception;
  * The TYPO3 project - inspiring people to share!
  */
 
-use TYPO3\CMS\Extbase\Object\Exception;
-
 /**
  * "Cannot build object" Exception
  */
-class CannotBuildObjectException extends Exception
+class CannotBuildObjectException extends \TYPO3\CMS\Extbase\Object\Exception
 {
 }

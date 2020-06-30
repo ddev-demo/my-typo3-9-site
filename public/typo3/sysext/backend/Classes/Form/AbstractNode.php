@@ -94,6 +94,7 @@ abstract class AbstractNode implements NodeInterface, LoggerAwareInterface
     {
         return [
             'additionalJavaScriptPost' => [],
+            'additionalJavaScriptSubmit' => [],
             'additionalHiddenFields' => [],
             'additionalInlineLanguageLabelFiles' => [],
             'stylesheetFiles' => [],
@@ -123,6 +124,9 @@ abstract class AbstractNode implements NodeInterface, LoggerAwareInterface
         }
         foreach ($childReturn['additionalJavaScriptPost'] ?? [] as $value) {
             $existing['additionalJavaScriptPost'][] = $value;
+        }
+        foreach ($childReturn['additionalJavaScriptSubmit'] ?? [] as $value) {
+            $existing['additionalJavaScriptSubmit'][] = $value;
         }
         foreach ($childReturn['additionalHiddenFields'] ?? [] as $value) {
             $existing['additionalHiddenFields'][] = $value;

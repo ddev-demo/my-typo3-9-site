@@ -729,7 +729,6 @@ return [
         'maximumNumberOfArguments' => 2,
         'restFiles' => [
             'Deprecation-85902-IMGMENUGMENU.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
         ],
     ],
     'TYPO3\CMS\Frontend\ContentObject\Menu\AbstractMenuContentObject->link' => [
@@ -737,7 +736,6 @@ return [
         'maximumNumberOfArguments' => 3,
         'restFiles' => [
             'Deprecation-85902-IMGMENUGMENU.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
         ],
     ],
     'TYPO3\CMS\Frontend\ContentObject\Menu\AbstractMenuContentObject->procesItemStates' => [
@@ -745,7 +743,6 @@ return [
         'maximumNumberOfArguments' => 1,
         'restFiles' => [
             'Deprecation-85902-IMGMENUGMENU.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
         ],
     ],
     'TYPO3\CMS\Frontend\ContentObject\Menu\AbstractMenuContentObject->changeLinksForAccessRestrictedPages' => [
@@ -753,7 +750,6 @@ return [
         'maximumNumberOfArguments' => 4,
         'restFiles' => [
             'Deprecation-85902-IMGMENUGMENU.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
         ],
     ],
     'TYPO3\CMS\Frontend\ContentObject\Menu\AbstractMenuContentObject->isNext' => [
@@ -761,7 +757,6 @@ return [
         'maximumNumberOfArguments' => 2,
         'restFiles' => [
             'Deprecation-85902-IMGMENUGMENU.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
         ],
     ],
     'TYPO3\CMS\Frontend\ContentObject\Menu\AbstractMenuContentObject->isActive' => [
@@ -769,7 +764,6 @@ return [
         'maximumNumberOfArguments' => 2,
         'restFiles' => [
             'Deprecation-85902-IMGMENUGMENU.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
         ],
     ],
     'TYPO3\CMS\Frontend\ContentObject\Menu\AbstractMenuContentObject->isCurrent' => [
@@ -777,7 +771,6 @@ return [
         'maximumNumberOfArguments' => 2,
         'restFiles' => [
             'Deprecation-85902-IMGMENUGMENU.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
         ],
     ],
     'TYPO3\CMS\Frontend\ContentObject\Menu\AbstractMenuContentObject->isSubMenu' => [
@@ -785,7 +778,6 @@ return [
         'maximumNumberOfArguments' => 1,
         'restFiles' => [
             'Deprecation-85902-IMGMENUGMENU.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
         ],
     ],
     'TYPO3\CMS\Frontend\ContentObject\Menu\AbstractMenuContentObject->isItemState' => [
@@ -793,7 +785,6 @@ return [
         'maximumNumberOfArguments' => 2,
         'restFiles' => [
             'Deprecation-85902-IMGMENUGMENU.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
         ],
     ],
     'TYPO3\CMS\Frontend\ContentObject\Menu\AbstractMenuContentObject->accessKey' => [
@@ -801,7 +792,6 @@ return [
         'maximumNumberOfArguments' => 1,
         'restFiles' => [
             'Deprecation-85902-IMGMENUGMENU.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
         ],
     ],
     'TYPO3\CMS\Frontend\ContentObject\Menu\AbstractMenuContentObject->userProcess' => [
@@ -809,7 +799,6 @@ return [
         'maximumNumberOfArguments' => 2,
         'restFiles' => [
             'Deprecation-85902-IMGMENUGMENU.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
         ],
     ],
     'TYPO3\CMS\Frontend\ContentObject\Menu\AbstractMenuContentObject->setATagParts' => [
@@ -817,7 +806,6 @@ return [
         'maximumNumberOfArguments' => 0,
         'restFiles' => [
             'Deprecation-85902-IMGMENUGMENU.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
         ],
     ],
     'TYPO3\CMS\Frontend\ContentObject\Menu\AbstractMenuContentObject->getPageTitle' => [
@@ -825,7 +813,6 @@ return [
         'maximumNumberOfArguments' => 2,
         'restFiles' => [
             'Deprecation-85902-IMGMENUGMENU.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
         ],
     ],
     'TYPO3\CMS\Frontend\ContentObject\Menu\AbstractMenuContentObject->getMPvar' => [
@@ -833,7 +820,6 @@ return [
         'maximumNumberOfArguments' => 1,
         'restFiles' => [
             'Deprecation-85902-IMGMENUGMENU.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
         ],
     ],
     'TYPO3\CMS\Frontend\ContentObject\Menu\AbstractMenuContentObject->getDoktypeExcludeWhere' => [
@@ -841,7 +827,6 @@ return [
         'maximumNumberOfArguments' => 0,
         'restFiles' => [
             'Deprecation-85902-IMGMENUGMENU.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
         ],
     ],
     'TYPO3\CMS\Frontend\ContentObject\Menu\AbstractMenuContentObject->getBannedUids' => [
@@ -849,7 +834,6 @@ return [
         'maximumNumberOfArguments' => 0,
         'restFiles' => [
             'Deprecation-85902-IMGMENUGMENU.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
         ],
     ],
     'TYPO3\CMS\Frontend\ContentObject\Menu\AbstractMenuContentObject->menuTypoLink' => [
@@ -857,7 +841,6 @@ return [
         'maximumNumberOfArguments' => 7,
         'restFiles' => [
             'Deprecation-85902-IMGMENUGMENU.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
         ],
     ],
     'TYPO3\CMS\Frontend\ContentObject\Menu\GraphicalMenuContentObject->extProc_RO' => [
@@ -865,7 +848,6 @@ return [
         'maximumNumberOfArguments' => 1,
         'restFiles' => [
             'Deprecation-85902-IMGMENUGMENU.rst',
-            'Breaking-80700-DeprecatedFunctionalityRemoved.rst',
         ],
     ],
     'TYPO3\CMS\Frontend\ContentObject\Menu\GraphicalMenuContentObject->extProc_init' => [
@@ -873,7 +855,6 @@ return [
         'maximumNumberOfArguments' => 0,
         'restFiles' => [
             'Deprecation-85902-IMGMENUGMENU.rst',
-            'Breaking-80700-DeprecatedFunctionalityRemoved.rst',
         ],
     ],
     'TYPO3\CMS\Frontend\ContentObject\Menu\GraphicalMenuContentObject->extProc_beforeLinking' => [
@@ -881,7 +862,6 @@ return [
         'maximumNumberOfArguments' => 1,
         'restFiles' => [
             'Deprecation-85902-IMGMENUGMENU.rst',
-            'Breaking-80700-DeprecatedFunctionalityRemoved.rst',
         ],
     ],
     'TYPO3\CMS\Frontend\ContentObject\Menu\GraphicalMenuContentObject->extProc_afterLinking' => [
@@ -889,7 +869,6 @@ return [
         'maximumNumberOfArguments' => 1,
         'restFiles' => [
             'Deprecation-85902-IMGMENUGMENU.rst',
-            'Breaking-80700-DeprecatedFunctionalityRemoved.rst',
         ],
     ],
     'TYPO3\CMS\Frontend\ContentObject\Menu\GraphicalMenuContentObject->extProc_beforeAllWrap' => [
@@ -897,7 +876,6 @@ return [
         'maximumNumberOfArguments' => 2,
         'restFiles' => [
             'Deprecation-85902-IMGMENUGMENU.rst',
-            'Breaking-80700-DeprecatedFunctionalityRemoved.rst',
         ],
     ],
     'TYPO3\CMS\Frontend\ContentObject\Menu\GraphicalMenuContentObject->extProc_fisish' => [
@@ -905,7 +883,6 @@ return [
         'maximumNumberOfArguments' => 0,
         'restFiles' => [
             'Deprecation-85902-IMGMENUGMENU.rst',
-            'Breaking-80700-DeprecatedFunctionalityRemoved.rst',
         ],
     ],
     'TYPO3\CMS\Frontend\ContentObject\ContentObjectRenderer->URLqMark' => [
@@ -1106,7 +1083,6 @@ return [
         'maximumNumberOfArguments' => 1,
         'restFiles' => [
             'Deprecation-85902-IMGMENUGMENU.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
         ],
     ],
     'TYPO3\CMS\Frontend\ContentObject\Menu\TextMenuContentObject->extProc_init' => [
@@ -1114,7 +1090,6 @@ return [
         'maximumNumberOfArguments' => 0,
         'restFiles' => [
             'Deprecation-85902-IMGMENUGMENU.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
         ],
     ],
     'TYPO3\CMS\Frontend\ContentObject\Menu\TextMenuContentObject->extProc_beforeLinking' => [
@@ -1122,7 +1097,6 @@ return [
         'maximumNumberOfArguments' => 1,
         'restFiles' => [
             'Deprecation-85902-IMGMENUGMENU.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
         ],
     ],
     'TYPO3\CMS\Frontend\ContentObject\Menu\TextMenuContentObject->extProc_afterLinking' => [
@@ -1130,7 +1104,6 @@ return [
         'maximumNumberOfArguments' => 1,
         'restFiles' => [
             'Deprecation-85902-IMGMENUGMENU.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
         ],
     ],
     'TYPO3\CMS\Frontend\ContentObject\Menu\TextMenuContentObject->extProc_beforeAllWrap' => [
@@ -1138,7 +1111,6 @@ return [
         'maximumNumberOfArguments' => 2,
         'restFiles' => [
             'Deprecation-85902-IMGMENUGMENU.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
         ],
     ],
     'TYPO3\CMS\Frontend\ContentObject\Menu\TextMenuContentObject->extProc_finish' => [
@@ -1146,7 +1118,6 @@ return [
         'maximumNumberOfArguments' => 0,
         'restFiles' => [
             'Deprecation-85902-IMGMENUGMENU.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
         ],
     ],
     'TYPO3\CMS\Frontend\Controller\TypoScriptFrontendController->beLoginLinkIPList' => [
@@ -1309,7 +1280,6 @@ return [
         'maximumNumberOfArguments' => 3,
         'restFiles' => [
             'Deprecation-81540-DeprecateDocumentTemplateformWidth.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
         ],
     ],
     'TYPO3\CMS\Extensionmanager\Utility\FileHandlingUtility->sendSqlDumpFileToBrowserAndDelete' => [
@@ -1471,7 +1441,6 @@ return [
         'maximumNumberOfArguments' => 3,
         'restFiles' => [
             'Deprecation-52694-DeprecatedGeneralUtilitydevLog.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst'
         ],
     ],
     'TYPO3\CMS\Frontend\Controller\TypoScriptFrontendController->sendRedirect' => [
@@ -1507,7 +1476,6 @@ return [
         'maximumNumberOfArguments' => 4,
         'restFiles' => [
             'Deprecation-85300-DataHandlerResortingMethod.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
         ],
     ],
     'TYPO3\CMS\Frontend\Controller\TypoScriptFrontendController->readLLfile' => [
@@ -1515,7 +1483,6 @@ return [
         'maximumNumberOfArguments' => 1,
         'restFiles' => [
             'Deprecation-81217-TSFE-relatedLanguageMethods.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
         ],
     ],
     'TYPO3\CMS\Frontend\Controller\TypoScriptFrontendController->getLLL' => [
@@ -1523,7 +1490,6 @@ return [
         'maximumNumberOfArguments' => 2,
         'restFiles' => [
             'Deprecation-81217-TSFE-relatedLanguageMethods.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
         ],
     ],
     'TYPO3\CMS\Frontend\Controller\TypoScriptFrontendController->initLLvars' => [
@@ -1531,7 +1497,6 @@ return [
         'maximumNumberOfArguments' => 0,
         'restFiles' => [
             'Deprecation-81217-TSFE-relatedLanguageMethods.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
         ],
     ],
     'TYPO3\CMS\Core\Page\PageRenderer->addMetaTag' => [
@@ -1539,7 +1504,7 @@ return [
         'maximumNumberOfArguments' => 1,
         'restFiles' => [
             'Deprecation-81464-AddAPIForMetaTagManagement.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
+
         ],
     ],
     'TYPO3\CMS\Extbase\Reflection\PropertyReflection->isTaggedWith' => [
@@ -1567,7 +1532,6 @@ return [
         'numberOfMandatoryArguments' => 2,
         'maximumNumberOfArguments' => 4,
         'restFiles' => [
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
             'Deprecation-57594-OptimizeReflectionServiceCacheHandling.rst',
         ],
     ],
@@ -1575,7 +1539,6 @@ return [
         'numberOfMandatoryArguments' => 1,
         'maximumNumberOfArguments' => 1,
         'restFiles' => [
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
             'Deprecation-57594-OptimizeReflectionServiceCacheHandling.rst',
         ],
     ],
@@ -1583,7 +1546,6 @@ return [
         'numberOfMandatoryArguments' => 0,
         'maximumNumberOfArguments' => 0,
         'restFiles' => [
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
             'Deprecation-57594-OptimizeReflectionServiceCacheHandling.rst',
         ],
     ],
@@ -1591,7 +1553,6 @@ return [
         'numberOfMandatoryArguments' => 1,
         'maximumNumberOfArguments' => 1,
         'restFiles' => [
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
             'Deprecation-57594-OptimizeReflectionServiceCacheHandling.rst',
         ],
     ],
@@ -1599,7 +1560,6 @@ return [
         'numberOfMandatoryArguments' => 0,
         'maximumNumberOfArguments' => 0,
         'restFiles' => [
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
             'Deprecation-57594-OptimizeReflectionServiceCacheHandling.rst',
         ],
     ],
@@ -1607,7 +1567,6 @@ return [
         'numberOfMandatoryArguments' => 1,
         'maximumNumberOfArguments' => 1,
         'restFiles' => [
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
             'Deprecation-57594-OptimizeReflectionServiceCacheHandling.rst',
         ],
     ],
@@ -1615,7 +1574,6 @@ return [
         'numberOfMandatoryArguments' => 0,
         'maximumNumberOfArguments' => 0,
         'restFiles' => [
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
             'Deprecation-57594-OptimizeReflectionServiceCacheHandling.rst',
         ],
     ],
@@ -1631,7 +1589,6 @@ return [
         'maximumNumberOfArguments' => 0,
         'restFiles' => [
             'Deprecation-82926-DomainRelatedApiMethodInTSFE.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
         ],
     ],
     'TYPO3\CMS\Backend\Configuration\TranslationConfigurationProvider->getTranslationTable' => [
@@ -1639,7 +1596,6 @@ return [
         'maximumNumberOfArguments' => 1,
         'restFiles' => [
             'Deprecation-82445-PageTranslationRelatedFunctionality.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
         ],
     ],
     'TYPO3\CMS\Backend\Configuration\TranslationConfigurationProvider->isTranslationInOwnTable' => [
@@ -1647,7 +1603,6 @@ return [
         'maximumNumberOfArguments' => 1,
         'restFiles' => [
             'Deprecation-82445-PageTranslationRelatedFunctionality.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
         ],
     ],
     'TYPO3\CMS\Backend\Configuration\TranslationConfigurationProvider->foreignTranslationTable' => [
@@ -1655,7 +1610,6 @@ return [
         'maximumNumberOfArguments' => 1,
         'restFiles' => [
             'Deprecation-82445-PageTranslationRelatedFunctionality.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
         ],
     ],
     'TYPO3\CMS\Core\DataHandling\DataHandler->newlog2' => [
@@ -1663,7 +1617,6 @@ return [
         'maximumNumberOfArguments' => 5,
         'restFiles' => [
             'Deprecation-83121-LoggingMethodDataHandler-newlog2.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
         ],
     ],
     'TYPO3\CMS\Frontend\Page\PageRepository->deleteClause' => [
@@ -1671,7 +1624,6 @@ return [
         'maximumNumberOfArguments' => 1,
         'restFiles' => [
             'Deprecation-83118-DeleteClauseMethods.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
         ],
     ],
     'TYPO3\CMS\Frontend\ContentObject\ContentObjectRenderer->stdWrap_spaceBefore' => [
@@ -1791,7 +1743,6 @@ return [
         'maximumNumberOfArguments' => 0,
         'restFiles' => [
             'Deprecation-83254-MovedPageGenerationMethodsIntoTSFE.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
         ],
     ],
     'TYPO3\CMS\Core\Html\RteHtmlParser->transformStyledATags' => [
@@ -1799,7 +1750,6 @@ return [
         'maximumNumberOfArguments' => 0,
         'restFiles' => [
             'Deprecation-83252-Link-tagSyntaxProcesssing.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
         ],
     ],
     'TYPO3\CMS\Core\Html\RteHtmlParser->TS_links_rte' => [
@@ -1807,7 +1757,6 @@ return [
         'maximumNumberOfArguments' => 0,
         'restFiles' => [
             'Deprecation-83252-Link-tagSyntaxProcesssing.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
         ],
     ],
     'TYPO3\CMS\Frontend\Controller\TypoScriptFrontendController->pageUnavailableAndExit' => [
@@ -1815,7 +1764,6 @@ return [
         'maximumNumberOfArguments' => 0,
         'restFiles' => [
             'Deprecation-83883-PageNotFoundAndErrorHandlingInFrontend.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
         ],
     ],
     'TYPO3\CMS\Frontend\Controller\TypoScriptFrontendController->pageNotFoundAndExit' => [
@@ -1823,7 +1771,6 @@ return [
         'maximumNumberOfArguments' => 0,
         'restFiles' => [
             'Deprecation-83883-PageNotFoundAndErrorHandlingInFrontend.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
         ],
     ],
     'TYPO3\CMS\Frontend\Controller\TypoScriptFrontendController->checkPageUnavailableHandler' => [
@@ -1831,7 +1778,6 @@ return [
         'maximumNumberOfArguments' => 0,
         'restFiles' => [
             'Deprecation-83883-PageNotFoundAndErrorHandlingInFrontend.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
         ],
     ],
     'TYPO3\CMS\Frontend\Controller\TypoScriptFrontendController->pageUnavailableHandler' => [
@@ -1839,7 +1785,6 @@ return [
         'maximumNumberOfArguments' => 0,
         'restFiles' => [
             'Deprecation-83883-PageNotFoundAndErrorHandlingInFrontend.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
         ],
     ],
     'TYPO3\CMS\Frontend\Controller\TypoScriptFrontendController->pageNotFoundHandler' => [
@@ -1847,7 +1792,6 @@ return [
         'maximumNumberOfArguments' => 0,
         'restFiles' => [
             'Deprecation-83883-PageNotFoundAndErrorHandlingInFrontend.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
         ],
     ],
     'TYPO3\CMS\Frontend\Controller\TypoScriptFrontendController->pageErrorHandler' => [
@@ -1855,7 +1799,6 @@ return [
         'maximumNumberOfArguments' => 0,
         'restFiles' => [
             'Deprecation-83883-PageNotFoundAndErrorHandlingInFrontend.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
         ],
     ],
     'TYPO3\CMS\Backend\Tree\View\AbstractTreeView->setDataFromArray' => [
@@ -1863,7 +1806,6 @@ return [
         'maximumNumberOfArguments' => 3,
         'restFiles' => [
             'Deprecation-83904-ArrayHandlingInAbstractTreeView.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
         ],
     ],
     'TYPO3\CMS\Backend\Tree\View\AbstractTreeView->setDataFromTreeArray' => [
@@ -1871,7 +1813,6 @@ return [
         'maximumNumberOfArguments' => 2,
         'restFiles' => [
             'Deprecation-83904-ArrayHandlingInAbstractTreeView.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
         ],
     ],
     'TYPO3\CMS\Filelist\FileFacade->getIcon' => [
@@ -1879,7 +1820,6 @@ return [
         'maximumNumberOfArguments' => 0,
         'restFiles' => [
             'Deprecation-83942-DeprecatedFileFacadegetIcon.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst'
         ],
     ],
     'TYPO3\CMS\Core\Core\Bootstrap->redirectToInstallTool' => [
@@ -1992,7 +1932,6 @@ return [
         'maximumNumberOfArguments' => 0,
         'restFiles' => [
             'Deprecation-84118-VariousPublicMethodsOfAdminPanelViewDeprecated.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
         ],
     ],
     'TYPO3\CMS\Frontend\View\AdminPanelView->isAdminModuleEnabled' => [
@@ -2000,7 +1939,6 @@ return [
         'maximumNumberOfArguments' => 1,
         'restFiles' => [
             'Deprecation-84118-VariousPublicMethodsOfAdminPanelViewDeprecated.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
         ],
     ],
     'TYPO3\CMS\Frontend\View\AdminPanelView->saveConfigOptions' => [
@@ -2008,7 +1946,6 @@ return [
         'maximumNumberOfArguments' => 0,
         'restFiles' => [
             'Deprecation-84118-VariousPublicMethodsOfAdminPanelViewDeprecated.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
         ],
     ],
     'TYPO3\CMS\Frontend\View\AdminPanelView->extGetFeAdminValue' => [
@@ -2016,7 +1953,6 @@ return [
         'maximumNumberOfArguments' => 2,
         'restFiles' => [
             'Deprecation-84118-VariousPublicMethodsOfAdminPanelViewDeprecated.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
         ],
     ],
     'TYPO3\CMS\Frontend\View\AdminPanelView->forcePreview' => [
@@ -2024,7 +1960,6 @@ return [
         'maximumNumberOfArguments' => 0,
         'restFiles' => [
             'Deprecation-84118-VariousPublicMethodsOfAdminPanelViewDeprecated.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
         ],
     ],
     'TYPO3\CMS\Frontend\View\AdminPanelView->isAdminModuleOpen' => [
@@ -2032,7 +1967,6 @@ return [
         'maximumNumberOfArguments' => 1,
         'restFiles' => [
             'Deprecation-84118-VariousPublicMethodsOfAdminPanelViewDeprecated.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
         ],
     ],
     'TYPO3\CMS\Frontend\View\AdminPanelView->extGetHead' => [
@@ -2040,7 +1974,6 @@ return [
         'maximumNumberOfArguments' => 1,
         'restFiles' => [
             'Deprecation-84118-VariousPublicMethodsOfAdminPanelViewDeprecated.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
         ],
     ],
     'TYPO3\CMS\Frontend\View\AdminPanelView->linkSectionHeader' => [
@@ -2048,7 +1981,6 @@ return [
         'maximumNumberOfArguments' => 1,
         'restFiles' => [
             'Deprecation-84118-VariousPublicMethodsOfAdminPanelViewDeprecated.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
         ],
     ],
     'TYPO3\CMS\Frontend\View\AdminPanelView->extGetItem' => [
@@ -2056,15 +1988,13 @@ return [
         'maximumNumberOfArguments' => 5,
         'restFiles' => [
             'Deprecation-84118-VariousPublicMethodsOfAdminPanelViewDeprecated.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
         ],
     ],
     'TYPO3\CMS\Backend\Tree\View\ElementBrowserFolderTreeView->ext_isLinkable' => [
         'numberOfMandatoryArguments' => 1,
         'maximumNumberOfArguments' => 1,
         'restFiles' => [
-            'Deprecation-84145-DeprecateExt_isLinkable.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
+            'Deprecation-84145-DeprecateExt_isLinkable.rst'
         ],
     ],
     'TYPO3\CMS\Core\Package\PackageManager->injectDependencyResolver' => [
@@ -2072,7 +2002,6 @@ return [
         'maximumNumberOfArguments' => 1,
         'restFiles' => [
             'Deprecation-84109-DeprecateDependencyResolver.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
         ],
     ],
     'TYPO3\CMS\Backend\Controller\EditDocumentController->preInit' => [
@@ -2080,7 +2009,6 @@ return [
         'maximumNumberOfArguments' => 1,
         'restFiles' => [
             'Deprecation-84195-ProtectedMethodsAndPropertiesInEditDocumentController.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
         ],
     ],
     'TYPO3\CMS\Backend\Controller\EditDocumentController->doProcessData' => [
@@ -2088,7 +2016,6 @@ return [
         'maximumNumberOfArguments' => 0,
         'restFiles' => [
             'Deprecation-84195-ProtectedMethodsAndPropertiesInEditDocumentController.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
         ],
     ],
     'TYPO3\CMS\Backend\Controller\EditDocumentController->processData' => [
@@ -2096,7 +2023,6 @@ return [
         'maximumNumberOfArguments' => 1,
         'restFiles' => [
             'Deprecation-84195-ProtectedMethodsAndPropertiesInEditDocumentController.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
         ],
     ],
     'TYPO3\CMS\Backend\Controller\EditDocumentController->makeEditForm' => [
@@ -2104,7 +2030,6 @@ return [
         'maximumNumberOfArguments' => 0,
         'restFiles' => [
             'Deprecation-84195-ProtectedMethodsAndPropertiesInEditDocumentController.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
         ],
     ],
     'TYPO3\CMS\Backend\Controller\EditDocumentController->compileForm' => [
@@ -2112,7 +2037,6 @@ return [
         'maximumNumberOfArguments' => 1,
         'restFiles' => [
             'Deprecation-84195-ProtectedMethodsAndPropertiesInEditDocumentController.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
         ],
     ],
     'TYPO3\CMS\Backend\Controller\EditDocumentController->shortCutLink' => [
@@ -2120,7 +2044,6 @@ return [
         'maximumNumberOfArguments' => 0,
         'restFiles' => [
             'Deprecation-84195-ProtectedMethodsAndPropertiesInEditDocumentController.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
         ],
     ],
     'TYPO3\CMS\Backend\Controller\EditDocumentController->openInNewWindowLink' => [
@@ -2128,7 +2051,6 @@ return [
         'maximumNumberOfArguments' => 0,
         'restFiles' => [
             'Deprecation-84195-ProtectedMethodsAndPropertiesInEditDocumentController.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
         ],
     ],
     'TYPO3\CMS\Backend\Controller\EditDocumentController->languageSwitch' => [
@@ -2136,7 +2058,6 @@ return [
         'maximumNumberOfArguments' => 3,
         'restFiles' => [
             'Deprecation-84195-ProtectedMethodsAndPropertiesInEditDocumentController.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
         ],
     ],
     'TYPO3\CMS\Backend\Controller\EditDocumentController->localizationRedirect' => [
@@ -2144,7 +2065,6 @@ return [
         'maximumNumberOfArguments' => 1,
         'restFiles' => [
             'Deprecation-84195-ProtectedMethodsAndPropertiesInEditDocumentController.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
         ],
     ],
     'TYPO3\CMS\Backend\Controller\EditDocumentController->getLanguages' => [
@@ -2152,7 +2072,6 @@ return [
         'maximumNumberOfArguments' => 1,
         'restFiles' => [
             'Deprecation-84195-ProtectedMethodsAndPropertiesInEditDocumentController.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
         ],
     ],
     'TYPO3\CMS\Backend\Controller\EditDocumentController->fixWSversioningInEditConf' => [
@@ -2160,7 +2079,6 @@ return [
         'maximumNumberOfArguments' => 1,
         'restFiles' => [
             'Deprecation-84195-ProtectedMethodsAndPropertiesInEditDocumentController.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
         ],
     ],
     'TYPO3\CMS\Backend\Controller\EditDocumentController->getRecordForEdit' => [
@@ -2168,7 +2086,6 @@ return [
         'maximumNumberOfArguments' => 2,
         'restFiles' => [
             'Deprecation-84195-ProtectedMethodsAndPropertiesInEditDocumentController.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
         ],
     ],
     'TYPO3\CMS\Backend\Controller\EditDocumentController->compileStoreDat' => [
@@ -2176,7 +2093,6 @@ return [
         'maximumNumberOfArguments' => 0,
         'restFiles' => [
             'Deprecation-84195-ProtectedMethodsAndPropertiesInEditDocumentController.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
         ],
     ],
     'TYPO3\CMS\Backend\Controller\EditDocumentController->getNewIconMode' => [
@@ -2184,7 +2100,6 @@ return [
         'maximumNumberOfArguments' => 2,
         'restFiles' => [
             'Deprecation-84195-ProtectedMethodsAndPropertiesInEditDocumentController.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
         ],
     ],
     'TYPO3\CMS\Backend\Controller\EditDocumentController->closeDocument' => [
@@ -2192,7 +2107,6 @@ return [
         'maximumNumberOfArguments' => 1,
         'restFiles' => [
             'Deprecation-84195-ProtectedMethodsAndPropertiesInEditDocumentController.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
         ],
     ],
     'TYPO3\CMS\Backend\Controller\EditDocumentController->setDocument' => [
@@ -2200,7 +2114,6 @@ return [
         'maximumNumberOfArguments' => 2,
         'restFiles' => [
             'Deprecation-84195-ProtectedMethodsAndPropertiesInEditDocumentController.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
         ],
     ],
     'TYPO3\CMS\Backend\Controller\FileSystemNavigationFrameController->initPage' => [
@@ -2208,7 +2121,6 @@ return [
         'maximumNumberOfArguments' => 0,
         'restFiles' => [
             'Deprecation-84273-ProtectedMethodsAndPropertiesInFileSystemNavigationFrameController.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
         ],
     ],
     'TYPO3\CMS\Backend\Controller\LogoutController->logout' => [
@@ -2216,14 +2128,12 @@ return [
         'maximumNumberOfArguments' => 0,
         'restFiles' => [
             'Deprecation-84275-ProtectedMethodInLogoutController.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
         ],
     ],
     'TYPO3\CMS\Backend\Controller\ContentElement\ElementInformationController->getLabelForTableColumn' => [
         'numberOfMandatoryArguments' => 2,
         'maximumNumberOfArguments' => 2,
         'restFiles' => [
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
             'Deprecation-84284-ProtectedMethodsAndPropertiesInContentElementElementInformationController.rst',
         ],
     ],
@@ -2232,7 +2142,6 @@ return [
         'maximumNumberOfArguments' => 0,
         'restFiles' => [
             'Deprecation-84295-UseServerRequestInterfaceInFileEditFileController.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
         ],
     ],
     'TYPO3\CMS\Backend\Controller\LoginController->makeInterfaceSelectorBox' => [
@@ -2240,7 +2149,6 @@ return [
         'maximumNumberOfArguments' => 0,
         'restFiles' => [
             'Deprecation-84274-ProtectedMethodsAndPropertiesInLoginController.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
         ],
     ],
     'TYPO3\CMS\Backend\Controller\File\FileUploadController->renderUploadForm' => [
@@ -2248,7 +2156,6 @@ return [
         'maximumNumberOfArguments' => 0,
         'restFiles' => [
             'Deprecation-84326-ProtectedMethodsAndPropertiesInFileUploadController.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
         ],
     ],
     'TYPO3\CMS\Backend\Controller\File\FileController->initClipboard' => [
@@ -2256,7 +2163,6 @@ return [
         'maximumNumberOfArguments' => 0,
         'restFiles' => [
             'Deprecation-84324-UseServerRequestInterfaceInFileFileController.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
         ],
     ],
     'TYPO3\CMS\Backend\Controller\File\FileController->finish' => [
@@ -2264,7 +2170,6 @@ return [
         'maximumNumberOfArguments' => 0,
         'restFiles' => [
             'Deprecation-84324-UseServerRequestInterfaceInFileFileController.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
         ],
     ],
     'TYPO3\CMS\Backend\Controller\SimpleDataHandlerController->initClipboard' => [
@@ -2272,7 +2177,6 @@ return [
         'maximumNumberOfArguments' => 0,
         'restFiles' => [
             'Deprecation-84374-ProtectedMethodsAndPropertiesInSimpleDataHandlerController.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
         ],
     ],
     'TYPO3\CMS\Backend\Controller\Wizard\TableController->tableWizard' => [
@@ -2280,7 +2184,6 @@ return [
         'maximumNumberOfArguments' => 0,
         'restFiles' => [
             'Deprecation-84338-ProtectedMethodsAndPropertiesInTableController.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
         ],
     ],
     'TYPO3\CMS\Backend\Controller\Wizard\TableController->getConfigCode' => [
@@ -2288,7 +2191,6 @@ return [
         'maximumNumberOfArguments' => 1,
         'restFiles' => [
             'Deprecation-84338-ProtectedMethodsAndPropertiesInTableController.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
         ],
     ],
     'TYPO3\CMS\Backend\Controller\Wizard\TableController->getTableHTML' => [
@@ -2296,7 +2198,6 @@ return [
         'maximumNumberOfArguments' => 1,
         'restFiles' => [
             'Deprecation-84338-ProtectedMethodsAndPropertiesInTableController.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
         ],
     ],
     'TYPO3\CMS\Backend\Controller\Wizard\TableController->changeFunc' => [
@@ -2304,7 +2205,6 @@ return [
         'maximumNumberOfArguments' => 0,
         'restFiles' => [
             'Deprecation-84338-ProtectedMethodsAndPropertiesInTableController.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
         ],
     ],
     'TYPO3\CMS\Backend\Controller\Wizard\TableController->cfgArray2CfgString' => [
@@ -2312,7 +2212,6 @@ return [
         'maximumNumberOfArguments' => 1,
         'restFiles' => [
             'Deprecation-84338-ProtectedMethodsAndPropertiesInTableController.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
         ],
     ],
     'TYPO3\CMS\Backend\Controller\Wizard\TableController->cfgString2CfgArray' => [
@@ -2320,7 +2219,6 @@ return [
         'maximumNumberOfArguments' => 2,
         'restFiles' => [
             'Deprecation-84338-ProtectedMethodsAndPropertiesInTableController.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
         ],
     ],
     'TYPO3\CMS\Rsaauth\RsaEncryptionEncoder->getRsaPublicKey' => [
@@ -2335,14 +2233,12 @@ return [
         'maximumNumberOfArguments' => 0,
         'restFiles' => [
             'Deprecation-84407-AJAXRequestMethodsInRsaEncryptionEncoder.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst'
         ],
     ],
     'TYPO3\CMS\Extbase\Validation\ValidatorResolver->buildMethodArgumentsValidatorConjunctions' => [
         'numberOfMandatoryArguments' => 1,
         'maximumNumberOfArguments' => 1,
         'restFiles' => [
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
             'Deprecation-83475-AggregateValidatorInformationInClassSchema-1.rst',
         ],
     ],
@@ -2351,7 +2247,6 @@ return [
         'maximumNumberOfArguments' => 0,
         'restFiles' => [
             'Deprecation-84549-DeprecateMethodsInCoreVersionService.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst'
         ],
     ],
     'TYPO3\CMS\Install\Service\CoreVersionService->isYoungerPatchDevelopmentReleaseAvailable' => [
@@ -2359,7 +2254,6 @@ return [
         'maximumNumberOfArguments' => 0,
         'restFiles' => [
             'Deprecation-84549-DeprecateMethodsInCoreVersionService.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst'
         ],
     ],
     'TYPO3\CMS\Install\Service\CoreVersionService->getYoungestPatchDevelopmentRelease' => [
@@ -2367,7 +2261,6 @@ return [
         'maximumNumberOfArguments' => 0,
         'restFiles' => [
             'Deprecation-84549-DeprecateMethodsInCoreVersionService.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst'
         ],
     ],
     'TYPO3\CMS\Install\Service\CoreVersionService->updateVersionMatrix' => [
@@ -2375,7 +2268,6 @@ return [
         'maximumNumberOfArguments' => 0,
         'restFiles' => [
             'Deprecation-84549-DeprecateMethodsInCoreVersionService.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst'
         ],
     ],
     'TYPO3\CMS\Core\TypoScript\TemplateService->linkData' => [
@@ -2383,7 +2275,6 @@ return [
         'maximumNumberOfArguments' => 8,
         'restFiles' => [
             'Deprecation-84637-TemplateService-linkDataFunctionalityMovedInPageLinkBuilder.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
         ],
     ],
     'TYPO3\CMS\Core\TypoScript\TemplateService->getFromMPmap' => [
@@ -2391,7 +2282,6 @@ return [
         'maximumNumberOfArguments' => 1,
         'restFiles' => [
             'Deprecation-84637-TemplateService-linkDataFunctionalityMovedInPageLinkBuilder.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
         ],
     ],
     'TYPO3\CMS\Core\TypoScript\TemplateService->initMPmap_create' => [
@@ -2399,7 +2289,6 @@ return [
         'maximumNumberOfArguments' => 3,
         'restFiles' => [
             'Deprecation-84637-TemplateService-linkDataFunctionalityMovedInPageLinkBuilder.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
         ],
     ],
     'TYPO3\CMS\Backend\FrontendBackendUserAuthentication->initializeAdminPanel' => [
@@ -2407,7 +2296,6 @@ return [
         'maximumNumberOfArguments' => 0,
         'restFiles' => [
             'Deprecation-84641-DeprecatedAdminPanelRelatedMethods.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
         ],
     ],
     'TYPO3\CMS\Backend\FrontendBackendUserAuthentication->initializeFrontendEdit' => [
@@ -2415,7 +2303,6 @@ return [
         'maximumNumberOfArguments' => 0,
         'restFiles' => [
             'Deprecation-84641-DeprecatedAdminPanelRelatedMethods.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
         ],
     ],
     'TYPO3\CMS\Backend\FrontendBackendUserAuthentication->isFrontendEditingActive' => [
@@ -2423,7 +2310,6 @@ return [
         'maximumNumberOfArguments' => 0,
         'restFiles' => [
             'Deprecation-84641-DeprecatedAdminPanelRelatedMethods.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
         ],
     ],
     'TYPO3\CMS\Backend\FrontendBackendUserAuthentication->displayAdminPanel' => [
@@ -2431,7 +2317,6 @@ return [
         'maximumNumberOfArguments' => 0,
         'restFiles' => [
             'Deprecation-84641-DeprecatedAdminPanelRelatedMethods.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
         ],
     ],
     'TYPO3\CMS\Backend\FrontendBackendUserAuthentication->isAdminPanelVisible' => [
@@ -2439,7 +2324,6 @@ return [
         'maximumNumberOfArguments' => 0,
         'restFiles' => [
             'Deprecation-84641-DeprecatedAdminPanelRelatedMethods.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
         ],
     ],
     'TYPO3\CMS\Frontend\Controller\TypoScriptFrontendController->findDomainRecord' => [
@@ -2447,7 +2331,6 @@ return [
         'maximumNumberOfArguments' => 1,
         'restFiles' => [
             'Deprecation-84725-SysDomainResolvingMovedIntoMiddleware.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
         ],
     ],
     'TYPO3\CMS\Frontend\Page\PageRepository->getDomainStartPage' => [
@@ -2455,7 +2338,6 @@ return [
         'maximumNumberOfArguments' => 3,
         'restFiles' => [
             'Deprecation-84725-SysDomainResolvingMovedIntoMiddleware.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
         ],
     ],
     'TYPO3\CMS\Frontend\Controller\TypoScriptFrontendController->connectToDB' => [
@@ -2463,7 +2345,6 @@ return [
         'maximumNumberOfArguments' => 0,
         'restFiles' => [
             'Deprecation-84965-VariousTypoScriptFrontendControllerMethods.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
         ],
     ],
     'TYPO3\CMS\Frontend\Controller\TypoScriptFrontendController->checkAlternativeIdMethods' => [
@@ -2471,7 +2352,6 @@ return [
         'maximumNumberOfArguments' => 0,
         'restFiles' => [
             'Deprecation-84965-VariousTypoScriptFrontendControllerMethods.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
         ],
     ],
     'TYPO3\CMS\Frontend\Controller\TypoScriptFrontendController->initializeBackendUser' => [
@@ -2479,7 +2359,6 @@ return [
         'maximumNumberOfArguments' => 0,
         'restFiles' => [
             'Deprecation-84965-VariousTypoScriptFrontendControllerMethods.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
         ],
     ],
     'TYPO3\CMS\Frontend\Controller\TypoScriptFrontendController->handleDataSubmission' => [
@@ -2487,7 +2366,6 @@ return [
         'maximumNumberOfArguments' => 0,
         'restFiles' => [
             'Deprecation-84965-VariousTypoScriptFrontendControllerMethods.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
         ],
     ],
     'TYPO3\CMS\Frontend\Controller\TypoScriptFrontendController->setCSS' => [
@@ -2495,7 +2373,6 @@ return [
         'maximumNumberOfArguments' => 2,
         'restFiles' => [
             'Deprecation-84965-VariousTypoScriptFrontendControllerMethods.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
         ],
     ],
     'TYPO3\CMS\Frontend\Controller\TypoScriptFrontendController->convPOSTCharset' => [
@@ -2503,7 +2380,6 @@ return [
         'maximumNumberOfArguments' => 0,
         'restFiles' => [
             'Deprecation-84965-VariousTypoScriptFrontendControllerMethods.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
         ],
     ],
     'TYPO3\CMS\Core\Authentication\BackendUserAuthentication->addTScomment' => [
@@ -2511,7 +2387,6 @@ return [
         'maximumNumberOfArguments' => 1,
         'restFiles' => [
             'Deprecation-84980-BackendUserAuthentication-addTScommentDeprecated.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
         ],
     ],
     'TYPO3\CMS\Core\Authentication\BackendUserAuthentication->simplelog' => [
@@ -2519,7 +2394,6 @@ return [
         'maximumNumberOfArguments' => 3,
         'restFiles' => [
             'Deprecation-84981-BackendUserAuthentication-simplelogDeprecated.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
         ],
     ],
     'TYPO3\CMS\Core\Authentication\BackendUserAuthentication->getTSConfigVal' => [
@@ -2527,7 +2401,6 @@ return [
         'maximumNumberOfArguments' => 1,
         'restFiles' => [
             'Deprecation-84993-DeprecateSomeTSconfigRelatedMethods.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
         ],
     ],
     'TYPO3\CMS\Core\Authentication\BackendUserAuthentication->getTSConfigProp' => [
@@ -2535,7 +2408,6 @@ return [
         'maximumNumberOfArguments' => 1,
         'restFiles' => [
             'Deprecation-84993-DeprecateSomeTSconfigRelatedMethods.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
         ],
     ],
     'TYPO3\CMS\backend\Tree\View\PagePositionMap->getModConfig' => [
@@ -2543,7 +2415,6 @@ return [
         'maximumNumberOfArguments' => 1,
         'restFiles' => [
             'Deprecation-84993-DeprecateSomeTSconfigRelatedMethods.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
         ],
     ],
     'TYPO3\CMS\core\DataHandling\DataHandler->getTCEMAIN_TSconfig' => [
@@ -2551,7 +2422,6 @@ return [
         'maximumNumberOfArguments' => 1,
         'restFiles' => [
             'Deprecation-84993-DeprecateSomeTSconfigRelatedMethods.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
         ],
     ],
     'TYPO3\CMS\Backend\Domain\Repository\Localization\LocalizationRepository->getUsedLanguagesInPageAndColumn' => [
@@ -2565,7 +2435,6 @@ return [
         'numberOfMandatoryArguments' => 2,
         'maximumNumberOfArguments' => 2,
         'restFiles' => [
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
             'Deprecation-85005-DeprecateMethodsAndConstantsInValidatorResolver.rst',
         ],
     ],
@@ -2573,7 +2442,6 @@ return [
         'numberOfMandatoryArguments' => 1,
         'maximumNumberOfArguments' => 1,
         'restFiles' => [
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
             'Deprecation-85005-DeprecateMethodsAndConstantsInValidatorResolver.rst',
         ],
     ],
@@ -2581,7 +2449,6 @@ return [
         'numberOfMandatoryArguments' => 1,
         'maximumNumberOfArguments' => 1,
         'restFiles' => [
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
             'Deprecation-85005-DeprecateMethodsAndConstantsInValidatorResolver.rst',
         ],
     ],
@@ -2589,22 +2456,13 @@ return [
         'numberOfMandatoryArguments' => 1,
         'maximumNumberOfArguments' => 1,
         'restFiles' => [
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
             'Deprecation-85005-DeprecateMethodsAndConstantsInValidatorResolver.rst',
-        ],
-    ],
-    'TYPO3\CMS\Extbase\Validation\ValidatorResolver->getMethodValidateAnnotations' => [
-        'numberOfMandatoryArguments' => 2,
-        'maximumNumberOfArguments' => 2,
-        'restFiles' => [
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
         ],
     ],
     'TYPO3\CMS\Extbase\Mvc\Controller\Argument->getValidationResults' => [
         'numberOfMandatoryArguments' => 0,
         'maximumNumberOfArguments' => 0,
         'restFiles' => [
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
             'Deprecation-85012-OnlyValidateMethodParamsIfNeeded.rst',
         ],
     ],
@@ -2612,7 +2470,6 @@ return [
         'numberOfMandatoryArguments' => 0,
         'maximumNumberOfArguments' => 0,
         'restFiles' => [
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
             'Deprecation-85012-OnlyValidateMethodParamsIfNeeded.rst',
         ],
     ],
@@ -2620,64 +2477,56 @@ return [
         'numberOfMandatoryArguments' => 1,
         'maximumNumberOfArguments' => 1,
         'restFiles' => [
-            'Deprecation-85122-FunctionalityInCharsetConverter.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
+            'Deprecation-85122-FunctionalityInCharsetConverter.rst'
         ],
     ],
     'TYPO3\CMS\Core\Charset\CharsetConverter->convArray' => [
         'numberOfMandatoryArguments' => 3,
         'maximumNumberOfArguments' => 4,
         'restFiles' => [
-            'Deprecation-85122-FunctionalityInCharsetConverter.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
+            'Deprecation-85122-FunctionalityInCharsetConverter.rst'
         ],
     ],
     'TYPO3\CMS\Core\Charset\CharsetConverter->utf8_to_entities' => [
         'numberOfMandatoryArguments' => 1,
         'maximumNumberOfArguments' => 1,
         'restFiles' => [
-            'Deprecation-85122-FunctionalityInCharsetConverter.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
+            'Deprecation-85122-FunctionalityInCharsetConverter.rst'
         ],
     ],
     'TYPO3\CMS\Core\Charset\CharsetConverter->entities_to_utf8' => [
         'numberOfMandatoryArguments' => 1,
         'maximumNumberOfArguments' => 1,
         'restFiles' => [
-            'Deprecation-85122-FunctionalityInCharsetConverter.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
+            'Deprecation-85122-FunctionalityInCharsetConverter.rst'
         ],
     ],
     'TYPO3\CMS\Core\Charset\CharsetConverter->crop' => [
         'numberOfMandatoryArguments' => 3,
         'maximumNumberOfArguments' => 4,
         'restFiles' => [
-            'Deprecation-85122-FunctionalityInCharsetConverter.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
+            'Deprecation-85122-FunctionalityInCharsetConverter.rst'
         ],
     ],
     'TYPO3\CMS\Core\Charset\CharsetConverter->convCaseFirst' => [
         'numberOfMandatoryArguments' => 3,
         'maximumNumberOfArguments' => 3,
         'restFiles' => [
-            'Deprecation-85122-FunctionalityInCharsetConverter.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
+            'Deprecation-85122-FunctionalityInCharsetConverter.rst'
         ],
     ],
     'TYPO3\CMS\Core\Charset\CharsetConverter->utf8_char2byte_pos' => [
         'numberOfMandatoryArguments' => 2,
         'maximumNumberOfArguments' => 2,
         'restFiles' => [
-            'Deprecation-85122-FunctionalityInCharsetConverter.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
+            'Deprecation-85122-FunctionalityInCharsetConverter.rst'
         ],
     ],
     'TYPO3\CMS\Core\Resource\Driver\AbstractHierarchicalFilesystemDriver->getCharsetConversion' => [
         'numberOfMandatoryArguments' => 0,
         'maximumNumberOfArguments' => 0,
         'restFiles' => [
-            'Deprecation-85125-UsagesOfCharsetConverterInCore.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst'
+            'Deprecation-85125-UsagesOfCharsetConverterInCore.rst'
         ],
     ],
     'TYPO3\CMS\Backend\Routing\UriBuilder->buildUriFromModule' => [
@@ -2685,7 +2534,6 @@ return [
         'maximumNumberOfArguments' => 3,
         'restFiles' => [
             'Deprecation-85113-LegacyBackendModuleRoutingMethods.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst'
         ],
     ],
     'TYPO3\CMS\Frontend\Controller\TypoScriptFrontendController->getPageShortcut' => [
@@ -2693,14 +2541,12 @@ return [
         'maximumNumberOfArguments' => 6,
         'restFiles' => [
             'Deprecation-85130-TSFE-getPageShortcutMovedToPageRepository.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
         ],
     ],
     'TYPO3\CMS\Extbase\Reflection\ReflectionService->getClassTagsValues' => [
         'numberOfMandatoryArguments' => 1,
         'maximumNumberOfArguments' => 1,
         'restFiles' => [
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
             'Deprecation-85004-DeprecateMethodsInReflectionService.rst',
         ],
     ],
@@ -2708,7 +2554,6 @@ return [
         'numberOfMandatoryArguments' => 2,
         'maximumNumberOfArguments' => 2,
         'restFiles' => [
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
             'Deprecation-85004-DeprecateMethodsInReflectionService.rst',
         ],
     ],
@@ -2716,7 +2561,6 @@ return [
         'numberOfMandatoryArguments' => 1,
         'maximumNumberOfArguments' => 1,
         'restFiles' => [
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
             'Deprecation-85004-DeprecateMethodsInReflectionService.rst',
         ],
     ],
@@ -2724,7 +2568,6 @@ return [
         'numberOfMandatoryArguments' => 2,
         'maximumNumberOfArguments' => 2,
         'restFiles' => [
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
             'Deprecation-85004-DeprecateMethodsInReflectionService.rst',
         ],
     ],
@@ -2732,7 +2575,6 @@ return [
         'numberOfMandatoryArguments' => 2,
         'maximumNumberOfArguments' => 2,
         'restFiles' => [
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
             'Deprecation-85004-DeprecateMethodsInReflectionService.rst',
         ],
     ],
@@ -2740,7 +2582,6 @@ return [
         'numberOfMandatoryArguments' => 2,
         'maximumNumberOfArguments' => 2,
         'restFiles' => [
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
             'Deprecation-85004-DeprecateMethodsInReflectionService.rst',
         ],
     ],
@@ -2748,7 +2589,6 @@ return [
         'numberOfMandatoryArguments' => 2,
         'maximumNumberOfArguments' => 2,
         'restFiles' => [
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
             'Deprecation-85004-DeprecateMethodsInReflectionService.rst',
         ],
     ],
@@ -2756,7 +2596,6 @@ return [
         'numberOfMandatoryArguments' => 3,
         'maximumNumberOfArguments' => 3,
         'restFiles' => [
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
             'Deprecation-85004-DeprecateMethodsInReflectionService.rst',
         ],
     ],
@@ -2764,7 +2603,6 @@ return [
         'numberOfMandatoryArguments' => 2,
         'maximumNumberOfArguments' => 2,
         'restFiles' => [
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
             'Deprecation-85004-DeprecateMethodsInReflectionService.rst',
         ],
     ],
@@ -2772,7 +2610,6 @@ return [
         'numberOfMandatoryArguments' => 3,
         'maximumNumberOfArguments' => 3,
         'restFiles' => [
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
             'Deprecation-85004-DeprecateMethodsInReflectionService.rst',
         ],
     ],
@@ -2794,24 +2631,21 @@ return [
         'numberOfMandatoryArguments' => 1,
         'maximumNumberOfArguments' => 1,
         'restFiles' => [
-            'Deprecation-85445-TemplateService-getFileName.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
+            'Deprecation-85445-TemplateService-getFileName.rst'
         ],
     ],
     'TYPO3\CMS\Frontend\Page\PageRepository->getRootLine' => [
         'numberOfMandatoryArguments' => 1,
         'maximumNumberOfArguments' => 3,
         'restFiles' => [
-            'Deprecation-85557-PageRepository-getRootLine.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
+            'Deprecation-85557-PageRepository-getRootLine.rst'
         ],
     ],
     'TYPO3\CMS\Frontend\ContentObject\ContentObjectRenderer->calcIntExplode' => [
         'numberOfMandatoryArguments' => 2,
         'maximumNumberOfArguments' => 2,
         'restFiles' => [
-            'Deprecation-85451-ContentObjectRenderer-calcIntExplodeDeprecated.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
+            'Deprecation-85451-ContentObjectRenderer-calcIntExplodeDeprecated.rst'
         ],
     ],
     'TYPO3\CMS\Frontend\Controller\TypoScriptFrontendController->getUniqueId' => [
@@ -2819,15 +2653,13 @@ return [
         'maximumNumberOfArguments' => 1,
         'restFiles' => [
             'Deprecation-85555-TypoScriptFrontendController-getUniqueId.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
         ],
     ],
     'TYPO3\CMS\Frontend\ContentObject\ContentObjectRenderer->enableFields' => [
         'numberOfMandatoryArguments' => 1,
         'maximumNumberOfArguments' => 3,
         'restFiles' => [
-            'Deprecation-85558-ContentObjectRenderer-enableFields.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
+            'Deprecation-85558-ContentObjectRenderer-enableFields.rst'
         ],
     ],
     'TYPO3\CMS\Scheduler\Controller\SchedulerModuleController->addMessage' => [
@@ -2835,7 +2667,6 @@ return [
         'maximumNumberOfArguments' => 2,
         'restFiles' => [
             'Deprecation-84387-DeprecatedMethodAndPropertyInSchedulerModuleController.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst'
         ],
     ],
     'TYPO3\CMS\Core\Page\PageRenderer->enableConcatenateFiles' => [
@@ -2843,7 +2674,6 @@ return [
         'maximumNumberOfArguments' => 0,
         'restFiles' => [
             'Deprecation-65578-ConfigconcatenateJsAndCssAndConcatenateFiles.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
         ],
     ],
     'TYPO3\CMS\Core\Page\PageRenderer->getConcatenateFiles' => [
@@ -2851,7 +2681,6 @@ return [
         'maximumNumberOfArguments' => 0,
         'restFiles' => [
             'Deprecation-65578-ConfigconcatenateJsAndCssAndConcatenateFiles.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
         ],
     ],
     'TYPO3\CMS\Core\Page\PageRenderer->disableConcatenateFiles' => [
@@ -2859,7 +2688,6 @@ return [
         'maximumNumberOfArguments' => 0,
         'restFiles' => [
             'Deprecation-65578-ConfigconcatenateJsAndCssAndConcatenateFiles.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
         ],
     ],
     'TYPO3\CMS\Frontend\Page\PageRepository->checkWorkspaceAccess' => [
@@ -2867,7 +2695,6 @@ return [
         'maximumNumberOfArguments' => 1,
         'restFiles' => [
             'Deprecation-85554-PageRepository-checkWorkspaceAccess.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
         ],
     ],
     'TYPO3\CMS\Frontend\Controller\TypoScriptFrontendController->initTemplate' => [
@@ -2875,7 +2702,6 @@ return [
         'maximumNumberOfArguments' => 0,
         'restFiles' => [
             'Deprecation-85666-TypoScriptFrontendController-initTemplate.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
         ],
     ],
     'TYPO3\CMS\Adminpanel\View\AdminPanelView->isAdminModuleEnabled' => [
@@ -2883,7 +2709,6 @@ return [
         'maximumNumberOfArguments' => 1,
         'restFiles' => [
             'Deprecation-84584-AdminPanelViewIsAdminModuleEnabledAndExt_makeToolbarDeprecated.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
         ],
     ],
     'TYPO3\CMS\Adminpanel\View\AdminPanelView->ext_makeToolBar' => [
@@ -2891,7 +2716,6 @@ return [
         'maximumNumberOfArguments' => 0,
         'restFiles' => [
             'Deprecation-84584-AdminPanelViewIsAdminModuleEnabledAndExt_makeToolbarDeprecated.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
         ]
     ],
     'TYPO3\CMS\Frontend\Page\PageRepository->getRecordsByField' => [
@@ -2899,7 +2723,6 @@ return [
         'maximumNumberOfArguments' => 7,
         'restFiles' => [
             'Deprecation-85699-MethodsInPageRepository.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
         ],
     ],
     'TYPO3\CMS\Backend\Template\ModuleTemplate->loadJavascriptLib' => [
@@ -2907,7 +2730,6 @@ return [
         'maximumNumberOfArguments' => 1,
         'restFiles' => [
             'Deprecation-85701-MethodsInModuleTemplate.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
         ],
     ],
     'TYPO3\CMS\Backend\Template\ModuleTemplate->icons' => [
@@ -2915,7 +2737,6 @@ return [
         'maximumNumberOfArguments' => 1,
         'restFiles' => [
             'Deprecation-85701-MethodsInModuleTemplate.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
         ],
     ],
     'TYPO3\CMS\Backend\Template\DocumentTemplate->addStyleSheet' => [
@@ -2923,7 +2744,6 @@ return [
         'maximumNumberOfArguments' => 4,
         'restFiles' => [
             'Deprecation-85735-MethodAndPropertyInDocumentTemplate.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
         ],
     ],
     'TYPO3\CMS\Frontend\Page\PageRepository->getFileReferences' => [
@@ -2931,7 +2751,6 @@ return [
         'maximumNumberOfArguments' => 3,
         'restFiles' => [
             'Deprecation-85699-MethodsInPageRepository.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
         ],
     ],
     'TYPO3\CMS\Frontend\Page\PageRepository->movePlhOL' => [
@@ -2939,7 +2758,6 @@ return [
         'maximumNumberOfArguments' => 2,
         'restFiles' => [
             'Deprecation-85699-MethodsInPageRepository.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
         ],
     ],
     'TYPO3\CMS\Frontend\Page\PageRepository->getMovePlaceholder' => [
@@ -2947,7 +2765,6 @@ return [
         'maximumNumberOfArguments' => 3,
         'restFiles' => [
             'Deprecation-85699-MethodsInPageRepository.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
         ],
     ],
     'TYPO3\CMS\Extbase\Service\EnvironmentService->isEnvironmentInCliMode' => [
@@ -2955,7 +2772,6 @@ return [
         'maximumNumberOfArguments' => 0,
         'restFiles' => [
             'Deprecation-85807-EnvironmentServiceisEnvironmentInCliMode.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
         ],
     ],
     'TYPO3\CMS\Saltedpasswords\Salt\Argon2iSalt->getOptions' => [
@@ -2963,7 +2779,6 @@ return [
         'maximumNumberOfArguments' => 0,
         'restFiles' => [
             'Deprecation-85804-SaltedPasswordHashClassDeprecations.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
         ],
     ],
     'TYPO3\CMS\Saltedpasswords\Salt\Argon2iSalt->setOptions' => [
@@ -2971,7 +2786,6 @@ return [
         'maximumNumberOfArguments' => 1,
         'restFiles' => [
             'Deprecation-85804-SaltedPasswordHashClassDeprecations.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
         ],
     ],
     'TYPO3\CMS\Saltedpasswords\Salt\BcryptSalt->getOptions' => [
@@ -2979,7 +2793,6 @@ return [
         'maximumNumberOfArguments' => 0,
         'restFiles' => [
             'Deprecation-85804-SaltedPasswordHashClassDeprecations.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
         ],
     ],
     'TYPO3\CMS\Saltedpasswords\Salt\BcryptSalt->setOptions' => [
@@ -2987,7 +2800,6 @@ return [
         'maximumNumberOfArguments' => 1,
         'restFiles' => [
             'Deprecation-85804-SaltedPasswordHashClassDeprecations.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
         ],
     ],
     'TYPO3\CMS\Saltedpasswords\Salt\BlowfishSalt->getHashCount' => [
@@ -2995,7 +2807,6 @@ return [
         'maximumNumberOfArguments' => 0,
         'restFiles' => [
             'Deprecation-85804-SaltedPasswordHashClassDeprecations.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
         ],
     ],
     'TYPO3\CMS\Saltedpasswords\Salt\BlowfishSalt->getMaxHashCount' => [
@@ -3003,7 +2814,6 @@ return [
         'maximumNumberOfArguments' => 0,
         'restFiles' => [
             'Deprecation-85804-SaltedPasswordHashClassDeprecations.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
         ],
     ],
     'TYPO3\CMS\Saltedpasswords\Salt\BlowfishSalt->getMinHashCount' => [
@@ -3011,7 +2821,6 @@ return [
         'maximumNumberOfArguments' => 0,
         'restFiles' => [
             'Deprecation-85804-SaltedPasswordHashClassDeprecations.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
         ],
     ],
     'TYPO3\CMS\Saltedpasswords\Salt\BlowfishSalt->getSaltLength' => [
@@ -3019,7 +2828,6 @@ return [
         'maximumNumberOfArguments' => 0,
         'restFiles' => [
             'Deprecation-85804-SaltedPasswordHashClassDeprecations.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
         ],
     ],
     'TYPO3\CMS\Saltedpasswords\Salt\BlowfishSalt->getSetting' => [
@@ -3027,7 +2835,6 @@ return [
         'maximumNumberOfArguments' => 0,
         'restFiles' => [
             'Deprecation-85804-SaltedPasswordHashClassDeprecations.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
         ],
     ],
     'TYPO3\CMS\Saltedpasswords\Salt\BlowfishSalt->setHashCount' => [
@@ -3035,7 +2842,6 @@ return [
         'maximumNumberOfArguments' => 1,
         'restFiles' => [
             'Deprecation-85804-SaltedPasswordHashClassDeprecations.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
         ],
     ],
     'TYPO3\CMS\Saltedpasswords\Salt\BlowfishSalt->setMaxHashCount' => [
@@ -3043,7 +2849,6 @@ return [
         'maximumNumberOfArguments' => 1,
         'restFiles' => [
             'Deprecation-85804-SaltedPasswordHashClassDeprecations.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
         ],
     ],
     'TYPO3\CMS\Saltedpasswords\Salt\BlowfishSalt->setMinHashCount' => [
@@ -3051,7 +2856,6 @@ return [
         'maximumNumberOfArguments' => 1,
         'restFiles' => [
             'Deprecation-85804-SaltedPasswordHashClassDeprecations.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
         ],
     ],
     'TYPO3\CMS\Saltedpasswords\Salt\Md5Salt->getSetting' => [
@@ -3059,7 +2863,6 @@ return [
         'maximumNumberOfArguments' => 0,
         'restFiles' => [
             'Deprecation-85804-SaltedPasswordHashClassDeprecations.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
         ],
     ],
     'TYPO3\CMS\Saltedpasswords\Salt\Md5Salt->getSaltLength' => [
@@ -3067,7 +2870,6 @@ return [
         'maximumNumberOfArguments' => 0,
         'restFiles' => [
             'Deprecation-85804-SaltedPasswordHashClassDeprecations.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
         ],
     ],
     'TYPO3\CMS\Saltedpasswords\Salt\Pbkdf2Salt->getHashCount' => [
@@ -3075,7 +2877,6 @@ return [
         'maximumNumberOfArguments' => 0,
         'restFiles' => [
             'Deprecation-85804-SaltedPasswordHashClassDeprecations.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
         ],
     ],
     'TYPO3\CMS\Saltedpasswords\Salt\Pbkdf2Salt->getMaxHashCount' => [
@@ -3083,7 +2884,6 @@ return [
         'maximumNumberOfArguments' => 0,
         'restFiles' => [
             'Deprecation-85804-SaltedPasswordHashClassDeprecations.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
         ],
     ],
     'TYPO3\CMS\Saltedpasswords\Salt\Pbkdf2Salt->getMinHashCount' => [
@@ -3091,7 +2891,6 @@ return [
         'maximumNumberOfArguments' => 0,
         'restFiles' => [
             'Deprecation-85804-SaltedPasswordHashClassDeprecations.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
         ],
     ],
     'TYPO3\CMS\Saltedpasswords\Salt\Pbkdf2Salt->getSaltLength' => [
@@ -3099,7 +2898,6 @@ return [
         'maximumNumberOfArguments' => 0,
         'restFiles' => [
             'Deprecation-85804-SaltedPasswordHashClassDeprecations.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
         ],
     ],
     'TYPO3\CMS\Saltedpasswords\Salt\Pbkdf2Salt->getSetting' => [
@@ -3107,7 +2905,6 @@ return [
         'maximumNumberOfArguments' => 0,
         'restFiles' => [
             'Deprecation-85804-SaltedPasswordHashClassDeprecations.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
         ],
     ],
     'TYPO3\CMS\Saltedpasswords\Salt\Pbkdf2Salt->setHashCount' => [
@@ -3115,7 +2912,6 @@ return [
         'maximumNumberOfArguments' => 1,
         'restFiles' => [
             'Deprecation-85804-SaltedPasswordHashClassDeprecations.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
         ],
     ],
     'TYPO3\CMS\Saltedpasswords\Salt\Pbkdf2Salt->setMaxHashCount' => [
@@ -3123,7 +2919,6 @@ return [
         'maximumNumberOfArguments' => 1,
         'restFiles' => [
             'Deprecation-85804-SaltedPasswordHashClassDeprecations.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
         ],
     ],
     'TYPO3\CMS\Saltedpasswords\Salt\Pbkdf2Salt->setMinHashCount' => [
@@ -3131,7 +2926,6 @@ return [
         'maximumNumberOfArguments' => 1,
         'restFiles' => [
             'Deprecation-85804-SaltedPasswordHashClassDeprecations.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
         ],
     ],
     'TYPO3\CMS\Saltedpasswords\Salt\PhpassSalt->getHashCount' => [
@@ -3139,7 +2933,6 @@ return [
         'maximumNumberOfArguments' => 0,
         'restFiles' => [
             'Deprecation-85804-SaltedPasswordHashClassDeprecations.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
         ],
     ],
     'TYPO3\CMS\Saltedpasswords\Salt\PhpassSalt->getMaxHashCount' => [
@@ -3147,7 +2940,6 @@ return [
         'maximumNumberOfArguments' => 0,
         'restFiles' => [
             'Deprecation-85804-SaltedPasswordHashClassDeprecations.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
         ],
     ],
     'TYPO3\CMS\Saltedpasswords\Salt\PhpassSalt->getMinHashCount' => [
@@ -3155,7 +2947,6 @@ return [
         'maximumNumberOfArguments' => 0,
         'restFiles' => [
             'Deprecation-85804-SaltedPasswordHashClassDeprecations.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
         ],
     ],
     'TYPO3\CMS\Saltedpasswords\Salt\PhpassSalt->getSaltLength' => [
@@ -3163,7 +2954,6 @@ return [
         'maximumNumberOfArguments' => 0,
         'restFiles' => [
             'Deprecation-85804-SaltedPasswordHashClassDeprecations.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
         ],
     ],
     'TYPO3\CMS\Saltedpasswords\Salt\PhpassSalt->getSetting' => [
@@ -3171,7 +2961,6 @@ return [
         'maximumNumberOfArguments' => 0,
         'restFiles' => [
             'Deprecation-85804-SaltedPasswordHashClassDeprecations.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
         ],
     ],
     'TYPO3\CMS\Saltedpasswords\Salt\PhpassSalt->setHashCount' => [
@@ -3179,7 +2968,6 @@ return [
         'maximumNumberOfArguments' => 1,
         'restFiles' => [
             'Deprecation-85804-SaltedPasswordHashClassDeprecations.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
         ],
     ],
     'TYPO3\CMS\Saltedpasswords\Salt\PhpassSalt->setMaxHashCount' => [
@@ -3187,7 +2975,6 @@ return [
         'maximumNumberOfArguments' => 1,
         'restFiles' => [
             'Deprecation-85804-SaltedPasswordHashClassDeprecations.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
         ],
     ],
     'TYPO3\CMS\Saltedpasswords\Salt\PhpassSalt->setMinHashCount' => [
@@ -3195,7 +2982,6 @@ return [
         'maximumNumberOfArguments' => 1,
         'restFiles' => [
             'Deprecation-85804-SaltedPasswordHashClassDeprecations.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
         ],
     ],
     'TYPO3\CMS\Saltedpasswords\Salt\BlowfishSalt->isValidSalt' => [
@@ -3203,7 +2989,6 @@ return [
         'maximumNumberOfArguments' => 1,
         'restFiles' => [
             'Deprecation-85804-SaltedPasswordHashClassDeprecations.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
         ],
     ],
     'TYPO3\CMS\Saltedpasswords\Salt\BlowfishSalt->base64Encode' => [
@@ -3211,7 +2996,6 @@ return [
         'maximumNumberOfArguments' => 2,
         'restFiles' => [
             'Deprecation-85804-SaltedPasswordHashClassDeprecations.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
         ],
     ],
     'TYPO3\CMS\Saltedpasswords\Salt\Md5Salt->isValidSalt' => [
@@ -3219,7 +3003,6 @@ return [
         'maximumNumberOfArguments' => 1,
         'restFiles' => [
             'Deprecation-85804-SaltedPasswordHashClassDeprecations.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
         ],
     ],
     'TYPO3\CMS\Saltedpasswords\Salt\Md5Salt->base64Encode' => [
@@ -3227,7 +3010,6 @@ return [
         'maximumNumberOfArguments' => 2,
         'restFiles' => [
             'Deprecation-85804-SaltedPasswordHashClassDeprecations.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
         ],
     ],
     'TYPO3\CMS\Saltedpasswords\Salt\Pbkdf2Salt->isValidSalt' => [
@@ -3235,7 +3017,6 @@ return [
         'maximumNumberOfArguments' => 1,
         'restFiles' => [
             'Deprecation-85804-SaltedPasswordHashClassDeprecations.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
         ],
     ],
     'TYPO3\CMS\Saltedpasswords\Salt\Pbkdf2Salt->base64Encode' => [
@@ -3243,7 +3024,6 @@ return [
         'maximumNumberOfArguments' => 2,
         'restFiles' => [
             'Deprecation-85804-SaltedPasswordHashClassDeprecations.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
         ],
     ],
     'TYPO3\CMS\Saltedpasswords\Salt\Pbkdf2Salt->base64Decode' => [
@@ -3251,7 +3031,6 @@ return [
         'maximumNumberOfArguments' => 1,
         'restFiles' => [
             'Deprecation-85804-SaltedPasswordHashClassDeprecations.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
         ],
     ],
     'TYPO3\CMS\Saltedpasswords\Salt\PhpassSalt->isValidSalt' => [
@@ -3259,7 +3038,6 @@ return [
         'maximumNumberOfArguments' => 1,
         'restFiles' => [
             'Deprecation-85804-SaltedPasswordHashClassDeprecations.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
         ],
     ],
     'TYPO3\CMS\Saltedpasswords\Salt\PhpassSalt->base64Encode' => [
@@ -3267,7 +3045,6 @@ return [
         'maximumNumberOfArguments' => 2,
         'restFiles' => [
             'Deprecation-85804-SaltedPasswordHashClassDeprecations.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
         ],
     ],
     'TYPO3\CMS\Core\Core\Bootstrap->configure' => [
@@ -3275,7 +3052,6 @@ return [
         'maximumNumberOfArguments' => 0,
         'restFiles' => [
             'Deprecation-85821-BootstrapMethods.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
         ],
     ],
     'TYPO3\CMS\Core\Core\Bootstrap->setEarlyInstance' => [
@@ -3283,7 +3059,6 @@ return [
         'maximumNumberOfArguments' => 2,
         'restFiles' => [
             'Deprecation-85821-BootstrapMethods.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
         ],
     ],
     'TYPO3\CMS\Core\Core\Bootstrap->getEarlyInstance' => [
@@ -3291,7 +3066,6 @@ return [
         'maximumNumberOfArguments' => 1,
         'restFiles' => [
             'Deprecation-85821-BootstrapMethods.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
         ],
     ],
     'TYPO3\CMS\Core\Core\Bootstrap->getEarlyInstances' => [
@@ -3299,7 +3073,6 @@ return [
         'maximumNumberOfArguments' => 0,
         'restFiles' => [
             'Deprecation-85821-BootstrapMethods.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
         ],
     ],
     'TYPO3\CMS\Core\Core\Bootstrap->initializePackageManagement' => [
@@ -3307,7 +3080,6 @@ return [
         'maximumNumberOfArguments' => 1,
         'restFiles' => [
             'Deprecation-85821-BootstrapMethods.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
         ],
     ],
     'TYPO3\CMS\Core\Core\Bootstrap->setRequestType' => [
@@ -3315,14 +3087,6 @@ return [
         'maximumNumberOfArguments' => 1,
         'restFiles' => [
             'Deprecation-85821-BootstrapMethods.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
-        ],
-    ],
-    'TYPO3\CMS\Core\Resource\File->_getMetaData' => [
-        'numberOfMandatoryArguments' => 0,
-        'maximumNumberOfArguments' => 0,
-        'restFiles' => [
-            'Deprecation-85895-DeprecateFile_getMetaData.rst',
         ],
     ],
     'TYPO3\CMS\Frontend\Controller\TypoScriptFrontendController->initFEuser' => [
@@ -3330,7 +3094,6 @@ return [
         'maximumNumberOfArguments' => 0,
         'restFiles' => [
             'Deprecation-85878-EidUtilityAndVariousTSFEMethods.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
         ],
     ],
     'TYPO3\CMS\Frontend\Controller\TypoScriptFrontendController->sendCacheHeaders' => [
@@ -3338,7 +3101,6 @@ return [
         'maximumNumberOfArguments' => 0,
         'restFiles' => [
             'Deprecation-85878-EidUtilityAndVariousTSFEMethods.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
         ],
     ],
     'TYPO3\CMS\Frontend\Controller\TypoScriptFrontendController->storeSessionData' => [
@@ -3346,7 +3108,6 @@ return [
         'maximumNumberOfArguments' => 0,
         'restFiles' => [
             'Deprecation-85878-EidUtilityAndVariousTSFEMethods.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
         ],
     ],
     'TYPO3\CMS\Frontend\Controller\TypoScriptFrontendController->hook_eofe' => [
@@ -3354,7 +3115,6 @@ return [
         'maximumNumberOfArguments' => 0,
         'restFiles' => [
             'Deprecation-85878-EidUtilityAndVariousTSFEMethods.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
         ],
     ],
     'TYPO3\CMS\Frontend\Controller\TypoScriptFrontendController->previewInfo' => [
@@ -3362,7 +3122,6 @@ return [
         'maximumNumberOfArguments' => 1,
         'restFiles' => [
             'Deprecation-85878-EidUtilityAndVariousTSFEMethods.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
         ],
     ],
     'TYPO3\CMS\Frontend\Controller\TypoScriptFrontendController->addTempContentHttpHeaders' => [
@@ -3370,7 +3129,6 @@ return [
         'maximumNumberOfArguments' => 0,
         'restFiles' => [
             'Deprecation-85878-EidUtilityAndVariousTSFEMethods.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
         ],
     ],
     'TYPO3\CMS\Frontend\Controller\TypoScriptFrontendController->domainNameMatchesCurrentRequest' => [
@@ -3378,7 +3136,6 @@ return [
         'maximumNumberOfArguments' => 1,
         'restFiles' => [
             'Deprecation-85892-VariousMethodsRegardingSysDomainResolving.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
         ],
     ],
     'TYPO3\CMS\Frontend\Controller\TypoScriptFrontendController->getDomainDataForPid' => [
@@ -3386,7 +3143,6 @@ return [
         'maximumNumberOfArguments' => 1,
         'restFiles' => [
             'Deprecation-85892-VariousMethodsRegardingSysDomainResolving.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
         ],
     ],
     'TYPO3\CMS\Backend\Controller\PageLayoutController->getLocalizedPageTitle' => [
@@ -3394,7 +3150,6 @@ return [
         'maximumNumberOfArguments' => 0,
         'restFiles' => [
             'Deprecation-84375-ProtectedMethodsAndPropertiesInPageLayoutController.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
         ],
     ],
     'TYPO3\CMS\Backend\Controller\PageLayoutController->getNumberOfHiddenElements' => [
@@ -3402,7 +3157,6 @@ return [
         'maximumNumberOfArguments' => 1,
         'restFiles' => [
             'Deprecation-84375-ProtectedMethodsAndPropertiesInPageLayoutController.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
         ],
     ],
     'TYPO3\CMS\Backend\Controller\PageLayoutController->local_linkThisScript' => [
@@ -3410,7 +3164,6 @@ return [
         'maximumNumberOfArguments' => 1,
         'restFiles' => [
             'Deprecation-84375-ProtectedMethodsAndPropertiesInPageLayoutController.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
         ],
     ],
     'TYPO3\CMS\Backend\Controller\PageLayoutController->pageIsNotLockedForEditors' => [
@@ -3418,7 +3171,6 @@ return [
         'maximumNumberOfArguments' => 0,
         'restFiles' => [
             'Deprecation-84375-ProtectedMethodsAndPropertiesInPageLayoutController.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
         ],
     ],
     'TYPO3\CMS\Backend\Controller\PageLayoutController->contentIsNotLockedForEditors' => [
@@ -3426,7 +3178,6 @@ return [
         'maximumNumberOfArguments' => 0,
         'restFiles' => [
             'Deprecation-84375-ProtectedMethodsAndPropertiesInPageLayoutController.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
         ],
     ],
     'TYPO3\CMS\Info\Controller\TranslationStatusController->getSystemLanguages' => [
@@ -3440,32 +3191,28 @@ return [
         'numberOfMandatoryArguments' => 1,
         'maximumNumberOfArguments' => 2,
         'restFiles' => [
-            'Deprecation-85164-LanguageRelatedMethods.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
+            'Deprecation-85164-LanguageRelatedMethods.rst'
         ],
     ],
     'TYPO3\CMS\Core\Authentication\AbstractUserAuthentication->compareUident' => [
         'numberOfMandatoryArguments' => 2,
         'maximumNumberOfArguments' => 3,
         'restFiles' => [
-            'Deprecation-85960-CompareUidentDeprecated.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
+            'Deprecation-85960-CompareUidentDeprecated.rst'
         ],
     ],
     'TYPO3\CMS\Core\Authentication\AbstractAuthenticationService->compareUident' => [
         'numberOfMandatoryArguments' => 2,
         'maximumNumberOfArguments' => 3,
         'restFiles' => [
-            'Deprecation-85960-CompareUidentDeprecated.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
+            'Deprecation-85960-CompareUidentDeprecated.rst'
         ],
     ],
     'TYPO3\CMS\Frontend\Page\PageRepository->getFirstWebPage' => [
         'numberOfMandatoryArguments' => 1,
         'maximumNumberOfArguments' => 1,
         'restFiles' => [
-            'Deprecation-85971-DeprecatePageRepository-getFirstWebPage.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
+            'Deprecation-85971-DeprecatePageRepository-getFirstWebPage.rst'
         ],
     ],
     'TYPO3\CMS\Extensionmanager\Command\ExtensionCommandController->installCommand' => [
@@ -3508,7 +3255,6 @@ return [
         'maximumNumberOfArguments' => 0,
         'restFiles' => [
             'Deprecation-86193-ProtectMethodsInAbstractLinkBrowserController.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
         ],
     ],
     'TYPO3\CMS\Recordlist\Controller\AbstractLinkBrowserController->getDisplayedLinkHandlerId' => [
@@ -3516,7 +3262,6 @@ return [
         'maximumNumberOfArguments' => 0,
         'restFiles' => [
             'Deprecation-86193-ProtectMethodsInAbstractLinkBrowserController.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
         ],
     ],
     'TYPO3\CMS\RteCKEditor\Controller\BrowseLinksController->renderLinkAttributeFields' => [
@@ -3524,7 +3269,6 @@ return [
         'maximumNumberOfArguments' => 0,
         'restFiles' => [
             'Deprecation-86193-ProtectMethodsInAbstractLinkBrowserController.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
         ],
     ],
     'TYPO3\CMS\RteCKEditor\Controller\BrowseLinksController->getPageConfigLabel' => [
@@ -3532,7 +3276,6 @@ return [
         'maximumNumberOfArguments' => 2,
         'restFiles' => [
             'Deprecation-86193-ProtectMethodsInAbstractLinkBrowserController.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
         ],
     ],
     'TYPO3\CMS\RteCKEditor\Controller\BrowseLinksController->getDisplayedLinkHandlerId' => [
@@ -3540,7 +3283,6 @@ return [
         'maximumNumberOfArguments' => 0,
         'restFiles' => [
             'Deprecation-86193-ProtectMethodsInAbstractLinkBrowserController.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
         ],
     ],
     'TYPO3\CMS\Impexp\Controller\ImportExportController->addRecordsForPid' => [
@@ -3548,7 +3290,6 @@ return [
         'maximumNumberOfArguments' => 3,
         'restFiles' => [
             'Deprecation-85031-ProtectedImportExportController.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
         ],
     ],
     'TYPO3\CMS\Impexp\Controller\ImportExportController->exec_listQueryPid' => [
@@ -3556,7 +3297,6 @@ return [
         'maximumNumberOfArguments' => 3,
         'restFiles' => [
             'Deprecation-85031-ProtectedImportExportController.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
         ],
     ],
     'TYPO3\CMS\Impexp\Controller\ImportExportController->makeConfigurationForm' => [
@@ -3564,7 +3304,6 @@ return [
         'maximumNumberOfArguments' => 1,
         'restFiles' => [
             'Deprecation-85031-ProtectedImportExportController.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
         ],
     ],
     'TYPO3\CMS\Impexp\Controller\ImportExportController->makeAdvancedOptionsForm' => [
@@ -3572,7 +3311,6 @@ return [
         'maximumNumberOfArguments' => 1,
         'restFiles' => [
             'Deprecation-85031-ProtectedImportExportController.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
         ],
     ],
     'TYPO3\CMS\Impexp\Controller\ImportExportController->makeSaveForm' => [
@@ -3580,7 +3318,6 @@ return [
         'maximumNumberOfArguments' => 1,
         'restFiles' => [
             'Deprecation-85031-ProtectedImportExportController.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
         ],
     ],
     'TYPO3\CMS\Impexp\Controller\ImportExportController->getTableSelectOptions' => [
@@ -3588,7 +3325,6 @@ return [
         'maximumNumberOfArguments' => 1,
         'restFiles' => [
             'Deprecation-85031-ProtectedImportExportController.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
         ],
     ],
     'TYPO3\CMS\Impexp\Controller\ImportExportController->filterPageIds' => [
@@ -3596,7 +3332,6 @@ return [
         'maximumNumberOfArguments' => 1,
         'restFiles' => [
             'Deprecation-85031-ProtectedImportExportController.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
         ],
     ],
     'TYPO3\CMS\Frontend\Controller\TypoScriptFrontendController->tempPageCacheContent' => [
@@ -3604,7 +3339,6 @@ return [
         'maximumNumberOfArguments' => 0,
         'restFiles' => [
             'Deprecation-86047-TSFEPropertiesMethodsAndChangeVisibility.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
         ],
     ],
     'TYPO3\CMS\Frontend\Controller\TypoScriptFrontendController->realPageCacheContent' => [
@@ -3612,7 +3346,6 @@ return [
         'maximumNumberOfArguments' => 0,
         'restFiles' => [
             'Deprecation-86047-TSFEPropertiesMethodsAndChangeVisibility.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
         ],
     ],
     'TYPO3\CMS\Frontend\Controller\TypoScriptFrontendController->setPageCacheContent' => [
@@ -3620,7 +3353,6 @@ return [
         'maximumNumberOfArguments' => 3,
         'restFiles' => [
             'Deprecation-86047-TSFEPropertiesMethodsAndChangeVisibility.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
         ],
     ],
     'TYPO3\CMS\Frontend\Controller\TypoScriptFrontendController->clearPageCacheContent_pidList' => [
@@ -3628,7 +3360,6 @@ return [
         'maximumNumberOfArguments' => 1,
         'restFiles' => [
             'Deprecation-86047-TSFEPropertiesMethodsAndChangeVisibility.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
         ],
     ],
     'TYPO3\CMS\Frontend\Controller\TypoScriptFrontendController->setSysLastChanged' => [
@@ -3636,7 +3367,6 @@ return [
         'maximumNumberOfArguments' => 0,
         'restFiles' => [
             'Deprecation-86047-TSFEPropertiesMethodsAndChangeVisibility.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
         ],
     ],
     'TYPO3\CMS\Frontend\Controller\TypoScriptFrontendController->contentStrReplace' => [
@@ -3644,7 +3374,6 @@ return [
         'maximumNumberOfArguments' => 0,
         'restFiles' => [
             'Deprecation-86047-TSFEPropertiesMethodsAndChangeVisibility.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
         ],
     ],
     'TYPO3\CMS\Extbase\Core\Bootstrap->configureObjectManager' => [
@@ -3652,7 +3381,6 @@ return [
         'maximumNumberOfArguments' => 0,
         'restFiles' => [
             'Deprecation-86270-ExtbaseXclassViaTypoScriptSettings.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
         ],
     ],
     'TYPO3\CMS\Fluid\Core\Widget\Bootstrap->configureObjectManager' => [
@@ -3660,39 +3388,34 @@ return [
         'maximumNumberOfArguments' => 0,
         'restFiles' => [
             'Deprecation-86270-ExtbaseXclassViaTypoScriptSettings.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
         ],
     ],
     'TYPO3\CMS\Backend\FrontendBackendUserAuthentication->checkBackendAccessSettingsFromInitPhp' => [
         'numberOfMandatoryArguments' => 0,
         'maximumNumberOfArguments' => 0,
         'restFiles' => [
-            'Deprecation-86288-FrontendBackendUserAuthenticationMethods.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
+            'Deprecation-86288-FrontendBackendUserAuthenticationMethods.rst'
         ],
     ],
     'TYPO3\CMS\Backend\FrontendBackendUserAuthentication->extPageReadAccess' => [
         'numberOfMandatoryArguments' => 1,
         'maximumNumberOfArguments' => 1,
         'restFiles' => [
-            'Deprecation-86288-FrontendBackendUserAuthenticationMethods.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
+            'Deprecation-86288-FrontendBackendUserAuthenticationMethods.rst'
         ],
     ],
     'TYPO3\CMS\Backend\FrontendBackendUserAuthentication->extGetTreeList' => [
         'numberOfMandatoryArguments' => 3,
         'maximumNumberOfArguments' => 4,
         'restFiles' => [
-            'Deprecation-86288-FrontendBackendUserAuthenticationMethods.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
+            'Deprecation-86288-FrontendBackendUserAuthenticationMethods.rst'
         ],
     ],
     'TYPO3\CMS\Backend\FrontendBackendUserAuthentication->extGetLL' => [
         'numberOfMandatoryArguments' => 1,
         'maximumNumberOfArguments' => 1,
         'restFiles' => [
-            'Deprecation-86288-FrontendBackendUserAuthenticationMethods.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
+            'Deprecation-86288-FrontendBackendUserAuthenticationMethods.rst'
         ],
     ],
     'TYPO3\CMS\Extbase\Mvc\Cli\Command->isFlushingCaches' => [
@@ -3770,7 +3493,6 @@ return [
         'maximumNumberOfArguments' => 1,
         'restFiles' => [
             'Deprecation-86389-GeneralUtility_GETsetAndTSFE-mergingWithGetVars.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
         ],
     ],
     'TYPO3\CMS\Core\DataHandling\DataHandler->checkValue_group_select_file' => [
@@ -3778,7 +3500,6 @@ return [
         'maximumNumberOfArguments' => 8,
         'restFiles' => [
             'Deprecation-86406-TCATypeGroupInternal_typeFileAndFile_reference.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
         ],
     ],
     'TYPO3\CMS\Core\DataHandling\DataHandler->copyRecord_procFilesRefs' => [
@@ -3786,7 +3507,6 @@ return [
         'maximumNumberOfArguments' => 3,
         'restFiles' => [
             'Deprecation-86406-TCATypeGroupInternal_typeFileAndFile_reference.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
         ],
     ],
     'TYPO3\CMS\Core\DataHandling\DataHandler->extFileFields' => [
@@ -3794,7 +3514,6 @@ return [
         'maximumNumberOfArguments' => 1,
         'restFiles' => [
             'Deprecation-86406-TCATypeGroupInternal_typeFileAndFile_reference.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
         ],
     ],
     'TYPO3\CMS\Core\DataHandling\DataHandler->extFileFunctions' => [
@@ -3802,7 +3521,6 @@ return [
         'maximumNumberOfArguments' => 3,
         'restFiles' => [
             'Deprecation-86406-TCATypeGroupInternal_typeFileAndFile_reference.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
         ],
     ],
     'TYPO3\CMS\Core\Database\ReferenceIndex->getRelations_procFiles' => [
@@ -3810,7 +3528,6 @@ return [
         'maximumNumberOfArguments' => 3,
         'restFiles' => [
             'Deprecation-86406-TCATypeGroupInternal_typeFileAndFile_reference.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
         ],
     ],
     'TYPO3\CMS\Core\Integrity\DatabaseIntegrityCheck->getFileFields' => [
@@ -3818,473 +3535,272 @@ return [
         'maximumNumberOfArguments' => 1,
         'restFiles' => [
             'Deprecation-86406-TCATypeGroupInternal_typeFileAndFile_reference.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
         ],
     ],
     'TYPO3\CMS\Frontend\Controller\TypoScriptFrontendController->makeCacheHash' => [
         'numberOfMandatoryArguments' => 0,
         'maximumNumberOfArguments' => 0,
         'restFiles' => [
-            'Deprecation-86411-TSFE-makeCacheHash.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
+            'Deprecation-86411-TSFE-makeCacheHash.rst'
         ],
     ],
     'TYPO3\CMS\Frontend\ContentObject\ContentObjectRenderer->stdWrap_addParams' => [
         'numberOfMandatoryArguments' => 0,
         'maximumNumberOfArguments' => 0,
         'restFiles' => [
-            'Deprecation-86433-VariousStdWrapFunctionsAndContentObjectRenderer-relatedMethods.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
+            'Deprecation-86433-VariousStdWrapFunctionsAndContentObjectRenderer-relatedMethods.rst'
         ],
     ],
     'TYPO3\CMS\Frontend\ContentObject\ContentObjectRenderer->stdWrap_filelink' => [
         'numberOfMandatoryArguments' => 0,
         'maximumNumberOfArguments' => 0,
         'restFiles' => [
-            'Deprecation-86433-VariousStdWrapFunctionsAndContentObjectRenderer-relatedMethods.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
+            'Deprecation-86433-VariousStdWrapFunctionsAndContentObjectRenderer-relatedMethods.rst'
         ],
     ],
     'TYPO3\CMS\Frontend\ContentObject\ContentObjectRenderer->stdWrap_filelist' => [
         'numberOfMandatoryArguments' => 0,
         'maximumNumberOfArguments' => 0,
         'restFiles' => [
-            'Deprecation-86433-VariousStdWrapFunctionsAndContentObjectRenderer-relatedMethods.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
+            'Deprecation-86433-VariousStdWrapFunctionsAndContentObjectRenderer-relatedMethods.rst'
         ],
     ],
     'TYPO3\CMS\Frontend\ContentObject\ContentObjectRenderer->addParams' => [
         'numberOfMandatoryArguments' => 0,
         'maximumNumberOfArguments' => 0,
         'restFiles' => [
-            'Deprecation-86433-VariousStdWrapFunctionsAndContentObjectRenderer-relatedMethods.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
+            'Deprecation-86433-VariousStdWrapFunctionsAndContentObjectRenderer-relatedMethods.rst'
         ],
     ],
     'TYPO3\CMS\Frontend\ContentObject\ContentObjectRenderer->filelink' => [
         'numberOfMandatoryArguments' => 0,
         'maximumNumberOfArguments' => 0,
         'restFiles' => [
-            'Deprecation-86433-VariousStdWrapFunctionsAndContentObjectRenderer-relatedMethods.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
+            'Deprecation-86433-VariousStdWrapFunctionsAndContentObjectRenderer-relatedMethods.rst'
         ],
     ],
     'TYPO3\CMS\Frontend\ContentObject\ContentObjectRenderer->filelist' => [
         'numberOfMandatoryArguments' => 0,
         'maximumNumberOfArguments' => 0,
         'restFiles' => [
-            'Deprecation-86433-VariousStdWrapFunctionsAndContentObjectRenderer-relatedMethods.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
+            'Deprecation-86433-VariousStdWrapFunctionsAndContentObjectRenderer-relatedMethods.rst'
         ],
     ],
     'TYPO3\CMS\Frontend\ContentObject\ContentObjectRenderer->typolinkWrap' => [
         'numberOfMandatoryArguments' => 0,
         'maximumNumberOfArguments' => 0,
         'restFiles' => [
-            'Deprecation-86433-VariousStdWrapFunctionsAndContentObjectRenderer-relatedMethods.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
+            'Deprecation-86433-VariousStdWrapFunctionsAndContentObjectRenderer-relatedMethods.rst'
         ],
     ],
     'TYPO3\CMS\Frontend\ContentObject\ContentObjectRenderer->currentPageUrl' => [
         'numberOfMandatoryArguments' => 0,
         'maximumNumberOfArguments' => 0,
         'restFiles' => [
-            'Deprecation-86433-VariousStdWrapFunctionsAndContentObjectRenderer-relatedMethods.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
+            'Deprecation-86433-VariousStdWrapFunctionsAndContentObjectRenderer-relatedMethods.rst'
         ],
     ],
     'TYPO3\CMS\Core\TypoScript\TemplateService->prependStaticExtra' => [
         'numberOfMandatoryArguments' => 1,
         'maximumNumberOfArguments' => 1,
         'restFiles' => [
-            'Deprecation-86439-MarkSeveralMethodsWithinTemplateServiceAsInternal.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
+            'Deprecation-86439-MarkSeveralMethodsWithinTemplateServiceAsInternal.rst'
         ],
     ],
     'TYPO3\CMS\Core\TypoScript\TemplateService->versionOL' => [
         'numberOfMandatoryArguments' => 1,
         'maximumNumberOfArguments' => 1,
         'restFiles' => [
-            'Deprecation-86439-MarkSeveralMethodsWithinTemplateServiceAsInternal.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
+            'Deprecation-86439-MarkSeveralMethodsWithinTemplateServiceAsInternal.rst'
         ],
     ],
     'TYPO3\CMS\Core\TypoScript\TemplateService->processIncludes' => [
         'numberOfMandatoryArguments' => 0,
         'maximumNumberOfArguments' => 0,
         'restFiles' => [
-            'Deprecation-86439-MarkSeveralMethodsWithinTemplateServiceAsInternal.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
+            'Deprecation-86439-MarkSeveralMethodsWithinTemplateServiceAsInternal.rst'
         ],
     ],
     'TYPO3\CMS\Core\TypoScript\TemplateService->mergeConstantsFromPageTSconfig' => [
         'numberOfMandatoryArguments' => 1,
         'maximumNumberOfArguments' => 1,
         'restFiles' => [
-            'Deprecation-86439-MarkSeveralMethodsWithinTemplateServiceAsInternal.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
+            'Deprecation-86439-MarkSeveralMethodsWithinTemplateServiceAsInternal.rst'
         ],
     ],
     'TYPO3\CMS\Core\TypoScript\TemplateService->flattenSetup' => [
         'numberOfMandatoryArguments' => 2,
         'maximumNumberOfArguments' => 2,
         'restFiles' => [
-            'Deprecation-86439-MarkSeveralMethodsWithinTemplateServiceAsInternal.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
+            'Deprecation-86439-MarkSeveralMethodsWithinTemplateServiceAsInternal.rst'
         ],
     ],
     'TYPO3\CMS\Core\TypoScript\TemplateService->substituteConstants' => [
         'numberOfMandatoryArguments' => 1,
         'maximumNumberOfArguments' => 1,
         'restFiles' => [
-            'Deprecation-86439-MarkSeveralMethodsWithinTemplateServiceAsInternal.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
+            'Deprecation-86439-MarkSeveralMethodsWithinTemplateServiceAsInternal.rst'
         ],
     ],
     'TYPO3\CMS\Core\Authentication\BackendUserAuthentication->isPSet' => [
         'numberOfMandatoryArguments' => 2,
         'maximumNumberOfArguments' => 3,
         'restFiles' => [
-            'Deprecation-86441-VariousMethodsAndPropertiesInsideBackendUserAuthentication.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
+            'Deprecation-86441-VariousMethodsAndPropertiesInsideBackendUserAuthentication.rst'
         ],
     ],
     'TYPO3\CMS\Core\Html\RteHtmlParser->TS_images_db' => [
         'numberOfMandatoryArguments' => 1,
         'maximumNumberOfArguments' => 1,
         'restFiles' => [
-            'Deprecation-86441-VariousMethodsAndPropertiesInsideBackendUserAuthentication.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
+            'Deprecation-86441-VariousMethodsAndPropertiesInsideBackendUserAuthentication.rst'
         ],
     ],
     'TYPO3\CMS\Core\Html\RteHtmlParser->TS_links_db' => [
         'numberOfMandatoryArguments' => 1,
         'maximumNumberOfArguments' => 1,
         'restFiles' => [
-            'Deprecation-86441-VariousMethodsAndPropertiesInsideBackendUserAuthentication.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
+            'Deprecation-86441-VariousMethodsAndPropertiesInsideBackendUserAuthentication.rst'
         ],
     ],
     'TYPO3\CMS\Core\Html\RteHtmlParser->TS_transform_db' => [
         'numberOfMandatoryArguments' => 1,
         'maximumNumberOfArguments' => 1,
         'restFiles' => [
-            'Deprecation-86441-VariousMethodsAndPropertiesInsideBackendUserAuthentication.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
+            'Deprecation-86441-VariousMethodsAndPropertiesInsideBackendUserAuthentication.rst'
         ],
     ],
     'TYPO3\CMS\Core\Html\RteHtmlParser->TS_transform_rte' => [
         'numberOfMandatoryArguments' => 1,
         'maximumNumberOfArguments' => 1,
         'restFiles' => [
-            'Deprecation-86441-VariousMethodsAndPropertiesInsideBackendUserAuthentication.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
+            'Deprecation-86441-VariousMethodsAndPropertiesInsideBackendUserAuthentication.rst'
         ],
     ],
     'TYPO3\CMS\Core\Html\RteHtmlParser->HTMLcleaner_db' => [
         'numberOfMandatoryArguments' => 1,
         'maximumNumberOfArguments' => 1,
         'restFiles' => [
-            'Deprecation-86441-VariousMethodsAndPropertiesInsideBackendUserAuthentication.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
+            'Deprecation-86441-VariousMethodsAndPropertiesInsideBackendUserAuthentication.rst'
         ],
     ],
     'TYPO3\CMS\Core\Html\RteHtmlParser->getKeepTags' => [
         'numberOfMandatoryArguments' => 0,
         'maximumNumberOfArguments' => 1,
         'restFiles' => [
-            'Deprecation-86441-VariousMethodsAndPropertiesInsideBackendUserAuthentication.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
+            'Deprecation-86441-VariousMethodsAndPropertiesInsideBackendUserAuthentication.rst'
         ],
     ],
     'TYPO3\CMS\Core\Html\RteHtmlParser->divideIntoLines' => [
         'numberOfMandatoryArguments' => 1,
         'maximumNumberOfArguments' => 3,
         'restFiles' => [
-            'Deprecation-86441-VariousMethodsAndPropertiesInsideBackendUserAuthentication.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
+            'Deprecation-86441-VariousMethodsAndPropertiesInsideBackendUserAuthentication.rst'
         ],
     ],
     'TYPO3\CMS\Core\Html\RteHtmlParser->setDivTags' => [
         'numberOfMandatoryArguments' => 1,
         'maximumNumberOfArguments' => 1,
         'restFiles' => [
-            'Deprecation-86441-VariousMethodsAndPropertiesInsideBackendUserAuthentication.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
+            'Deprecation-86441-VariousMethodsAndPropertiesInsideBackendUserAuthentication.rst'
         ],
     ],
     'TYPO3\CMS\Core\Html\RteHtmlParser->getWHFromAttribs' => [
         'numberOfMandatoryArguments' => 1,
         'maximumNumberOfArguments' => 1,
         'restFiles' => [
-            'Deprecation-86441-VariousMethodsAndPropertiesInsideBackendUserAuthentication.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
+            'Deprecation-86441-VariousMethodsAndPropertiesInsideBackendUserAuthentication.rst'
         ],
     ],
     'TYPO3\CMS\Core\Html\RteHtmlParser->urlInfoForLinkTags' => [
         'numberOfMandatoryArguments' => 1,
         'maximumNumberOfArguments' => 1,
         'restFiles' => [
-            'Deprecation-86441-VariousMethodsAndPropertiesInsideBackendUserAuthentication.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
+            'Deprecation-86441-VariousMethodsAndPropertiesInsideBackendUserAuthentication.rst'
         ],
     ],
     'TYPO3\CMS\Core\Html\RteHtmlParser->TS_AtagToAbs' => [
         'numberOfMandatoryArguments' => 1,
         'maximumNumberOfArguments' => 1,
         'restFiles' => [
-            'Deprecation-86441-VariousMethodsAndPropertiesInsideBackendUserAuthentication.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
+            'Deprecation-86441-VariousMethodsAndPropertiesInsideBackendUserAuthentication.rst'
         ],
     ],
     'TYPO3\CMS\Core\Page\PageRenderer->loadJquery' => [
         'numberOfMandatoryArguments' => 0,
         'maximumNumberOfArguments' => 3,
         'restFiles' => [
-            'Deprecation-86438-PageRenderer-loadJQuery.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
+            'Deprecation-86438-PageRenderer-loadJQuery.rst'
         ],
     ],
     'TYPO3\CMS\Core\Authentication\AbstractUserAuthentication->fetchUserRecord' => [
         'numberOfMandatoryArguments' => 2,
         'maximumNumberOfArguments' => 3,
         'restFiles' => [
-            'Deprecation-86466-AbstractUserAuthentication-fetchUserRecord.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
+            'Deprecation-86466-AbstractUserAuthentication-fetchUserRecord.rst'
         ],
     ],
     'TYPO3\CMS\Core\TypoScript\Parser\TypoScriptParser->nextDivider' => [
         'numberOfMandatoryArguments' => 0,
         'maximumNumberOfArguments' => 0,
         'restFiles' => [
-            'Deprecation-86461-MarkVariousTypoScriptParsingFunctionalityAsInternal.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
+            'Deprecation-86461-MarkVariousTypoScriptParsingFunctionalityAsInternal.rst'
         ],
     ],
     'TYPO3\CMS\Core\TypoScript\Parser\TypoScriptParser->parseSub' => [
         'numberOfMandatoryArguments' => 1,
         'maximumNumberOfArguments' => 1,
         'restFiles' => [
-            'Deprecation-86461-MarkVariousTypoScriptParsingFunctionalityAsInternal.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst'
+            'Deprecation-86461-MarkVariousTypoScriptParsingFunctionalityAsInternal.rst'
         ],
     ],
     'TYPO3\CMS\Core\TypoScript\Parser\TypoScriptParser->rollParseSub' => [
         'numberOfMandatoryArguments' => 2,
         'maximumNumberOfArguments' => 2,
         'restFiles' => [
-            'Deprecation-86461-MarkVariousTypoScriptParsingFunctionalityAsInternal.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
+            'Deprecation-86461-MarkVariousTypoScriptParsingFunctionalityAsInternal.rst'
         ],
     ],
     'TYPO3\CMS\Core\TypoScript\Parser\TypoScriptParser->setVal' => [
         'numberOfMandatoryArguments' => 3,
         'maximumNumberOfArguments' => 4,
         'restFiles' => [
-            'Deprecation-86461-MarkVariousTypoScriptParsingFunctionalityAsInternal.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
+            'Deprecation-86461-MarkVariousTypoScriptParsingFunctionalityAsInternal.rst'
         ],
     ],
     'TYPO3\CMS\Core\TypoScript\Parser\TypoScriptParser->error' => [
         'numberOfMandatoryArguments' => 1,
         'maximumNumberOfArguments' => 2,
         'restFiles' => [
-            'Deprecation-86461-MarkVariousTypoScriptParsingFunctionalityAsInternal.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
+            'Deprecation-86461-MarkVariousTypoScriptParsingFunctionalityAsInternal.rst'
         ],
     ],
     'TYPO3\CMS\Core\TypoScript\Parser\TypoScriptParser->regHighLight' => [
         'numberOfMandatoryArguments' => 2,
         'maximumNumberOfArguments' => 3,
         'restFiles' => [
-            'Deprecation-86461-MarkVariousTypoScriptParsingFunctionalityAsInternal.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
+            'Deprecation-86461-MarkVariousTypoScriptParsingFunctionalityAsInternal.rst'
         ],
     ],
     'TYPO3\CMS\Core\TypoScript\Parser\TypoScriptParser->syntaxHighlight_print' => [
         'numberOfMandatoryArguments' => 2,
         'maximumNumberOfArguments' => 2,
         'restFiles' => [
-            'Deprecation-86461-MarkVariousTypoScriptParsingFunctionalityAsInternal.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
+            'Deprecation-86461-MarkVariousTypoScriptParsingFunctionalityAsInternal.rst'
         ],
     ],
     'TYPO3\CMS\Core\Resource\ResourceStorage->dumpFileContents' => [
         'numberOfMandatoryArguments' => 1,
         'maximumNumberOfArguments' => 4,
         'restFiles' => [
-            'Deprecation-83793-FALResourceStorage-dumpFileContents.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst'
+            'Deprecation-83793-FALResourceStorage-dumpFileContents.rst'
         ],
     ],
     'TYPO3\CMS\Frontend\Controller\TypoScriptFrontendController->processOutput' => [
         'numberOfMandatoryArguments' => 0,
         'maximumNumberOfArguments' => 0,
         'restFiles' => [
-            'Deprecation-86486-TypoScriptFrontendController-processOutput.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst'
-        ],
-    ],
-    'TYPO3\CMS\Extbase\Persistence\Generic\Mapper\DataMapper->__construct' => [
-        'numberOfMandatoryArguments' => 7,
-        'maximumNumberOfArguments' => 8,
-        'restFiles' => [
-            'Breaking-87305-UseConstructorInjectionInDataMapper.rst',
-            'Deprecation-87305-UseConstructorInjectionInDataMapper.rst',
-        ],
-    ],
-    'TYPO3\CMS\Core\DataHandling\DataHandler->process_uploads' => [
-        'numberOfMandatoryArguments' => 1,
-        'maximumNumberOfArguments' => 1,
-        'restFiles' => [
-            'Breaking-87305-UseConstructorInjectionInDataMapper.rst',
-        ],
-    ],
-    'TYPO3\CMS\Extbase\Mvc\Web\Routing\UriBuilder->setUseCacheHash' => [
-        'numberOfMandatoryArguments' => 1,
-        'maximumNumberOfArguments' => 1,
-        'restFiles' => [
-            'Deprecation-88406-SetCacheHashnoCacheHashOptionsInViewHelpersAndUriBuilder.rst'
-        ],
-    ],
-    'TYPO3\CMS\Extbase\Mvc\Web\Routing\UriBuilder->getUseCacheHash' => [
-        'numberOfMandatoryArguments' => 0,
-        'maximumNumberOfArguments' => 0,
-        'restFiles' => [
-            'Deprecation-88406-SetCacheHashnoCacheHashOptionsInViewHelpersAndUriBuilder.rst'
-        ],
-    ],
-    'TYPO3\CMS\Frontend\Controller\TypoScriptFrontendController->settingLocale' => [
-        'numberOfMandatoryArguments' => 0,
-        'maximumNumberOfArguments' => 0,
-        'restFiles' => [
-            'Deprecation-88473-TypoScriptFrontendController-settingLocale.rst'
-        ],
-    ],
-    'TYPO3\CMS\Core\Database\SoftReferenceIndex->findRef_images' => [
-        'numberOfMandatoryArguments' => 1,
-        'maximumNumberOfArguments' => 1,
-        'restFiles' => [
-            'Breaking-88500-RTEImageHandlingFunctionalityDropped.rst'
-        ],
-    ],
-    'TYPO3\CMS\Core\Html\RteHtmlParser->TS_images_rte' => [
-        'numberOfMandatoryArguments' => 1,
-        'maximumNumberOfArguments' => 1,
-        'restFiles' => [
-            'Breaking-88500-RTEImageHandlingFunctionalityDropped.rst'
-        ],
-    ],
-    'TYPO3\CMS\Impexp\ImportExport->getRTEoriginalFilename' => [
-        'numberOfMandatoryArguments' => 1,
-        'maximumNumberOfArguments' => 1,
-        'restFiles' => [
-            'Breaking-88500-RTEImageHandlingFunctionalityDropped.rst'
-        ],
-    ],
-    'TYPO3\CMS\Recordlist\RecordList\DatabaseRecordList->getButtons' => [
-        'numberOfMandatoryArguments' => 0,
-        'maximumNumberOfArguments' => 0,
-        'restFiles' => [
-            'Breaking-88779-RecordListRemoveUnusedCode.rst'
-        ],
-    ],
-    'TYPO3\CMS\Recordlist\RecordList\DatabaseRecordList->thumbCode' => [
-        'numberOfMandatoryArguments' => 3,
-        'maximumNumberOfArguments' => 3,
-        'restFiles' => [
-            'Breaking-88779-RecordListRemoveUnusedCode.rst'
-        ],
-    ],
-    'TYPO3\CMS\Recordlist\RecordList\DatabaseRecordList->requestUri' => [
-        'numberOfMandatoryArguments' => 0,
-        'maximumNumberOfArguments' => 0,
-        'restFiles' => [
-            'Breaking-88779-RecordListRemoveUnusedCode.rst'
-        ],
-    ],
-    'TYPO3\CMS\Recordlist\RecordList\DatabaseRecordList->writeTop' => [
-        'numberOfMandatoryArguments' => 0,
-        'maximumNumberOfArguments' => 0,
-        'restFiles' => [
-            'Breaking-88779-RecordListRemoveUnusedCode.rst'
-        ],
-    ],
-    'TYPO3\CMS\Recordlist\RecordList\DatabaseRecordList->fwd_rwd_nav' => [
-        'numberOfMandatoryArguments' => 0,
-        'maximumNumberOfArguments' => 1,
-        'restFiles' => [
-            'Breaking-88779-RecordListRemoveUnusedCode.rst'
-        ],
-    ],
-    'TYPO3\CMS\Recordlist\RecordList\DatabaseRecordList->fwd_rwd_HTML' => [
-        'numberOfMandatoryArguments' => 2,
-        'maximumNumberOfArguments' => 3,
-        'restFiles' => [
-            'Breaking-88779-RecordListRemoveUnusedCode.rst'
-        ],
-    ],
-    '\TYPO3\CMS\Frontend\ContentObject\ContentObjectRenderer::sendNotifyEmail' => [
-        'numberOfMandatoryArguments' => 4,
-        'maximumNumberOfArguments' => 6,
-        'restFiles' => [
-            'Deprecation-88850-ContentObjectRendererSendNotifyEmail.rst'
-        ],
-    ],
-    'TYPO3\CMS\Backend\History\RecordHistory->getHistoryEntry' => [
-        'numberOfMandatoryArguments' => 1,
-        'maximumNumberOfArguments' => 1,
-        'restFiles' => [
-            'Deprecation-89127-CleanupRecordHistoryHandling.rst',
-        ],
-    ],
-    'TYPO3\CMS\Backend\History\RecordHistory->getHistoryData' => [
-        'numberOfMandatoryArguments' => 2,
-        'maximumNumberOfArguments' => 4,
-        'restFiles' => [
-            'Deprecation-89127-CleanupRecordHistoryHandling.rst',
-        ],
-    ],
-    'TYPO3\CMS\Backend\History\RecordHistory->createChangeLog' => [
-        'numberOfMandatoryArguments' => 0,
-        'maximumNumberOfArguments' => 0,
-        'restFiles' => [
-            'Deprecation-89127-CleanupRecordHistoryHandling.rst',
-        ],
-    ],
-    'TYPO3\CMS\Backend\History\RecordHistory->shouldPerformRollback' => [
-        'numberOfMandatoryArguments' => 0,
-        'maximumNumberOfArguments' => 0,
-        'restFiles' => [
-            'Deprecation-89127-CleanupRecordHistoryHandling.rst',
-        ],
-    ],
-    'TYPO3\CMS\Backend\History\RecordHistory->getElementData' => [
-        'numberOfMandatoryArguments' => 0,
-        'maximumNumberOfArguments' => 0,
-        'restFiles' => [
-            'Deprecation-89127-CleanupRecordHistoryHandling.rst',
-        ],
-    ],
-    'TYPO3\CMS\Backend\History\RecordHistory->performRollback' => [
-        'numberOfMandatoryArguments' => 0,
-        'maximumNumberOfArguments' => 0,
-        'restFiles' => [
-            'Deprecation-89127-CleanupRecordHistoryHandling.rst',
-        ],
-    ],
-    'TYPO3\CMS\Backend\History\RecordHistory->createMultipleDiff' => [
-        'numberOfMandatoryArguments' => 0,
-        'maximumNumberOfArguments' => 0,
-        'restFiles' => [
-            'Deprecation-89127-CleanupRecordHistoryHandling.rst',
-        ],
-    ],
-    'TYPO3\CMS\Backend\History\RecordHistory->setLastHistoryEntry' => [
-        'numberOfMandatoryArguments' => 1,
-        'maximumNumberOfArguments' => 1,
-        'restFiles' => [
-            'Deprecation-89127-CleanupRecordHistoryHandling.rst',
+            'Deprecation-86486-TypoScriptFrontendController-processOutput.rst'
         ],
     ],
 ];

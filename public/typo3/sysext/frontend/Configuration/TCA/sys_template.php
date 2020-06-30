@@ -27,7 +27,7 @@ return [
         'searchFields' => 'title,constants,config'
     ],
     'interface' => [
-        'showRecordFieldList' => 'title,clear,root,basedOn,sitetitle,description,hidden,starttime,endtime'
+        'showRecordFieldList' => 'title,clear,root,basedOn,nextLevel,sitetitle,description,hidden,starttime,endtime'
     ],
     'columns' => [
         'title' => [
@@ -116,12 +116,24 @@ return [
             'config' => [
                 'type' => 'text',
                 'cols' => 48,
-                'rows' => 10,
+                'rows' => 15,
                 'wrap' => 'off',
                 'enableTabulator' => true,
                 'fixedFont' => true,
                 'softref' => 'email[subst],url[subst]'
             ],
+        ],
+        'nextLevel' => [
+            'label' => 'LLL:EXT:frontend/Resources/Private/Language/locallang_tca.xlf:sys_template.nextLevel',
+            'config' => [
+                'type' => 'group',
+                'internal_type' => 'db',
+                'allowed' => 'sys_template',
+                'size' => 1,
+                'maxitems' => 1,
+                'minitems' => 0,
+                'default' => '',
+            ]
         ],
         'include_static_file' => [
             'label' => 'LLL:EXT:frontend/Resources/Private/Language/locallang_tca.xlf:sys_template.include_static_file',
@@ -131,6 +143,7 @@ return [
                 'size' => 10,
                 'maxitems' => 100,
                 'items' => [],
+                'enableMultiSelectFilterTextfield' => true,
                 'softref' => 'ext_fileref'
             ]
         ],
@@ -180,7 +193,7 @@ return [
             'label' => 'LLL:EXT:frontend/Resources/Private/Language/locallang_tca.xlf:sys_template.config',
             'config' => [
                 'type' => 'text',
-                'rows' => 10,
+                'rows' => 15,
                 'cols' => 48,
                 'wrap' => 'off',
                 'enableTabulator' => true,
@@ -209,6 +222,14 @@ return [
                 ],
                 'default' => 0
             ]
+        ],
+        't3ver_label' => [
+            'label' => 'LLL:EXT:core/Resources/Private/Language/locallang_general.xlf:LGL.versionLabel',
+            'config' => [
+                'type' => 'input',
+                'size' => 30,
+                'max' => 255
+            ]
         ]
     ],
     'types' => [
@@ -216,7 +237,7 @@ return [
             --div--;LLL:EXT:core/Resources/Private/Language/Form/locallang_tabs.xlf:general,
                 title, sitetitle, constants, config,
             --div--;LLL:EXT:frontend/Resources/Private/Language/locallang_tca.xlf:sys_template.tabs.options,
-                clear, root,
+                clear, root, nextLevel,
             --div--;LLL:EXT:frontend/Resources/Private/Language/locallang_tca.xlf:sys_template.tabs.include,
                 includeStaticAfterBasedOn, include_static_file, basedOn, static_file_mode,
             --div--;LLL:EXT:core/Resources/Private/Language/Form/locallang_tabs.xlf:access,

@@ -136,20 +136,6 @@ class SilentConfigurationUpgradeService
         'SYS/isInitialDatabaseImportDone',
         // #84810
         'BE/explicitConfirmationOfTranslation',
-        // #87482
-        'EXT/extConf',
-        // #87767
-        'SYS/recursiveDomainSearch',
-        // #88376
-        'FE/pageNotFound_handling',
-        'FE/pageNotFound_handling_statheader',
-        'FE/pageNotFound_handling_accessdeniedheader',
-        'FE/pageUnavailable_handling',
-        'FE/pageUnavailable_handling_statheader',
-        // #88458
-        'FE/get_url_id_token',
-        // #88500
-        'BE/RTE_imageStorageDir',
     ];
 
     public function __construct(ConfigurationManager $configurationManager = null)
@@ -182,8 +168,6 @@ class SilentConfigurationUpgradeService
         $this->migrateExceptionErrors();
         $this->migrateDisplayErrorsSetting();
         $this->migrateSaltedPasswordsSettings();
-        $this->migrateCachingFrameworkCaches();
-        $this->migrateMailSettingsToSendmail();
 
         // Should run at the end to prevent obsolete settings are removed before migration
         $this->removeObsoleteLocalConfigurationSettings();
@@ -1012,8 +996,16 @@ class SilentConfigurationUpgradeService
         } catch (MissingArrayPathException $e) {
             $extensionConfiguration = [];
         }
+        try {
+            // The silent upgrade may be executed before LayoutController synchronized old serialized extConf
+            // settings to EXTENSIONS if upgrading from v8 to v9.
+            $extConfConfiguration = (string)$confManager->getLocalConfigurationValueByPath('EXT/extConf/saltedpasswords');
+            $configsToRemove[] = 'EXT/extConf/saltedpasswords';
+        } catch (MissingArrayPathException $e) {
+            $extConfConfiguration = [];
+        }
         // Migration already done
-        if (empty($extensionConfiguration)) {
+        if (empty($extensionConfiguration) && empty($extConfConfiguration)) {
             return;
         }
         // Upgrade to best available hash method. This is only done once since that code will no longer be reached
@@ -1050,53 +1042,5 @@ class SilentConfigurationUpgradeService
         }
         $confManager->removeLocalConfigurationKeysByPath($configsToRemove);
         $this->throwConfigurationChangedException();
-    }
-
-    /**
-     * Renames all SYS[caching][cache] configuration names to names without the prefix "cache_".
-     * see #88366
-     */
-    protected function migrateCachingFrameworkCaches()
-    {
-        $confManager = $this->configurationManager;
-        try {
-            $cacheConfigurations = (array)$confManager->getLocalConfigurationValueByPath('SYS/caching/cacheConfigurations');
-            $newConfig = [];
-            $hasBeenModified = false;
-            foreach ($cacheConfigurations as $identifier => $cacheConfiguration) {
-                if (strpos($identifier, 'cache_') === 0) {
-                    $identifier = substr($identifier, 6);
-                    $hasBeenModified = true;
-                }
-                $newConfig[$identifier] = $cacheConfiguration;
-            }
-
-            if ($hasBeenModified) {
-                $confManager->setLocalConfigurationValueByPath('SYS/caching/cacheConfigurations', $newConfig);
-                $this->throwConfigurationChangedException();
-            }
-        } catch (MissingArrayPathException $e) {
-            // no change inside the LocalConfiguration.php found, so nothing needs to be modified
-        }
-    }
-
-    /**
-     * Migrates "mail" to "sendmail" as "mail" (PHP's built-in mail() method) is not supported anymore
-     * with Symfony components.
-     * See #88643
-     */
-    protected function migrateMailSettingsToSendmail()
-    {
-        $confManager = $this->configurationManager;
-        try {
-            $transport = (array)$confManager->getLocalConfigurationValueByPath('MAIL/transport');
-            if ($transport === 'mail') {
-                $confManager->setLocalConfigurationValueByPath('MAIL/transport', 'sendmail');
-                $confManager->setLocalConfigurationValueByPath('MAIL/transport_sendmail_command', (string)@ini_get('sendmail_path'));
-                $this->throwConfigurationChangedException();
-            }
-        } catch (MissingArrayPathException $e) {
-            // no change inside the LocalConfiguration.php found, so nothing needs to be modified
-        }
     }
 }

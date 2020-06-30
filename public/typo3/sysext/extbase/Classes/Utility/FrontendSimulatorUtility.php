@@ -1,6 +1,4 @@
 <?php
-declare(strict_types = 1);
-
 namespace TYPO3\CMS\Extbase\Utility;
 
 /*
@@ -16,10 +14,6 @@ namespace TYPO3\CMS\Extbase\Utility;
  * The TYPO3 project - inspiring people to share!
  */
 
-use TYPO3\CMS\Core\Utility\GeneralUtility;
-use TYPO3\CMS\Frontend\ContentObject\ContentObjectRenderer;
-use TYPO3\CMS\Frontend\Controller\TypoScriptFrontendController;
-
 /**
  * Utilities to simulate a frontend in backend context.
  *
@@ -28,7 +22,7 @@ use TYPO3\CMS\Frontend\Controller\TypoScriptFrontendController;
 class FrontendSimulatorUtility
 {
     /**
-     * @var TypoScriptFrontendController|null
+     * @var mixed
      */
     protected static $tsfeBackup;
 
@@ -36,14 +30,14 @@ class FrontendSimulatorUtility
      * Sets the $TSFE->cObjectDepthCounter in Backend mode
      * This somewhat hacky work around is currently needed because the cObjGetSingle() function of \TYPO3\CMS\Frontend\ContentObject\ContentObjectRenderer relies on this setting
      *
-     * @param ContentObjectRenderer|null $cObj
+     * @param \TYPO3\CMS\Frontend\ContentObject\ContentObjectRenderer|null $cObj
      */
-    public static function simulateFrontendEnvironment(ContentObjectRenderer $cObj = null): void
+    public static function simulateFrontendEnvironment(\TYPO3\CMS\Frontend\ContentObject\ContentObjectRenderer $cObj = null)
     {
         self::$tsfeBackup = $GLOBALS['TSFE'] ?? null;
         $GLOBALS['TSFE'] = new \stdClass();
         $GLOBALS['TSFE']->cObjectDepthCounter = 100;
-        $GLOBALS['TSFE']->cObj = $cObj ?? GeneralUtility::makeInstance(ContentObjectRenderer::class);
+        $GLOBALS['TSFE']->cObj = $cObj ?? \TYPO3\CMS\Core\Utility\GeneralUtility::makeInstance(\TYPO3\CMS\Frontend\ContentObject\ContentObjectRenderer::class);
     }
 
     /**
@@ -51,9 +45,9 @@ class FrontendSimulatorUtility
      *
      * @see simulateFrontendEnvironment()
      */
-    public static function resetFrontendEnvironment(): void
+    public static function resetFrontendEnvironment()
     {
-        if (self::$tsfeBackup !== null) {
+        if (!empty(self::$tsfeBackup)) {
             $GLOBALS['TSFE'] = self::$tsfeBackup;
         }
     }

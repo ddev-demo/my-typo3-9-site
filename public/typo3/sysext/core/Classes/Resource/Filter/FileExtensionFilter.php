@@ -19,6 +19,7 @@ use TYPO3\CMS\Core\Resource\Driver\DriverInterface;
 use TYPO3\CMS\Core\Resource\Exception\FileDoesNotExistException;
 use TYPO3\CMS\Core\Resource\ResourceFactory;
 use TYPO3\CMS\Core\Utility\GeneralUtility;
+use TYPO3\CMS\Core\Utility\PathUtility;
 
 /**
  * Utility methods for filtering filenames
@@ -107,7 +108,11 @@ class FileExtensionFilter
             } catch (\InvalidArgumentException $e) {
                 $fileInfo = [];
             }
-            if (!$this->isAllowed($fileInfo['extension'] ?? '')) {
+            if (!isset($fileInfo['extension'])) {
+                trigger_error('Guessing FAL file extensions will be removed in TYPO3 v10.0. The FAL (' . get_class($driver) . ') driver method getFileInfoByIdentifier() should return the file extension.', E_USER_DEPRECATED);
+                $fileInfo['extension'] = PathUtility::pathinfo($itemIdentifier, PATHINFO_EXTENSION);
+            }
+            if (!$this->isAllowed($fileInfo['extension'])) {
                 $returnCode = -1;
             }
         }

@@ -14,8 +14,10 @@ namespace TYPO3\CMS\Core\Database;
  * The TYPO3 project - inspiring people to share!
  */
 
+use TYPO3\CMS\Backend\Module\BaseScriptClass;
 use TYPO3\CMS\Backend\Utility\BackendUtility;
 use TYPO3\CMS\Core\Authentication\BackendUserAuthentication;
+use TYPO3\CMS\Core\Core\Environment;
 use TYPO3\CMS\Core\Database\Query\QueryHelper;
 use TYPO3\CMS\Core\Database\Query\Restriction\DeletedRestriction;
 use TYPO3\CMS\Core\Localization\LanguageService;
@@ -58,7 +60,7 @@ class QueryGenerator
             '41_' => 'binary AND does not equal',
             '42_' => 'binary OR equals',
             '43_' => 'binary OR does not equal',
-            // Type = multiple, relation, offset = 64
+            // Type = multiple, relation, files , offset = 64
             '64_' => 'equals',
             '65_' => 'does not equal',
             '66_' => 'contains',
@@ -117,7 +119,7 @@ class QueryGenerator
         '41' => '(#FIELD# & #VALUE#)!=#VALUE#',
         '42' => '(#FIELD# | #VALUE#)=#VALUE#',
         '43' => '(#FIELD# | #VALUE#)!=#VALUE#',
-        // Type = multiple, relation, offset = 64
+        // Type = multiple, relation, files , offset = 64
         '64' => '#FIELD# = \'#VALUE#\'',
         '65' => '#FIELD# != \'#VALUE#\'',
         '66' => '#FIELD# LIKE \'%#VALUE#%\' AND #FIELD# LIKE \'%#VALUE1#%\'',
@@ -157,6 +159,7 @@ class QueryGenerator
         'number' => 1,
         'multiple' => 2,
         'relation' => 2,
+        'files' => 2,
         'date' => 3,
         'time' => 3,
         'boolean' => 4,
@@ -333,6 +336,7 @@ class QueryGenerator
                             }
                             break;
                         case 'group':
+                            $this->fields[$fieldName]['type'] = 'files';
                             if ($this->fields[$fieldName]['internal_type'] === 'db') {
                                 $this->fields[$fieldName]['type'] = 'relation';
                             }
@@ -373,7 +377,7 @@ class QueryGenerator
         $this->queryConfig = array(
         array(
         'operator' => 'AND',
-        'type' => 'FIELD_space_before_class',
+        'type' => 'FIELD_spaceBefore',
         ),
         array(
         'operator' => 'AND',
@@ -386,7 +390,7 @@ class QueryGenerator
         'nl' => array(
         array(
         'operator' => 'AND',
-        'type' => 'FIELD_space_before_class',
+        'type' => 'FIELD_spaceBefore',
         'negate' => 1,
         'inputValue' => 'foo foo'
         ),
@@ -671,7 +675,7 @@ class QueryGenerator
                     $lineHTML[] = '<div class="form-inline">';
                     $lineHTML[] = $this->makeComparisonSelector($subscript, $fieldName, $conf);
                     if ($conf['comparison'] === 68 || $conf['comparison'] === 69 || $conf['comparison'] === 162 || $conf['comparison'] === 163) {
-                        $lineHTML[] = '<select class="form-control" name="' . $fieldPrefix . '[inputValue][]" multiple="multiple">';
+                        $lineHTML[] = '<select class="form-control" name="' . $fieldPrefix . '[inputValue]' . '[]" multiple="multiple">';
                     } elseif ($conf['comparison'] === 66 || $conf['comparison'] === 67) {
                         if (is_array($conf['inputValue'])) {
                             $conf['inputValue'] = implode(',', $conf['inputValue']);
@@ -683,7 +687,7 @@ class QueryGenerator
                         }
                         $lineHTML[] = '<select class="form-control t3js-submit-change" name="' . $fieldPrefix . '[inputValue]">';
                     } else {
-                        $lineHTML[] = '<select class="form-control t3js-submit-change" name="' . $fieldPrefix . '[inputValue]">';
+                        $lineHTML[] = '<select class="form-control t3js-submit-change" name="' . $fieldPrefix . '[inputValue]' . '">';
                     }
                     if ($conf['comparison'] != 66 && $conf['comparison'] != 67) {
                         $lineHTML[] = $this->makeOptionList($fieldName, $conf, $this->table);
@@ -691,10 +695,25 @@ class QueryGenerator
                     }
                     $lineHTML[] = '</div>';
                     break;
+                case 'files':
+                    $lineHTML[] = '<div class="form-inline">';
+                    $lineHTML[] = $this->makeComparisonSelector($subscript, $fieldName, $conf);
+                    if ($conf['comparison'] === 68 || $conf['comparison'] === 69) {
+                        $lineHTML[] = '<select class="form-control" name="' . $fieldPrefix . '[inputValue]' . '[]" multiple="multiple">';
+                    } else {
+                        $lineHTML[] = '<select class="form-control t3js-submit-change" name="' . $fieldPrefix . '[inputValue]' . '">';
+                    }
+                    $lineHTML[] = '<option value=""></option>' . $this->makeOptionList($fieldName, $conf, $this->table);
+                    $lineHTML[] = '</select>';
+                    if ($conf['comparison'] === 66 || $conf['comparison'] === 67) {
+                        $lineHTML[] = ' + <input class="form-control t3js-clearable" type="text" value="' . htmlspecialchars($conf['inputValue1']) . '" name="' . $fieldPrefix . '[inputValue1]' . '">';
+                    }
+                    $lineHTML[] = '</div>';
+                    break;
                 case 'boolean':
                     $lineHTML[] = '<div class="form-inline">';
                     $lineHTML[] = $this->makeComparisonSelector($subscript, $fieldName, $conf);
-                    $lineHTML[] = '<input type="hidden" value="1" name="' . $fieldPrefix . '[inputValue]">';
+                    $lineHTML[] = '<input type="hidden" value="1" name="' . $fieldPrefix . '[inputValue]' . '">';
                     $lineHTML[] = '</div>';
                     break;
                 default:
@@ -702,10 +721,10 @@ class QueryGenerator
                     $lineHTML[] = $this->makeComparisonSelector($subscript, $fieldName, $conf);
                     if ($conf['comparison'] === 37 || $conf['comparison'] === 36) {
                         // between:
-                        $lineHTML[] = '<input class="form-control t3js-clearable" type="text" value="' . htmlspecialchars($conf['inputValue']) . '" name="' . $fieldPrefix . '[inputValue]">';
-                        $lineHTML[] = '<input class="form-control t3js-clearable" type="text" value="' . htmlspecialchars($conf['inputValue1']) . '" name="' . $fieldPrefix . '[inputValue1]">';
+                        $lineHTML[] = '<input class="form-control t3js-clearable" type="text" value="' . htmlspecialchars($conf['inputValue']) . '" name="' . $fieldPrefix . '[inputValue]' . '">';
+                        $lineHTML[] = '<input class="form-control t3js-clearable" type="text" value="' . htmlspecialchars($conf['inputValue1']) . '" name="' . $fieldPrefix . '[inputValue1]' . '">';
                     } else {
-                        $lineHTML[] = '<input class="form-control t3js-clearable" type="text" value="' . htmlspecialchars($conf['inputValue']) . '" name="' . $fieldPrefix . '[inputValue]">';
+                        $lineHTML[] = '<input class="form-control t3js-clearable" type="text" value="' . htmlspecialchars($conf['inputValue']) . '" name="' . $fieldPrefix . '[inputValue]' . '">';
                     }
                     $lineHTML[] = '</div>';
             }
@@ -752,7 +771,7 @@ class QueryGenerator
         $lineHTML[] = '	<div class="input-group">';
         $lineHTML[] = $this->mkCompSelect($fieldPrefix . '[comparison]', $conf['comparison'], $conf['negate'] ? 1 : 0);
         $lineHTML[] = '	<div class="input-group-addon">';
-        $lineHTML[] = '		<input type="checkbox" class="checkbox t3js-submit-click"' . ($conf['negate'] ? ' checked' : '') . ' name="' . htmlspecialchars($fieldPrefix) . '[negate]">';
+        $lineHTML[] = '		<input type="checkbox" class="checkbox t3js-submit-click"' . ($conf['negate'] ? ' checked' : '') . ' name="' . htmlspecialchars($fieldPrefix) . '[negate]' . '">';
         $lineHTML[] = '	</div>';
         $lineHTML[] = '	</div>';
         return implode(LF, $lineHTML);
@@ -771,6 +790,35 @@ class QueryGenerator
         $out = [];
         $fieldSetup = $this->fields[$fieldName];
         $languageService = $this->getLanguageService();
+        if ($fieldSetup['type'] === 'files') {
+            if ($conf['comparison'] === 66 || $conf['comparison'] === 67) {
+                $fileExtArray = explode(',', $fieldSetup['allowed']);
+                natcasesort($fileExtArray);
+                foreach ($fileExtArray as $fileExt) {
+                    if (GeneralUtility::inList($conf['inputValue'], $fileExt)) {
+                        $out[] = '<option value="' . htmlspecialchars($fileExt) . '" selected>.' . htmlspecialchars($fileExt) . '</option>';
+                    } else {
+                        $out[] = '<option value="' . htmlspecialchars($fileExt) . '">.' . htmlspecialchars($fileExt) . '</option>';
+                    }
+                }
+            }
+            $d = dir(Environment::getPublicPath() . '/' . $fieldSetup['uploadfolder']);
+            while (false !== ($entry = $d->read())) {
+                if ($entry === '.' || $entry === '..') {
+                    continue;
+                }
+                $fileArray[] = $entry;
+            }
+            $d->close();
+            natcasesort($fileArray);
+            foreach ($fileArray as $fileName) {
+                if (GeneralUtility::inList($conf['inputValue'], $fileName)) {
+                    $out[] = '<option value="' . htmlspecialchars($fileName) . '" selected>' . htmlspecialchars($fileName) . '</option>';
+                } else {
+                    $out[] = '<option value="' . htmlspecialchars($fileName) . '">' . htmlspecialchars($fileName) . '</option>';
+                }
+            }
+        }
         if ($fieldSetup['type'] === 'multiple') {
             $optGroupOpen = false;
             foreach ($fieldSetup['items'] as $key => $val) {
@@ -826,7 +874,7 @@ class QueryGenerator
                     }
                 }
             }
-            if (strpos($fieldSetup['allowed'], ',') !== false) {
+            if (stristr($fieldSetup['allowed'], ',')) {
                 $from_table_Arr = explode(',', $fieldSetup['allowed']);
                 $useTablePrefix = 1;
                 if (!$fieldSetup['prepend_tname']) {
@@ -836,16 +884,16 @@ class QueryGenerator
                         ->from($table)
                         ->execute();
                     while ($row = $statement->fetch()) {
-                        if (strpos($row[$fieldName], ',') !== false) {
+                        if (stristr($row[$fieldName], ',')) {
                             $checkContent = explode(',', $row[$fieldName]);
                             foreach ($checkContent as $singleValue) {
-                                if (strpos($singleValue, '_') === false) {
+                                if (!stristr($singleValue, '_')) {
                                     $dontPrefixFirstTable = 1;
                                 }
                             }
                         } else {
                             $singleValue = $row[$fieldName];
-                            if ($singleValue !== '' && strpos($singleValue, '_') === false) {
+                            if ($singleValue !== '' && !stristr($singleValue, '_')) {
                                 $dontPrefixFirstTable = 1;
                             }
                         }
@@ -1312,14 +1360,18 @@ class QueryGenerator
         $prefix = $this->enablePrefix ? $this->table . '.' : '';
         if (!$first) {
             // Is it OK to insert the AND operator if none is set?
-            $qs .= trim($conf['operator'] ?: 'AND') . ' ';
+            $operator = strtoupper(trim($conf['operator']));
+            if (!in_array($operator, ['AND', 'OR'], true)) {
+                $operator = 'AND';
+            }
+            $qs .= $operator . ' ';
         }
         $qsTmp = str_replace('#FIELD#', $prefix . trim(substr($conf['type'], 6)), $this->compSQL[$conf['comparison']]);
         $inputVal = $this->cleanInputVal($conf);
         if ($conf['comparison'] === 68 || $conf['comparison'] === 69) {
             $inputVal = explode(',', $inputVal);
             foreach ($inputVal as $key => $fileName) {
-                $inputVal[$key] = '\'' . $fileName . '\'';
+                $inputVal[$key] = $queryBuilder->quote($fileName);
             }
             $inputVal = implode(',', $inputVal);
             $qsTmp = str_replace('#VALUE#', $inputVal, $qsTmp);
@@ -1459,7 +1511,7 @@ class QueryGenerator
                 $this->extFieldLists['queryOrder_SQL'] = implode(',', $reList);
             }
             // Query Generator:
-            $this->procesData($modSettings['queryConfig'] ? unserialize($modSettings['queryConfig']) : '');
+            $this->procesData($modSettings['queryConfig'] ? unserialize($modSettings['queryConfig'], ['allowed_classes' => false]) : '');
             $this->queryConfig = $this->cleanUpQueryConfig($this->queryConfig);
             $this->enableQueryParts = (bool)$modSettings['search_query_smallparts'];
             $codeArr = $this->getFormElements();
@@ -1731,7 +1783,7 @@ class QueryGenerator
     }
 
     /**
-     * @return object
+     * @return BaseScriptClass
      */
     protected function getModule()
     {

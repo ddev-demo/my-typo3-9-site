@@ -22,8 +22,4 @@ namespace TYPO3\CMS\Core\Http;
  */
 class NullResponse extends Response
 {
-    public function __construct()
-    {
-        parent::__construct(null);
-    }
 }

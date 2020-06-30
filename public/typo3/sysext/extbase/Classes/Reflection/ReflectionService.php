@@ -15,7 +15,8 @@ namespace TYPO3\CMS\Extbase\Reflection;
  */
 
 use TYPO3\CMS\Core\Cache\CacheManager;
-use TYPO3\CMS\Core\Core\Environment;
+use TYPO3\CMS\Core\Cache\Exception\NoSuchCacheException;
+use TYPO3\CMS\Core\Cache\Frontend\FrontendInterface;
 use TYPO3\CMS\Core\SingletonInterface;
 
 /**
@@ -24,13 +25,11 @@ use TYPO3\CMS\Core\SingletonInterface;
  */
 class ReflectionService implements SingletonInterface
 {
-    /**
-     * @var string
-     */
-    private static $cacheEntryIdentifier;
+    const CACHE_IDENTIFIER = 'extbase_reflection';
+    const CACHE_ENTRY_IDENTIFIER = 'ClassSchematas';
 
     /**
-     * @var \TYPO3\CMS\Core\Cache\Frontend\VariableFrontend
+     * @var FrontendInterface
      */
     protected $dataCache;
 
@@ -64,13 +63,18 @@ class ReflectionService implements SingletonInterface
      */
     public function __construct(CacheManager $cacheManager = null)
     {
-        if ($cacheManager instanceof CacheManager && $cacheManager->hasCache('extbase')) {
-            $this->cachingEnabled = true;
-            $this->dataCache = $cacheManager->getCache('extbase');
+        if ($cacheManager instanceof CacheManager) {
+            try {
+                $this->dataCache = $cacheManager->getCache(static::CACHE_IDENTIFIER);
+                $this->cachingEnabled = true;
+            } catch (NoSuchCacheException $ignoredException) {
+                $this->cachingEnabled = false;
+            }
 
-            static::$cacheEntryIdentifier = 'ClassSchemata_' . sha1(TYPO3_version . Environment::getProjectPath());
-            if (($classSchemata = $this->dataCache->get(static::$cacheEntryIdentifier)) !== false) {
-                $this->classSchemata = $classSchemata;
+            if ($this->cachingEnabled) {
+                if (($classSchemata = $this->dataCache->get(static::CACHE_ENTRY_IDENTIFIER)) !== false) {
+                    $this->classSchemata = $classSchemata;
+                }
             }
         }
     }
@@ -78,8 +82,78 @@ class ReflectionService implements SingletonInterface
     public function __destruct()
     {
         if ($this->dataCacheNeedsUpdate && $this->cachingEnabled) {
-            $this->dataCache->set(static::$cacheEntryIdentifier, $this->classSchemata);
+            $this->dataCache->set(static::CACHE_ENTRY_IDENTIFIER, $this->classSchemata);
         }
+    }
+
+    /**
+     * Returns all tags and their values the specified class is tagged with
+     *
+     * @param string $className Name of the class
+     * @return array An array of tags and their values or an empty array if no tags were found
+     * @deprecated since TYPO3 v9, will be removed in TYPO3 v10.0.
+     */
+    public function getClassTagsValues($className): array
+    {
+        trigger_error(
+            'Method ' . __METHOD__ . ' is deprecated and will be removed in TYPO3 v10.0.',
+            E_USER_DEPRECATED
+        );
+
+        try {
+            $classSchema = $this->getClassSchema($className);
+        } catch (\Exception $e) {
+            return [];
+        }
+
+        return $classSchema->getTags();
+    }
+
+    /**
+     * Returns the values of the specified class tag
+     *
+     * @param string $className Name of the class containing the property
+     * @param string $tag Tag to return the values of
+     * @return array An array of values or an empty array if the tag was not found
+     * @deprecated since TYPO3 v9, will be removed in TYPO3 v10.0.
+     */
+    public function getClassTagValues($className, $tag): array
+    {
+        trigger_error(
+            'Method ' . __METHOD__ . ' is deprecated and will be removed in TYPO3 v10.0.',
+            E_USER_DEPRECATED
+        );
+
+        try {
+            $classSchema = $this->getClassSchema($className);
+        } catch (\Exception $e) {
+            return [];
+        }
+
+        return $classSchema->getTags()[$tag] ?? [];
+    }
+
+    /**
+     * Returns the names of all properties of the specified class
+     *
+     * @param string $className Name of the class to return the property names of
+     * @return array An array of property names or an empty array if none exist
+     * @deprecated since TYPO3 v9, will be removed in TYPO3 v10.0.
+     */
+    public function getClassPropertyNames($className): array
+    {
+        trigger_error(
+            'Method ' . __METHOD__ . ' is deprecated and will be removed in TYPO3 v10.0.',
+            E_USER_DEPRECATED
+        );
+
+        try {
+            $classSchema = $this->getClassSchema($className);
+        } catch (\Exception $e) {
+            return [];
+        }
+
+        return array_keys($classSchema->getProperties());
     }
 
     /**
@@ -100,6 +174,189 @@ class ReflectionService implements SingletonInterface
     }
 
     /**
+     * Wrapper for method_exists() which tells if the given method exists.
+     *
+     * @param string $className Name of the class containing the method
+     * @param string $methodName Name of the method
+     * @return bool
+     * @deprecated since TYPO3 v9, will be removed in TYPO3 v10.0.
+     */
+    public function hasMethod($className, $methodName): bool
+    {
+        trigger_error(
+            'Method ' . __METHOD__ . ' is deprecated and will be removed in TYPO3 v10.0.',
+            E_USER_DEPRECATED
+        );
+
+        try {
+            $classSchema = $this->getClassSchema($className);
+        } catch (\Exception $e) {
+            return false;
+        }
+
+        return $classSchema->hasMethod($methodName);
+    }
+
+    /**
+     * Returns all tags and their values the specified method is tagged with
+     *
+     * @param string $className Name of the class containing the method
+     * @param string $methodName Name of the method to return the tags and values of
+     * @return array An array of tags and their values or an empty array of no tags were found
+     * @deprecated since TYPO3 v9, will be removed in TYPO3 v10.0.
+     */
+    public function getMethodTagsValues($className, $methodName): array
+    {
+        trigger_error(
+            'Method ' . __METHOD__ . ' is deprecated and will be removed in TYPO3 v10.0.',
+            E_USER_DEPRECATED
+        );
+
+        try {
+            $classSchema = $this->getClassSchema($className);
+        } catch (\Exception $e) {
+            return [];
+        }
+
+        return $classSchema->getMethod($methodName)['tags'] ?? [];
+    }
+
+    /**
+     * Returns an array of parameters of the given method. Each entry contains
+     * additional information about the parameter position, type hint etc.
+     *
+     * @param string $className Name of the class containing the method
+     * @param string $methodName Name of the method to return parameter information of
+     * @return array An array of parameter names and additional information or an empty array of no parameters were found
+     * @deprecated since TYPO3 v9, will be removed in TYPO3 v10.0.
+     */
+    public function getMethodParameters($className, $methodName): array
+    {
+        trigger_error(
+            'Method ' . __METHOD__ . ' is deprecated and will be removed in TYPO3 v10.0.',
+            E_USER_DEPRECATED
+        );
+
+        try {
+            $classSchema = $this->getClassSchema($className);
+        } catch (\Exception $e) {
+            return [];
+        }
+
+        return $classSchema->getMethod($methodName)['params'] ?? [];
+    }
+
+    /**
+     * Returns all tags and their values the specified class property is tagged with
+     *
+     * @param string $className Name of the class containing the property
+     * @param string $propertyName Name of the property to return the tags and values of
+     * @return array An array of tags and their values or an empty array of no tags were found
+     * @deprecated since TYPO3 v9, will be removed in TYPO3 v10.0.
+     */
+    public function getPropertyTagsValues($className, $propertyName): array
+    {
+        trigger_error(
+            'Method ' . __METHOD__ . ' is deprecated and will be removed in TYPO3 v10.0.',
+            E_USER_DEPRECATED
+        );
+
+        try {
+            $classSchema = $this->getClassSchema($className);
+        } catch (\Exception $e) {
+            return [];
+        }
+
+        return $classSchema->getProperty($propertyName)['tags'] ?? [];
+    }
+
+    /**
+     * Returns the values of the specified class property tag
+     *
+     * @param string $className Name of the class containing the property
+     * @param string $propertyName Name of the tagged property
+     * @param string $tag Tag to return the values of
+     * @return array An array of values or an empty array if the tag was not found
+     * @deprecated since TYPO3 v9, will be removed in TYPO3 v10.0.
+     */
+    public function getPropertyTagValues($className, $propertyName, $tag): array
+    {
+        trigger_error(
+            'Method ' . __METHOD__ . ' is deprecated and will be removed in TYPO3 v10.0.',
+            E_USER_DEPRECATED
+        );
+
+        try {
+            $classSchema = $this->getClassSchema($className);
+        } catch (\Exception $e) {
+            return [];
+        }
+
+        return $classSchema->getProperty($propertyName)['tags'][$tag] ?? [];
+    }
+
+    /**
+     * Tells if the specified class is tagged with the given tag
+     *
+     * @param string $className Name of the class
+     * @param string $tag Tag to check for
+     * @return bool TRUE if the class is tagged with $tag, otherwise FALSE
+     * @deprecated since TYPO3 v9, will be removed in TYPO3 v10.0.
+     */
+    public function isClassTaggedWith($className, $tag): bool
+    {
+        trigger_error(
+            'Method ' . __METHOD__ . ' is deprecated and will be removed in TYPO3 v10.0.',
+            E_USER_DEPRECATED
+        );
+
+        try {
+            $classSchema = $this->getClassSchema($className);
+        } catch (\Exception $e) {
+            return false;
+        }
+
+        foreach (array_keys($classSchema->getTags()) as $tagName) {
+            if ($tagName === $tag) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * Tells if the specified class property is tagged with the given tag
+     *
+     * @param string $className Name of the class
+     * @param string $propertyName Name of the property
+     * @param string $tag Tag to check for
+     * @return bool TRUE if the class property is tagged with $tag, otherwise FALSE
+     * @deprecated since TYPO3 v9, will be removed in TYPO3 v10.0.
+     */
+    public function isPropertyTaggedWith($className, $propertyName, $tag): bool
+    {
+        trigger_error(
+            'Method ' . __METHOD__ . ' is deprecated and will be removed in TYPO3 v10.0.',
+            E_USER_DEPRECATED
+        );
+
+        try {
+            $classSchema = $this->getClassSchema($className);
+        } catch (\Exception $e) {
+            return false;
+        }
+
+        $property = $classSchema->getProperty($propertyName);
+
+        if (empty($property)) {
+            return false;
+        }
+
+        return isset($property['tags'][$tag]);
+    }
+
+    /**
      * Builds class schemata from classes annotated as entities or value objects
      *
      * @param string $className
@@ -116,5 +373,24 @@ class ReflectionService implements SingletonInterface
         $this->classSchemata[$className] = $classSchema;
         $this->dataCacheNeedsUpdate = true;
         return $classSchema;
+    }
+
+    /**
+     * @internal
+     */
+    public function __sleep(): array
+    {
+        return [];
+    }
+
+    /**
+     * @internal
+     */
+    public function __wakeup(): void
+    {
+        $this->dataCache = null;
+        $this->dataCacheNeedsUpdate = false;
+        $this->classSchemata = [];
+        $this->cachingEnabled = false;
     }
 }

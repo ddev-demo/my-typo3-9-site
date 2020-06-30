@@ -18,7 +18,12 @@ use Psr\Http\Message\ServerRequestInterface;
 use TYPO3\CMS\Backend\Utility\BackendUtility;
 use TYPO3\CMS\Backend\View\PageLayoutView;
 use TYPO3\CMS\Core\Authentication\BackendUserAuthentication;
+use TYPO3\CMS\Core\Compatibility\PublicMethodDeprecationTrait;
+use TYPO3\CMS\Core\Compatibility\PublicPropertyDeprecationTrait;
 use TYPO3\CMS\Core\Localization\LanguageService;
+use TYPO3\CMS\Core\Site\Entity\NullSite;
+use TYPO3\CMS\Core\Site\Entity\PseudoSite;
+use TYPO3\CMS\Core\Site\Entity\Site;
 use TYPO3\CMS\Core\Utility\GeneralUtility;
 
 /**
@@ -27,6 +32,28 @@ use TYPO3\CMS\Core\Utility\GeneralUtility;
  */
 class PageInformationController
 {
+    use PublicPropertyDeprecationTrait;
+    use PublicMethodDeprecationTrait;
+
+    /**
+     * @var array
+     */
+    private $deprecatedPublicProperties = [
+        'pObj' => 'Using PageInformationController::$pObj is deprecated and will not be possible anymore in TYPO3 v10.0.',
+        'function_key' => 'Using PageInformationController::$function_key is deprecated, property will be removed in TYPO3 v10.0.',
+        'extClassConf' => 'Using PageInformationController::$extClassConf is deprecated, property will be removed in TYPO3 v10.0.',
+        'localLangFile' => 'Using PageInformationController::$localLangFile is deprecated, property will be removed in TYPO3 v10.0.',
+        'extObj' => 'Using PageInformationController::$extObj is deprecated, property will be removed in TYPO3 v10.0.',
+    ];
+
+    /**
+     * @var array
+     */
+    private $deprecatedPublicMethods = [
+        'modMenu' => 'Using PageInformationController::modMenu() is deprecated and will not be possible anymore in TYPO3 v10.0.',
+        'extObjContent' => 'Using PageInformationController::extObjContent() is deprecated, method will be removed in TYPO3 v10.0.',
+    ];
+
     /**
      * @var array
      */
@@ -43,6 +70,29 @@ class PageInformationController
     protected $pObj;
 
     /**
+     * @deprecated since TYPO3 v9, will be removed in TYPO3 v10.0.
+     */
+    protected $extObj;
+
+    /**
+     * Can be hardcoded to the name of a locallang.xlf file (from the same directory as the class file) to use/load
+     * and is included / added to $GLOBALS['LOCAL_LANG']
+     *
+     * @var string
+     */
+    protected $localLangFile = '';
+
+    /**
+     * @deprecated since TYPO3 v9, will be removed in TYPO3 v10.0.
+     */
+    protected $extClassConf;
+
+    /**
+     * @deprecated since TYPO3 v9, will be removed in TYPO3 v10.0.
+     */
+    protected $function_key = '';
+
+    /**
      * Init, called from parent object
      *
      * @param InfoModuleController $pObj A reference to the parent (calling) object
@@ -50,6 +100,11 @@ class PageInformationController
     public function init($pObj)
     {
         $this->pObj = $pObj;
+        // Local lang:
+        if (!empty($this->localLangFile)) {
+            // @deprecated since TYPO3 v9, will be removed in TYPO3 v10.0.
+            $this->getLanguageService()->includeLLFile($this->localLangFile);
+        }
         $this->id = (int)GeneralUtility::_GP('id');
         // Setting MOD_MENU items as we need them for logging:
         $this->pObj->MOD_MENU = array_merge($this->pObj->MOD_MENU, $this->modMenu());
@@ -72,7 +127,7 @@ class PageInformationController
         $dblist->script = (string)$uriBuilder->buildUriFromRoute('web_info');
         $dblist->showIcon = 0;
         $dblist->setLMargin = 0;
-        $dblist->agePrefixes = $this->getLanguageService()->sL('LLL:EXT:core/Resources/Private/Language/locallang_core.xlf:labels.minutesHoursDaysYears');
+        $dblist->agePrefixes = $GLOBALS['LANG']->sL('LLL:EXT:core/Resources/Private/Language/locallang_core.xlf:labels.minutesHoursDaysYears');
         $dblist->pI_showUser = true;
 
         if (isset($this->fieldConfiguration[$this->pObj->MOD_SETTINGS['pages']])) {
@@ -114,12 +169,12 @@ class PageInformationController
         $menu = [
             'pages' => [],
             'depth' => [
-                0 => $this->getLanguageService()->sL('LLL:EXT:core/Resources/Private/Language/locallang_core.xlf:labels.depth_0'),
-                1 => $this->getLanguageService()->sL('LLL:EXT:core/Resources/Private/Language/locallang_core.xlf:labels.depth_1'),
-                2 => $this->getLanguageService()->sL('LLL:EXT:core/Resources/Private/Language/locallang_core.xlf:labels.depth_2'),
-                3 => $this->getLanguageService()->sL('LLL:EXT:core/Resources/Private/Language/locallang_core.xlf:labels.depth_3'),
-                4 => $this->getLanguageService()->sL('LLL:EXT:core/Resources/Private/Language/locallang_core.xlf:labels.depth_4'),
-                999 => $this->getLanguageService()->sL('LLL:EXT:core/Resources/Private/Language/locallang_core.xlf:labels.depth_infi')
+                0 => $GLOBALS['LANG']->sL('LLL:EXT:core/Resources/Private/Language/locallang_core.xlf:labels.depth_0'),
+                1 => $GLOBALS['LANG']->sL('LLL:EXT:core/Resources/Private/Language/locallang_core.xlf:labels.depth_1'),
+                2 => $GLOBALS['LANG']->sL('LLL:EXT:core/Resources/Private/Language/locallang_core.xlf:labels.depth_2'),
+                3 => $GLOBALS['LANG']->sL('LLL:EXT:core/Resources/Private/Language/locallang_core.xlf:labels.depth_3'),
+                4 => $GLOBALS['LANG']->sL('LLL:EXT:core/Resources/Private/Language/locallang_core.xlf:labels.depth_4'),
+                999 => $GLOBALS['LANG']->sL('LLL:EXT:core/Resources/Private/Language/locallang_core.xlf:labels.depth_infi')
             ]
         ];
 
@@ -174,11 +229,48 @@ class PageInformationController
         foreach ($modTSconfig as $key => $item) {
             $fieldList = str_replace('###ALL_TABLES###', $this->cleanTableNames(), $item['fields']);
             $fields = GeneralUtility::trimExplode(',', $fieldList, true);
+            if ((int)$key === 0) {
+                // If "Basic settings" is rendered, hide the alias field on trees that have a site configuration
+                // and hide the slug field on PseudoSites. On NullSites (pid 0), show both.
+                $site = $request->getAttribute('site');
+                if ($site instanceof PseudoSite) {
+                    $fields = array_diff($fields, ['slug']);
+                } elseif ($site instanceof Site && !$site instanceof NullSite) {
+                    $fields = array_diff($fields, ['alias']);
+                }
+            }
             $key = trim($key, '.');
             $this->fieldConfiguration[$key] = [
-                'label' => $item['label'] ? $this->getLanguageService()->sL($item['label']) : $key,
+                'label' => $item['label'] ? $GLOBALS['LANG']->sL($item['label']) : $key,
                 'fields' => $fields
             ];
+        }
+    }
+
+    /**
+     * Called from InfoModuleController until deprecation removal in TYPO3 v10.0
+     *
+     * @deprecated since TYPO3 v9, will be removed in TYPO3 v10.0.
+     */
+    public function checkExtObj()
+    {
+        if (is_array($this->extClassConf) && $this->extClassConf['name']) {
+            $this->extObj = GeneralUtility::makeInstance($this->extClassConf['name']);
+            $this->extObj->init($this->pObj, $this->extClassConf);
+            // Re-write:
+            $this->pObj->MOD_SETTINGS = BackendUtility::getModuleData($this->pObj->MOD_MENU, GeneralUtility::_GP('SET'), 'web_info');
+        }
+    }
+
+    /**
+     * Calls the main function inside ANOTHER sub-submodule which might exist.
+     *
+     * @deprecated since TYPO3 v9, will be removed in TYPO3 v10.0.
+     */
+    protected function extObjContent()
+    {
+        if (is_object($this->extObj)) {
+            return $this->extObj->main();
         }
     }
 
@@ -191,10 +283,10 @@ class PageInformationController
     }
 
     /**
-     * @return LanguageService|null
+     * @return LanguageService
      */
-    protected function getLanguageService(): ?LanguageService
+    protected function getLanguageService(): LanguageService
     {
-        return $GLOBALS['LANG'] ?? null;
+        return $GLOBALS['LANG'];
     }
 }

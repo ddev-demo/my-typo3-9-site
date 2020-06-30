@@ -78,7 +78,7 @@ class PlainDataResolver
     public function __construct($tableName, array $liveIds, array $sortingStatement = null)
     {
         $this->tableName = $tableName;
-        $this->liveIds = $this->reindex($this->sanitizeIds($liveIds));
+        $this->liveIds = $this->reindex($liveIds);
         $this->sortingStatement = $sortingStatement;
     }
 
@@ -164,7 +164,6 @@ class PlainDataResolver
      */
     public function processVersionOverlays(array $ids)
     {
-        $ids = $this->sanitizeIds($ids);
         if (empty($this->workspaceId) || !$this->isWorkspaceEnabled() || empty($ids)) {
             return $ids;
         }
@@ -181,6 +180,7 @@ class PlainDataResolver
             ->select('uid', 't3ver_oid', 't3ver_state')
             ->from($this->tableName)
             ->where(
+                $queryBuilder->expr()->eq('pid', $queryBuilder->createNamedParameter(-1, \PDO::PARAM_INT)),
                 $queryBuilder->expr()->in(
                     't3ver_oid',
                     $queryBuilder->createNamedParameter($ids, Connection::PARAM_INT_ARRAY)
@@ -218,7 +218,6 @@ class PlainDataResolver
      */
     public function processVersionMovePlaceholders(array $ids)
     {
-        $ids = $this->sanitizeIds($ids);
         // Early return on insufficient data-set
         if (empty($this->workspaceId) || !$this->isWorkspaceEnabled() || empty($ids)) {
             return $ids;
@@ -233,6 +232,7 @@ class PlainDataResolver
             ->select('uid', 't3ver_move_id')
             ->from($this->tableName)
             ->where(
+                $queryBuilder->expr()->neq('pid', $queryBuilder->createNamedParameter(-1, \PDO::PARAM_INT)),
                 $queryBuilder->expr()->eq(
                     't3ver_state',
                     $queryBuilder->createNamedParameter((string)VersionState::MOVE_PLACEHOLDER, \PDO::PARAM_INT)
@@ -274,7 +274,6 @@ class PlainDataResolver
      */
     public function processSorting(array $ids)
     {
-        $ids = $this->sanitizeIds($ids);
         // Early return on missing sorting statement or insufficient data-set
         if (empty($this->sortingStatement) || count($ids) < 2) {
             return $ids;
@@ -318,7 +317,6 @@ class PlainDataResolver
      */
     public function applyLiveIds(array $ids)
     {
-        $ids = $this->sanitizeIds($ids);
         if (!$this->keepLiveIds || !$this->isWorkspaceEnabled() || empty($ids)) {
             return $ids;
         }
@@ -368,17 +366,6 @@ class PlainDataResolver
         $ids = array_values($ids);
         $ids = array_combine($ids, $ids);
         return $ids;
-    }
-
-    /**
-     * Removes empty values (null, '0', 0, false).
-     *
-     * @param int[] $ids
-     * @return array
-     */
-    protected function sanitizeIds(array $ids): array
-    {
-        return array_filter($ids);
     }
 
     /**

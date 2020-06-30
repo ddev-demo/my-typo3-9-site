@@ -15,15 +15,14 @@ namespace TYPO3\CMS\Frontend\ContentObject\Menu;
  */
 
 use TYPO3\CMS\Core\Cache\CacheManager;
+use TYPO3\CMS\Core\Compatibility\PublicMethodDeprecationTrait;
+use TYPO3\CMS\Core\Compatibility\PublicPropertyDeprecationTrait;
 use TYPO3\CMS\Core\Context\Context;
 use TYPO3\CMS\Core\Context\LanguageAspect;
 use TYPO3\CMS\Core\Database\ConnectionPool;
 use TYPO3\CMS\Core\Database\RelationHandler;
-use TYPO3\CMS\Core\Domain\Repository\PageRepository;
-use TYPO3\CMS\Core\Exception\SiteNotFoundException;
-use TYPO3\CMS\Core\Site\Entity\NullSite;
+use TYPO3\CMS\Core\Routing\SiteMatcher;
 use TYPO3\CMS\Core\Site\Entity\SiteInterface;
-use TYPO3\CMS\Core\Site\SiteFinder;
 use TYPO3\CMS\Core\TimeTracker\TimeTracker;
 use TYPO3\CMS\Core\TypoScript\TemplateService;
 use TYPO3\CMS\Core\TypoScript\TypoScriptService;
@@ -31,6 +30,8 @@ use TYPO3\CMS\Core\Utility\GeneralUtility;
 use TYPO3\CMS\Core\Utility\MathUtility;
 use TYPO3\CMS\Frontend\ContentObject\ContentObjectRenderer;
 use TYPO3\CMS\Frontend\Controller\TypoScriptFrontendController;
+use TYPO3\CMS\Frontend\Page\CacheHashCalculator;
+use TYPO3\CMS\Frontend\Page\PageRepository;
 use TYPO3\CMS\Frontend\Typolink\PageLinkBuilder;
 
 /**
@@ -38,10 +39,73 @@ use TYPO3\CMS\Frontend\Typolink\PageLinkBuilder;
  *
  * The HMENU content object uses this (or more precisely one of the extension classes).
  * Among others the class generates an array of menu items. Thereafter functions from the subclasses are called.
- * The class is always used through extension classes like TextMenuContentObject.
+ * The class is always used through extension classes (like GraphicalMenuContentObject or TextMenuContentObject).
  */
 abstract class AbstractMenuContentObject
 {
+    use PublicPropertyDeprecationTrait;
+    use PublicMethodDeprecationTrait;
+
+    protected $deprecatedPublicProperties = [
+        'menuNumber' => 'Using $menuNumber of cObject HMENU from the outside is discouraged, as this variable is only used for internal storage.',
+        'entryLevel' => 'Using $entryLevel of cObject HMENU from the outside is discouraged, as this variable is only used for internal storage.',
+        'spacerIDList' => 'Using $spacerIDList of cObject HMENU from the outside is discouraged, as this variable is only used for internal storage.',
+        'doktypeExcludeList' => 'Using $doktypeExcludeList of cObject HMENU from the outside is discouraged, as this variable is only used for internal storage.',
+        'alwaysActivePIDlist' => 'Using $alwaysActivePIDlist of cObject HMENU from the outside is discouraged, as this variable is only used for internal storage.',
+        'imgNamePrefix' => 'Using $imgNamePrefix of cObject HMENU is discouraged, as all graphical-related functionality will be removed in TYPO3 v10.0.',
+        'imgNameNotRandom' => 'Using $imgNameNotRandom of cObject HMENU is discouraged, as all graphical-related functionality will be removed in TYPO3 v10.0.',
+        'debug' => 'Using $debug of cObject HMENU from the outside is discouraged, as this variable is not in use anymore and will be removed in TYPO3 v10.0.',
+        'GMENU_fixKey' => 'Using $GMENU_fixKey of cObject HMENU is discouraged, as all graphical-related functionality will be removed in TYPO3 v10.0.',
+        'MP_array' => 'Using $MP_array of cObject HMENU from the outside is discouraged, as this variable is only used for internal storage.',
+        'conf' => 'Using $conf of cObject HMENU from the outside is discouraged, as this variable is only used for internal storage.',
+        'mconf' => 'Using $mconf of cObject HMENU from the outside is discouraged, as this variable is only used for internal storage.',
+        'tmpl' => 'Using $tmpl of cObject HMENU from the outside is discouraged, as this variable is only used for internal storage.',
+        'sys_page' => 'Using $sys_page of cObject HMENU from the outside is discouraged, as this variable is only used for internal storage.',
+        'id' => 'Using $id of cObject HMENU from the outside is discouraged, as this variable is only used for internal storage.',
+        'nextActive' => 'Using $nextActive of cObject HMENU from the outside is discouraged, as this variable is only used for internal storage.',
+        'menuArr' => 'Using $menuArr of cObject HMENU from the outside is discouraged, as this variable is only used for internal storage.',
+        'hash' => 'Using $hash of cObject HMENU from the outside is discouraged, as this variable is only used for internal storage.',
+        'result' => 'Using $result of cObject HMENU from the outside is discouraged, as this variable is only used for internal storage.',
+        'rL_uidRegister' => 'Using $rL_uidRegister of cObject HMENU from the outside is discouraged, as this variable is only used for internal storage.',
+        'INPfixMD5' => 'Using $INPfixMD5 of cObject HMENU is discouraged, as all graphical-related functionality will be removed in TYPO3 v10.0.',
+        'I' => 'Using $I of cObject HMENU from the outside is discouraged, as this variable is only used for internal storage.',
+        'WMresult' => 'Using $WMresult of cObject HMENU is discouraged, as all graphical-related functionality will be removed in TYPO3 v10.0.',
+        'WMfreezePrefix' => 'Using $WMfreezePrefix of cObject HMENU is discouraged, as all graphical-related functionality will be removed in TYPO3 v10.0.',
+        'WMmenuItems' => 'Using $WMmenuItems of cObject HMENU is discouraged, as all graphical-related functionality will be removed in TYPO3 v10.0.',
+        'WMsubmenuObjSuffixes' => 'Using $WMsubmenuObjSuffixes of cObject HMENU is discouraged, as all graphical-related functionality will be removed in TYPO3 v10.0.',
+        'WMextraScript' => 'Using $WMextraScript of cObject HMENU is discouraged, as all graphical-related functionality will be removed in TYPO3 v10.0.',
+        'WMcObj' => 'Using $WMcObj of cObject HMENU is discouraged, as all graphical-related functionality will be removed in TYPO3 v10.0.',
+        'alternativeMenuTempArray' => 'Using $alternativeMenuTempArray of cObject HMENU from the outside is discouraged, as this variable is only used for internal storage.',
+        'nameAttribute' => 'Using $nameAttribute of cObject HMENU from the outside is discouraged, as this variable is only used for internal storage.',
+    ];
+
+    protected $deprecatedPublicMethods = [
+        'subMenu' => 'Using subMenu() within HMENU is discouraged, as this is internal functionality that should not be exposed to the public.',
+        'link' => 'Using link() within HMENU is discouraged, as this is internal functionality that should not be exposed to the public.',
+        'procesItemStates' => 'Using procesItemStates() within HMENU is discouraged, as this is internal functionality that should not be exposed to the public.',
+        'changeLinksForAccessRestrictedPages' => 'Using changeLinksForAccessRestrictedPages() within HMENU is discouraged, as this is internal functionality that should not be exposed to the public.',
+        'isNext' => 'Using isNext() within HMENU is discouraged, as this is internal functionality that should not be exposed to the public.',
+        'isActive' => 'Using isActive() within HMENU is discouraged, as this is internal functionality that should not be exposed to the public.',
+        'isCurrent' => 'Using isCurrent() within HMENU is discouraged, as this is internal functionality that should not be exposed to the public.',
+        'isSubMenu' => 'Using isSubMenu() within HMENU is discouraged, as this is internal functionality that should not be exposed to the public.',
+        'isItemState' => 'Using isItemState() within HMENU is discouraged, as this is internal functionality that should not be exposed to the public.',
+        'accessKey' => 'Using accessKey() within HMENU is discouraged, as this is internal functionality that should not be exposed to the public.',
+        'userProcess' => 'Using userProcess() within HMENU is discouraged, as this is internal functionality that should not be exposed to the public.',
+        'setATagParts' => 'Using setATagParts() within HMENU is discouraged, as this is internal functionality that should not be exposed to the public.',
+        'getPageTitle' => 'Using getPageTitle() within HMENU is discouraged, as this is internal functionality that should not be exposed to the public.',
+        'getMPvar' => 'Using getMPvar() within HMENU is discouraged, as this is internal functionality that should not be exposed to the public.',
+        'getDoktypeExcludeWhere' => 'Using getDoktypeExcludeWhere() within HMENU is discouraged, as this is internal functionality that should not be exposed to the public.',
+        'getBannedUids' => 'Using getBannedUids() within HMENU is discouraged, as this is internal functionality that should not be exposed to the public.',
+        'menuTypoLink' => 'Using menuTypoLink() within HMENU is discouraged, as this is internal functionality that should not be exposed to the public.',
+        'extProc_RO' => 'Using extProc_RO() within HMENU extensions is discouraged, as rollover functionality will be removed in TYPO3 v10.0.',
+        'extProc_init' => 'Using extProc_init() within HMENU extensions is discouraged, as extending HMENU should only happens via userFunc options.',
+        'extProc_beforeLinking' => 'Using extProc_beforeLinking() within HMENU extensions is discouraged, as extending HMENU should only happens via userFunc options.',
+        'extProc_afterLinking' => 'Using extProc_afterLinking() within HMENU extensions is discouraged, as extending HMENU should only happens via userFunc options.',
+        'extProc_beforeAllWrap' => 'Using extProc_beforeAllWrap() within HMENU extensions is discouraged, as extending HMENU should only happens via userFunc options.',
+        'extProc_finish' => 'Using extProc_finish() within HMENU extensions is discouraged, as extending HMENU should only happens via userFunc options.',
+        'getBeforeAfter' => 'Using getBeforeAfter() within HMENU extensions is discouraged, as extending HMENU should only happens via userFunc options.',
+    ];
+
     /**
      * tells you which menu number this is. This is important when getting data from the setup
      *
@@ -57,11 +121,18 @@ abstract class AbstractMenuContentObject
     protected $entryLevel = 0;
 
     /**
+     * The doktype-number that defines a spacer
+     *
+     * @var string
+     */
+    protected $spacerIDList = '199';
+
+    /**
      * Doktypes that define which should not be included in a menu
      *
-     * @var int[]
+     * @var string
      */
-    protected $excludedDoktypes = [PageRepository::DOKTYPE_BE_USER_SECTION];
+    protected $doktypeExcludeList = '6';
 
     /**
      * @var int[]
@@ -69,11 +140,31 @@ abstract class AbstractMenuContentObject
     protected $alwaysActivePIDlist = [];
 
     /**
+     * @var string
+     */
+    protected $imgNamePrefix = 'img';
+
+    /**
+     * @var int
+     */
+    protected $imgNameNotRandom = 0;
+
+    /**
+     * @var bool
+     */
+    protected $debug = false;
+
+    /**
      * Loaded with the parent cObj-object when a new HMENU is made
      *
-     * @var ContentObjectRenderer
+     * @var \TYPO3\CMS\Frontend\ContentObject\ContentObjectRenderer
      */
     public $parent_cObj;
+
+    /**
+     * @var string
+     */
+    protected $GMENU_fixKey = 'gmenu';
 
     /**
      * accumulation of mount point data
@@ -90,19 +181,19 @@ abstract class AbstractMenuContentObject
     protected $conf = [];
 
     /**
-     * xMENU configuration (TMENU etc)
+     * xMENU configuration (TMENU, GMENU etc)
      *
      * @var array
      */
     protected $mconf = [];
 
     /**
-     * @var TemplateService
+     * @var \TYPO3\CMS\Core\TypoScript\TemplateService
      */
     protected $tmpl;
 
     /**
-     * @var PageRepository
+     * @var \TYPO3\CMS\Frontend\Page\PageRepository
      */
     protected $sys_page;
 
@@ -147,6 +238,11 @@ abstract class AbstractMenuContentObject
     protected $rL_uidRegister;
 
     /**
+     * @var string
+     */
+    protected $INPfixMD5;
+
+    /**
      * @var mixed[]
      */
     protected $I;
@@ -157,6 +253,11 @@ abstract class AbstractMenuContentObject
     protected $WMresult;
 
     /**
+     * @var string
+     */
+    protected $WMfreezePrefix;
+
+    /**
      * @var int
      */
     protected $WMmenuItems;
@@ -165,6 +266,11 @@ abstract class AbstractMenuContentObject
      * @var array[]
      */
     protected $WMsubmenuObjSuffixes;
+
+    /**
+     * @var string
+     */
+    protected $WMextraScript;
 
     /**
      * @var ContentObjectRenderer
@@ -179,6 +285,21 @@ abstract class AbstractMenuContentObject
     protected $alternativeMenuTempArray = '';
 
     /**
+     * Will be 'id' in XHTML-mode
+     *
+     * @var string
+     */
+    protected $nameAttribute = 'name';
+
+    /**
+     * TRUE to use cHash in generated link (normally only for the language
+     * selector and if parameters exist in the URL).
+     *
+     * @var bool
+     */
+    protected $useCacheHash = false;
+
+    /**
      * Array key of the parentMenuItem in the parentMenuArr, if this menu is a subMenu.
      *
      * @var int|null
@@ -189,22 +310,6 @@ abstract class AbstractMenuContentObject
      * @var array
      */
     protected $parentMenuArr;
-
-    protected const customItemStates = [
-        // IFSUB is TRUE if there exist submenu items to the current item
-        'IFSUB',
-        'ACT',
-        // ACTIFSUB is TRUE if there exist submenu items to the current item and the current item is active
-        'ACTIFSUB',
-        // CUR is TRUE if the current page equals the item here!
-        'CUR',
-        // CURIFSUB is TRUE if there exist submenu items to the current item and the current page equals the item here!
-        'CURIFSUB',
-        'USR',
-        'SPC',
-        'USERDEF1',
-        'USERDEF2'
-    ];
 
     /**
      * The initialization of the object. This just sets some internal variables.
@@ -221,11 +326,28 @@ abstract class AbstractMenuContentObject
     public function start($tmpl, $sys_page, $id, $conf, $menuNumber, $objSuffix = '')
     {
         $tsfe = $this->getTypoScriptFrontendController();
+        // Init:
         $this->conf = $conf;
         $this->menuNumber = $menuNumber;
         $this->mconf = $conf[$this->menuNumber . $objSuffix . '.'];
+        $this->debug = !empty($tsfe->config['config']['debug']);
         $this->WMcObj = GeneralUtility::makeInstance(ContentObjectRenderer::class);
-        // Sets the internal vars. $tmpl MUST be the template-object. $sys_page MUST be the PageRepository object
+        // In XHTML and HTML5 there is no "name" attribute anymore
+        switch ($tsfe->xhtmlDoctype) {
+            case 'xhtml_strict':
+                // intended fall-through
+            case 'xhtml_11':
+                // intended fall-through
+            case 'html5':
+                // intended fall-through
+            case '':
+                // empty means that it's HTML5 by default
+                $this->nameAttribute = 'id';
+                break;
+            default:
+                $this->nameAttribute = 'name';
+        }
+        // Sets the internal vars. $tmpl MUST be the template-object. $sys_page MUST be the sys_page object
         if ($this->conf[$this->menuNumber . $objSuffix] && is_object($tmpl) && is_object($sys_page)) {
             $this->tmpl = $tmpl;
             $this->sys_page = $sys_page;
@@ -239,9 +361,15 @@ abstract class AbstractMenuContentObject
                 }
                 $this->alwaysActivePIDlist = GeneralUtility::intExplode(',', $this->conf['alwaysActivePIDlist']);
             }
-            // exclude doktypes that should not be shown in menu (e.g. backend user section)
+            // includeNotInMenu initialized:
+            $includeNotInMenu = $this->conf['includeNotInMenu'];
+            $includeNotInMenuConf = $this->conf['includeNotInMenu.'] ?? null;
+            $this->conf['includeNotInMenu'] = is_array($includeNotInMenuConf)
+                ? $this->parent_cObj->stdWrap($includeNotInMenu, $includeNotInMenuConf)
+                : $includeNotInMenu;
+            // 'not in menu' doktypes
             if ($this->conf['excludeDoktypes']) {
-                $this->excludedDoktypes = GeneralUtility::intExplode(',', $this->conf['excludeDoktypes']);
+                $this->doktypeExcludeList = implode(',', GeneralUtility::intExplode(',', $this->conf['excludeDoktypes']));
             }
             // EntryLevel
             $this->entryLevel = $this->parent_cObj->getKey(
@@ -309,7 +437,7 @@ abstract class AbstractMenuContentObject
                     }
                 }
             }
-            // Set $directoryLevel so the following evaluation of the nextActive will not return
+            // Set $directoryLevel so the following evalution of the nextActive will not return
             // an invalid value if .special=directory was set
             $directoryLevel = 0;
             if ($this->conf['special'] === 'directory') {
@@ -349,10 +477,17 @@ abstract class AbstractMenuContentObject
             } else {
                 $this->nextActive = '';
             }
-            return true;
+            // imgNamePrefix
+            if ($this->mconf['imgNamePrefix']) {
+                $this->imgNamePrefix = $this->mconf['imgNamePrefix'];
+            }
+            $this->imgNameNotRandom = $this->mconf['imgNameNotRandom'];
+            $retVal = true;
+        } else {
+            $this->getTimeTracker()->setTSlogMessage('ERROR in menu', 3);
+            $retVal = false;
         }
-        $this->getTimeTracker()->setTSlogMessage('ERROR in menu', 3);
-        return false;
+        return $retVal;
     }
 
     /**
@@ -366,6 +501,8 @@ abstract class AbstractMenuContentObject
         if (!$this->id) {
             return;
         }
+
+        $this->useCacheHash = false;
 
         // Initializing showAccessRestrictedPages
         $SAVED_where_groupAccess = '';
@@ -393,14 +530,14 @@ abstract class AbstractMenuContentObject
         // Fill in the menuArr with elements that should go into the menu:
         $this->menuArr = [];
         foreach ($menuItems as $data) {
-            $isSpacerPage = (int)$data['doktype'] === PageRepository::DOKTYPE_SPACER || $data['ITEM_STATE'] === 'SPC';
+            $spacer = GeneralUtility::inList($this->spacerIDList, $data['doktype']) || $data['ITEM_STATE'] === 'SPC';
             // if item is a spacer, $spacer is set
-            if ($this->filterMenuPages($data, $banUidArray, $isSpacerPage)) {
+            if ($this->filterMenuPages($data, $banUidArray, $spacer)) {
                 $c_b++;
                 // If the beginning item has been reached.
                 if ($begin <= $c_b) {
-                    $this->menuArr[$c] = $data;
-                    $this->menuArr[$c]['isSpacer'] = $isSpacerPage;
+                    $this->menuArr[$c] = $this->determineOriginalShortcutPage($data);
+                    $this->menuArr[$c]['isSpacer'] = $spacer;
                     $c++;
                     if ($maxItems && $c >= $maxItems) {
                         break;
@@ -425,10 +562,10 @@ abstract class AbstractMenuContentObject
         // Setting number of menu items
         $this->getTypoScriptFrontendController()->register['count_menuItems'] = count($this->menuArr);
         $this->hash = md5(
-            json_encode($this->menuArr) .
-            json_encode($this->mconf) .
-            json_encode($this->tmpl->rootLine) .
-            json_encode($this->MP_array)
+            serialize($this->menuArr) .
+            serialize($this->mconf) .
+            serialize($this->tmpl->rootLine) .
+            serialize($this->MP_array)
         );
         // Get the cache timeout:
         if ($this->conf['cache_period']) {
@@ -479,7 +616,7 @@ abstract class AbstractMenuContentObject
         $banned = $this->getBannedUids();
         $filteredPages = [];
         foreach ($pages as $aPage) {
-            if ($this->filterMenuPages($aPage, $banned, (int)$aPage['doktype'] === PageRepository::DOKTYPE_SPACER)) {
+            if ($this->filterMenuPages($aPage, $banned, $aPage['doktype'] === PageRepository::DOKTYPE_SPACER)) {
                 $filteredPages[$aPage['uid']] = $aPage;
             }
         }
@@ -577,7 +714,10 @@ abstract class AbstractMenuContentObject
             array_merge($this->conf['special.'], ['value' => $specialValue, '_altSortField' => $sortingField]),
             ''
         );
-        return is_array($menuItems) ? $menuItems : [];
+        if (!is_array($menuItems)) {
+            $menuItems = [];
+        }
+        return $menuItems;
     }
 
     /**
@@ -618,23 +758,24 @@ abstract class AbstractMenuContentObject
                 (!$sUid || empty($lRecs)) ||
                 !$this->conf['special.']['normalWhenNoLanguage'] && $sUid && empty($lRecs)
             ) {
-                $iState = $currentLanguageId === $sUid ? 'USERDEF2' : 'USERDEF1';
+                $iState = $currentLanguageId == $sUid ? 'USERDEF2' : 'USERDEF1';
             } else {
-                $iState = $currentLanguageId === $sUid ? 'ACT' : 'NO';
+                $iState = $currentLanguageId == $sUid ? 'ACT' : 'NO';
             }
-            $getVars = '';
             if ($this->conf['addQueryString']) {
                 $getVars = $this->parent_cObj->getQueryArguments(
                     $this->conf['addQueryString.'],
-                    [],
+                    ['L' => $sUid],
                     true
                 );
+                $this->analyzeCacheHashRequirements($getVars);
+            } else {
+                $getVars = '&L=' . $sUid;
             }
             // Adding menu item:
             $menuItems[] = array_merge(
                 array_merge($currentPageWithNoOverlay, $lRecs),
                 [
-                    '_PAGES_OVERLAY_REQUESTEDLANGUAGE' => $sUid,
                     'ITEM_STATE' => $iState,
                     '_ADD_GETVARS' => $getVars,
                     '_SAFE' => true
@@ -677,6 +818,14 @@ abstract class AbstractMenuContentObject
             // Get sub-pages:
             $statement = $this->parent_cObj->exec_getQuery('pages', ['pidInList' => $id, 'orderBy' => $sortingField]);
             while ($row = $statement->fetch()) {
+                // When the site language configuration is in "free" mode, then the page without overlay is fetched
+                // (which is kind-of strange for pages, but this is what exec_getQuery() is doing)
+                // this means, that $row is a translated page, but hasn't been overlaid. For this reason, we fetch
+                // the default translation page again, (which does a ->getPageOverlay() again - doing this on a
+                // translated page would result in no record at all)
+                if ($row['l10n_parent'] > 0 && !isset($row['_PAGES_OVERLAY'])) {
+                    $row = $this->sys_page->getPage($row['l10n_parent'], true);
+                }
                 $tsfe->sys_page->versionOL('pages', $row, true);
                 if (!empty($row)) {
                     // Keep mount point?
@@ -700,7 +849,7 @@ abstract class AbstractMenuContentObject
                         if ($MP) {
                             $row['_MP_PARAM'] = $MP . ($row['_MP_PARAM'] ? ',' . $row['_MP_PARAM'] : '');
                         }
-                        $menuItems[$row['uid']] = $this->sys_page->getPageOverlay($row);
+                        $menuItems[] = $this->sys_page->getPageOverlay($row);
                     }
                 }
             }
@@ -800,7 +949,7 @@ abstract class AbstractMenuContentObject
         if (!$limit) {
             $limit = 10;
         }
-        // 'auto', 'manual', 'tstamp'
+        // *'auto', 'manual', 'tstamp'
         $mode = $this->conf['special.']['mode'];
         // Get id's
         $beginAtLevel = MathUtility::forceIntegerInRange($this->conf['special.']['beginAtLevel'], 0, 100);
@@ -847,6 +996,14 @@ abstract class AbstractMenuContentObject
             'max' => $limit
         ]);
         while ($row = $statement->fetch()) {
+            // When the site language configuration is in "free" mode, then the page without overlay is fetched
+            // (which is kind-of strange for pages, but this is what exec_getQuery() is doing)
+            // this means, that $row is a translated page, but hasn't been overlaid. For this reason, we fetch
+            // the default translation page again, (which does a ->getPageOverlay() again - doing this on a
+            // translated page would result in no record at all)
+            if ($row['l10n_parent'] > 0 && !isset($row['_PAGES_OVERLAY'])) {
+                $row = $this->sys_page->getPage($row['l10n_parent'], true);
+            }
             $tsfe->sys_page->versionOL('pages', $row, true);
             if (is_array($row)) {
                 $menuItems[$row['uid']] = $this->sys_page->getPageOverlay($row);
@@ -867,7 +1024,7 @@ abstract class AbstractMenuContentObject
     {
         $tsfe = $this->getTypoScriptFrontendController();
         $menuItems = [];
-        list($specialValue) = GeneralUtility::intExplode(',', $specialValue);
+        [$specialValue] = GeneralUtility::intExplode(',', $specialValue);
         if (!$specialValue) {
             $specialValue = $tsfe->page['uid'];
         }
@@ -918,7 +1075,7 @@ abstract class AbstractMenuContentObject
         // Which field is for keywords
         $kfield = 'keywords';
         if ($this->conf['special.']['keywordsField']) {
-            list($kfield) = explode(' ', trim($this->conf['special.']['keywordsField']));
+            [$kfield] = explode(' ', trim($this->conf['special.']['keywordsField']));
         }
         // If there are keywords and the startuid is present
         if ($kw && $startUid) {
@@ -950,15 +1107,15 @@ abstract class AbstractMenuContentObject
                     )
                 );
 
-            if (!empty($keyWordsWhereArr)) {
+            if (count($keyWordsWhereArr) !== 0) {
                 $queryBuilder->andWhere($queryBuilder->expr()->orX(...$keyWordsWhereArr));
             }
 
-            if (!empty($this->excludedDoktypes)) {
+            if ($this->doktypeExcludeList) {
                 $queryBuilder->andWhere(
                     $queryBuilder->expr()->notIn(
                         'pages.doktype',
-                        $this->excludedDoktypes
+                        GeneralUtility::intExplode(',', $this->doktypeExcludeList, true)
                     )
                 );
             }
@@ -1057,7 +1214,7 @@ abstract class AbstractMenuContentObject
     protected function prepareMenuItemsForBrowseMenu($specialValue, $sortingField, $additionalWhere)
     {
         $menuItems = [];
-        list($specialValue) = GeneralUtility::intExplode(',', $specialValue);
+        [$specialValue] = GeneralUtility::intExplode(',', $specialValue);
         if (!$specialValue) {
             $specialValue = $this->getTypoScriptFrontendController()->page['uid'];
         }
@@ -1163,17 +1320,42 @@ abstract class AbstractMenuContentObject
     }
 
     /**
+     * Analyzes the parameters to find if the link needs a cHash parameter.
+     *
+     * @param string $queryString
+     */
+    protected function analyzeCacheHashRequirements($queryString)
+    {
+        $parameters = GeneralUtility::explodeUrl2Array($queryString);
+        if (!empty($parameters)) {
+            if (!isset($parameters['id'])) {
+                $queryString .= '&id=' . $this->getTypoScriptFrontendController()->id;
+            }
+            /** @var CacheHashCalculator $cacheHashCalculator */
+            $cacheHashCalculator = GeneralUtility::makeInstance(CacheHashCalculator::class);
+            $cHashParameters = $cacheHashCalculator->getRelevantParameters($queryString);
+            if (count($cHashParameters) > 1) {
+                $this->useCacheHash = (
+                    $GLOBALS['TYPO3_CONF_VARS']['FE']['disableNoCacheParameter'] ||
+                    !isset($parameters['no_cache']) ||
+                    !$parameters['no_cache']
+                );
+            }
+        }
+    }
+
+    /**
      * Checks if a page is OK to include in the final menu item array. Pages can be excluded if the doktype is wrong,
      * if they are hidden in navigation, have a uid in the list of banned uids etc.
      *
      * @param array $data Array of menu items
      * @param array $banUidArray Array of page uids which are to be excluded
-     * @param bool $isSpacerPage If set, then the page is a spacer.
+     * @param bool $spacer If set, then the page is a spacer.
      * @return bool Returns TRUE if the page can be safely included.
      *
      * @throws \UnexpectedValueException
      */
-    public function filterMenuPages(&$data, $banUidArray, $isSpacerPage)
+    public function filterMenuPages(&$data, $banUidArray, $spacer)
     {
         $includePage = true;
         foreach ($GLOBALS['TYPO3_CONF_VARS']['SC_OPTIONS']['cms/tslib/class.tslib_menu.php']['filterMenuPages'] ?? [] as $className) {
@@ -1181,7 +1363,7 @@ abstract class AbstractMenuContentObject
             if (!$hookObject instanceof AbstractMenuFilterPagesHookInterface) {
                 throw new \UnexpectedValueException($className . ' must implement interface ' . AbstractMenuFilterPagesHookInterface::class, 1269877402);
             }
-            $includePage = $includePage && $hookObject->processFilter($data, $banUidArray, $isSpacerPage, $this);
+            $includePage = $includePage && $hookObject->processFilter($data, $banUidArray, $spacer, $this);
         }
         if (!$includePage) {
             return false;
@@ -1189,42 +1371,34 @@ abstract class AbstractMenuContentObject
         if ($data['_SAFE']) {
             return true;
         }
-        // If the spacer-function is not enabled, spacers will not enter the $menuArr
-        if (!$this->mconf['SPC'] && $isSpacerPage) {
-            return false;
-        }
-        // Page may not be a 'Backend User Section' or any other excluded doktype
-        if (in_array((int)$data['doktype'], $this->excludedDoktypes, true)) {
-            return false;
-        }
-        // PageID should not be banned
-        if (in_array((int)$data['uid'], $banUidArray, true)) {
-            return false;
-        }
-        // If the page is hide in menu, but the menu does not include them do not show the page
-        if ($data['nav_hide'] && !$this->conf['includeNotInMenu']) {
-            return false;
-        }
-        // Checking if a page should be shown in the menu depending on whether a translation exists or if the default language is disabled
-        if (!$this->sys_page->isPageSuitableForLanguage($data, $this->getCurrentLanguageAspect())) {
-            return false;
-        }
-        // Checking if "&L" should be modified so links to non-accessible pages will not happen.
-        if ($this->getCurrentLanguageAspect()->getId() > 0 && $this->conf['protectLvar']) {
-            if ($this->conf['protectLvar'] === 'all' || GeneralUtility::hideIfNotTranslated($data['l18n_cfg'])) {
-                $olRec = $this->sys_page->getPageOverlay($data['uid'], $this->getCurrentLanguageAspect()->getId());
-                if (empty($olRec)) {
-                    // If no page translation record then page can NOT be accessed in
-                    // the language pointed to by "&L" and therefore we protect the link by setting "&L=0"
-                    $data['_ADD_GETVARS'] .= '&L=0';
+
+        if (
+            ($this->mconf['SPC'] || !$spacer) // If the spacer-function is not enabled, spacers will not enter the $menuArr
+            && (!$data['nav_hide'] || $this->conf['includeNotInMenu']) // Not hidden in navigation
+            && !GeneralUtility::inList($this->doktypeExcludeList, $data['doktype']) // Page may not be 'not_in_menu' or 'Backend User Section'
+            && !in_array($data['uid'], $banUidArray, false) // not in banned uid's
+        ) {
+            // Checking if a page should be shown in the menu depending on whether a translation exists or if the default language is disabled
+            if ($this->sys_page->isPageSuitableForLanguage($data, $this->getCurrentLanguageAspect())) {
+                // Checking if "&L" should be modified so links to non-accessible pages will not happen.
+                if ($this->getCurrentLanguageAspect()->getId() > 0 && $this->conf['protectLvar']) {
+                    if ($this->conf['protectLvar'] === 'all' || GeneralUtility::hideIfNotTranslated($data['l18n_cfg'])) {
+                        $olRec = $this->sys_page->getPageOverlay($data['uid'], $this->getCurrentLanguageAspect()->getId());
+                        if (empty($olRec)) {
+                            // If no page translation record then page can NOT be accessed in
+                            // the language pointed to by "&L" and therefore we protect the link by setting "&L=0"
+                            $data['_ADD_GETVARS'] .= '&L=0';
+                        }
+                    }
                 }
+                return true;
             }
         }
-        return true;
+        return false;
     }
 
     /**
-     * Generating the per-menu-item configuration arrays based on the settings for item states (NO, ACT, CUR etc)
+     * Generating the per-menu-item configuration arrays based on the settings for item states (NO, RO, ACT, CUR etc)
      * set in ->mconf (config for the current menu object)
      * Basically it will produce an individual array for each menu item based on the item states.
      * BUT in addition the "optionSplit" syntax for the values is ALSO evaluated here so that all property-values
@@ -1234,9 +1408,9 @@ abstract class AbstractMenuContentObject
      * (since the ->result array may be cached, see makeMenu) it doesn't hurt so badly.
      *
      * @param int $splitCount Number of menu items in the menu
-     * @return array the resolved configuration for each item
+     * @return array An array with two keys: array($NOconf,$ROconf) - where $NOconf contains the resolved configuration for each item when NOT rolled-over and $ROconf contains the ditto for the mouseover state (if any)
      */
-    protected function processItemStates($splitCount)
+    protected function procesItemStates($splitCount)
     {
         // Prepare normal settings
         if (!is_array($this->mconf['NO.']) && $this->mconf['NO']) {
@@ -1245,28 +1419,246 @@ abstract class AbstractMenuContentObject
         }
         $typoScriptService = GeneralUtility::makeInstance(TypoScriptService::class);
         $NOconf = $typoScriptService->explodeConfigurationForOptionSplit((array)$this->mconf['NO.'], $splitCount);
-
-        // Prepare custom states settings, overriding normal settings
-        foreach (self::customItemStates as $state) {
-            if (empty($this->mconf[$state])) {
-                continue;
-            }
-            $customConfiguration = null;
+        // Prepare rollOver settings, overriding normal settings
+        $ROconf = [];
+        if ($this->mconf['RO']) {
+            $ROconf = $typoScriptService->explodeConfigurationForOptionSplit((array)$this->mconf['RO.'], $splitCount);
+        }
+        // Prepare IFSUB settings, overriding normal settings
+        // IFSUB is TRUE if there exist submenu items to the current item
+        if (!empty($this->mconf['IFSUB'])) {
+            $IFSUBconf = null;
+            $IFSUBROconf = null;
             foreach ($NOconf as $key => $val) {
-                if ($this->isItemState($state, $key)) {
-                    // if this is the first element of type $state, we must generate the custom configuration.
-                    if ($customConfiguration === null) {
-                        $customConfiguration = $typoScriptService->explodeConfigurationForOptionSplit((array)$this->mconf[$state . '.'], $splitCount);
+                if ($this->isItemState('IFSUB', $key)) {
+                    // if this is the first IFSUB element, we must generate IFSUB.
+                    if ($IFSUBconf === null) {
+                        $IFSUBconf = $typoScriptService->explodeConfigurationForOptionSplit((array)$this->mconf['IFSUB.'], $splitCount);
+                        if (!empty($this->mconf['IFSUBRO'])) {
+                            $IFSUBROconf = $typoScriptService->explodeConfigurationForOptionSplit((array)$this->mconf['IFSUBRO.'], $splitCount);
+                        }
                     }
-                    // Substitute normal with the custom (e.g. IFSUB)
-                    if (isset($customConfiguration[$key])) {
-                        $NOconf[$key] = $customConfiguration[$key];
+                    // Substitute normal with ifsub
+                    if (isset($IFSUBconf[$key])) {
+                        $NOconf[$key] = $IFSUBconf[$key];
+                    }
+                    // If rollOver on normal, we must apply a state for rollOver on the active
+                    if ($ROconf) {
+                        // If RollOver on active then apply this
+                        $ROconf[$key] = !empty($IFSUBROconf[$key]) ? $IFSUBROconf[$key] : $IFSUBconf[$key];
                     }
                 }
             }
         }
-
-        return $NOconf;
+        // Prepare active settings, overriding normal settings
+        if (!empty($this->mconf['ACT'])) {
+            $ACTconf = null;
+            $ACTROconf = null;
+            // Find active
+            foreach ($NOconf as $key => $val) {
+                if ($this->isItemState('ACT', $key)) {
+                    // If this is the first 'active', we must generate ACT.
+                    if ($ACTconf === null) {
+                        $ACTconf = $typoScriptService->explodeConfigurationForOptionSplit((array)$this->mconf['ACT.'], $splitCount);
+                        // Prepare active rollOver settings, overriding normal active settings
+                        if (!empty($this->mconf['ACTRO'])) {
+                            $ACTROconf = $typoScriptService->explodeConfigurationForOptionSplit((array)$this->mconf['ACTRO.'], $splitCount);
+                        }
+                    }
+                    // Substitute normal with active
+                    if (isset($ACTconf[$key])) {
+                        $NOconf[$key] = $ACTconf[$key];
+                    }
+                    // If rollOver on normal, we must apply a state for rollOver on the active
+                    if ($ROconf) {
+                        // If RollOver on active then apply this
+                        $ROconf[$key] = !empty($ACTROconf[$key]) ? $ACTROconf[$key] : $ACTconf[$key];
+                    }
+                }
+            }
+        }
+        // Prepare ACT (active)/IFSUB settings, overriding normal settings
+        // ACTIFSUB is TRUE if there exist submenu items to the current item and the current item is active
+        if (!empty($this->mconf['ACTIFSUB'])) {
+            $ACTIFSUBconf = null;
+            $ACTIFSUBROconf = null;
+            // Find active
+            foreach ($NOconf as $key => $val) {
+                if ($this->isItemState('ACTIFSUB', $key)) {
+                    // If this is the first 'active', we must generate ACTIFSUB.
+                    if ($ACTIFSUBconf === null) {
+                        $ACTIFSUBconf = $typoScriptService->explodeConfigurationForOptionSplit((array)$this->mconf['ACTIFSUB.'], $splitCount);
+                        // Prepare active rollOver settings, overriding normal active settings
+                        if (!empty($this->mconf['ACTIFSUBRO'])) {
+                            $ACTIFSUBROconf = $typoScriptService->explodeConfigurationForOptionSplit((array)$this->mconf['ACTIFSUBRO.'], $splitCount);
+                        }
+                    }
+                    // Substitute normal with active
+                    if (isset($ACTIFSUBconf[$key])) {
+                        $NOconf[$key] = $ACTIFSUBconf[$key];
+                    }
+                    // If rollOver on normal, we must apply a state for rollOver on the active
+                    if ($ROconf) {
+                        // If RollOver on active then apply this
+                        $ROconf[$key] = !empty($ACTIFSUBROconf[$key]) ? $ACTIFSUBROconf[$key] : $ACTIFSUBconf[$key];
+                    }
+                }
+            }
+        }
+        // Prepare CUR (current) settings, overriding normal settings
+        // CUR is TRUE if the current page equals the item here!
+        if (!empty($this->mconf['CUR'])) {
+            $CURconf = null;
+            $CURROconf = null;
+            foreach ($NOconf as $key => $val) {
+                if ($this->isItemState('CUR', $key)) {
+                    // if this is the first 'current', we must generate CUR. Basically this control is just inherited
+                    // from the other implementations as current would only exist one time and that's it
+                    // (unless you use special-features of HMENU)
+                    if ($CURconf === null) {
+                        $CURconf = $typoScriptService->explodeConfigurationForOptionSplit((array)$this->mconf['CUR.'], $splitCount);
+                        if (!empty($this->mconf['CURRO'])) {
+                            $CURROconf = $typoScriptService->explodeConfigurationForOptionSplit((array)$this->mconf['CURRO.'], $splitCount);
+                        }
+                    }
+                    // Substitute normal with current
+                    if (isset($CURconf[$key])) {
+                        $NOconf[$key] = $CURconf[$key];
+                    }
+                    // If rollOver on normal, we must apply a state for rollOver on the active
+                    if ($ROconf) {
+                        // If RollOver on active then apply this
+                        $ROconf[$key] = !empty($CURROconf[$key]) ? $CURROconf[$key] : $CURconf[$key];
+                    }
+                }
+            }
+        }
+        // Prepare CUR (current)/IFSUB settings, overriding normal settings
+        // CURIFSUB is TRUE if there exist submenu items to the current item and the current page equals the item here!
+        if (!empty($this->mconf['CURIFSUB'])) {
+            $CURIFSUBconf = null;
+            $CURIFSUBROconf = null;
+            foreach ($NOconf as $key => $val) {
+                if ($this->isItemState('CURIFSUB', $key)) {
+                    // If this is the first 'current', we must generate CURIFSUB.
+                    if ($CURIFSUBconf === null) {
+                        $CURIFSUBconf = $typoScriptService->explodeConfigurationForOptionSplit((array)$this->mconf['CURIFSUB.'], $splitCount);
+                        // Prepare current rollOver settings, overriding normal current settings
+                        if (!empty($this->mconf['CURIFSUBRO'])) {
+                            $CURIFSUBROconf = $typoScriptService->explodeConfigurationForOptionSplit((array)$this->mconf['CURIFSUBRO.'], $splitCount);
+                        }
+                    }
+                    // Substitute normal with active
+                    if ($CURIFSUBconf[$key]) {
+                        $NOconf[$key] = $CURIFSUBconf[$key];
+                    }
+                    // If rollOver on normal, we must apply a state for rollOver on the current
+                    if ($ROconf) {
+                        // If RollOver on current then apply this
+                        $ROconf[$key] = !empty($CURIFSUBROconf[$key]) ? $CURIFSUBROconf[$key] : $CURIFSUBconf[$key];
+                    }
+                }
+            }
+        }
+        // Prepare active settings, overriding normal settings
+        if (!empty($this->mconf['USR'])) {
+            $USRconf = null;
+            $USRROconf = null;
+            // Find active
+            foreach ($NOconf as $key => $val) {
+                if ($this->isItemState('USR', $key)) {
+                    // if this is the first active, we must generate USR.
+                    if ($USRconf === null) {
+                        $USRconf = $typoScriptService->explodeConfigurationForOptionSplit((array)$this->mconf['USR.'], $splitCount);
+                        // Prepare active rollOver settings, overriding normal active settings
+                        if (!empty($this->mconf['USRRO'])) {
+                            $USRROconf = $typoScriptService->explodeConfigurationForOptionSplit((array)$this->mconf['USRRO.'], $splitCount);
+                        }
+                    }
+                    // Substitute normal with active
+                    if ($USRconf[$key]) {
+                        $NOconf[$key] = $USRconf[$key];
+                    }
+                    // If rollOver on normal, we must apply a state for rollOver on the active
+                    if ($ROconf) {
+                        // If RollOver on active then apply this
+                        $ROconf[$key] = !empty($USRROconf[$key]) ? $USRROconf[$key] : $USRconf[$key];
+                    }
+                }
+            }
+        }
+        // Prepare spacer settings, overriding normal settings
+        if (!empty($this->mconf['SPC'])) {
+            $SPCconf = null;
+            // Find spacers
+            foreach ($NOconf as $key => $val) {
+                if ($this->isItemState('SPC', $key)) {
+                    // If this is the first spacer, we must generate SPC.
+                    if ($SPCconf === null) {
+                        $SPCconf = $typoScriptService->explodeConfigurationForOptionSplit((array)$this->mconf['SPC.'], $splitCount);
+                    }
+                    // Substitute normal with spacer
+                    if (isset($SPCconf[$key])) {
+                        $NOconf[$key] = $SPCconf[$key];
+                    }
+                }
+            }
+        }
+        // Prepare Userdefined settings
+        if (!empty($this->mconf['USERDEF1'])) {
+            $USERDEF1conf = null;
+            $USERDEF1ROconf = null;
+            // Find active
+            foreach ($NOconf as $key => $val) {
+                if ($this->isItemState('USERDEF1', $key)) {
+                    // If this is the first active, we must generate USERDEF1.
+                    if ($USERDEF1conf === null) {
+                        $USERDEF1conf = $typoScriptService->explodeConfigurationForOptionSplit((array)$this->mconf['USERDEF1.'], $splitCount);
+                        // Prepare active rollOver settings, overriding normal active settings
+                        if (!empty($this->mconf['USERDEF1RO'])) {
+                            $USERDEF1ROconf = $typoScriptService->explodeConfigurationForOptionSplit((array)$this->mconf['USERDEF1RO.'], $splitCount);
+                        }
+                    }
+                    // Substitute normal with active
+                    if (isset($USERDEF1conf[$key])) {
+                        $NOconf[$key] = $USERDEF1conf[$key];
+                    }
+                    // If rollOver on normal, we must apply a state for rollOver on the active
+                    if ($ROconf) {
+                        // If RollOver on active then apply this
+                        $ROconf[$key] = !empty($USERDEF1ROconf[$key]) ? $USERDEF1ROconf[$key] : $USERDEF1conf[$key];
+                    }
+                }
+            }
+        }
+        // Prepare Userdefined settings
+        if (!empty($this->mconf['USERDEF2'])) {
+            $USERDEF2conf = null;
+            $USERDEF2ROconf = null;
+            // Find active
+            foreach ($NOconf as $key => $val) {
+                if ($this->isItemState('USERDEF2', $key)) {
+                    // If this is the first active, we must generate USERDEF2.
+                    if ($USERDEF2conf === null) {
+                        $USERDEF2conf = $typoScriptService->explodeConfigurationForOptionSplit((array)$this->mconf['USERDEF2.'], $splitCount);
+                        // Prepare active rollOver settings, overriding normal active settings
+                        if (!empty($this->mconf['USERDEF2RO'])) {
+                            $USERDEF2ROconf = $typoScriptService->explodeConfigurationForOptionSplit((array)$this->mconf['USERDEF2RO.'], $splitCount);
+                        }
+                    }
+                    // Substitute normal with active
+                    if (isset($USERDEF2conf[$key])) {
+                        $NOconf[$key] = $USERDEF2conf[$key];
+                    }
+                    // If rollOver on normal, we must apply a state for rollOver on the active
+                    if ($ROconf) {
+                        // If RollOver on active then apply this
+                        $ROconf[$key] = !empty($USERDEF2ROconf[$key]) ? $USERDEF2ROconf[$key] : $USERDEF2conf[$key];
+                    }
+                }
+            }
+        }
+        return [$NOconf, $ROconf];
     }
 
     /**
@@ -1278,28 +1670,28 @@ abstract class AbstractMenuContentObject
      * @param string $typeOverride Alternative type
      * @return array Returns an array with A-tag attributes as key/value pairs (HREF, TARGET and onClick)
      */
-    protected function link($key, $altTarget, $typeOverride)
+    protected function link($key, $altTarget = '', $typeOverride = '')
     {
         $runtimeCache = $this->getRuntimeCache();
         $MP_var = $this->getMPvar($key);
-        $cacheId = 'menu-generated-links-' . md5($key . $altTarget . $typeOverride . $MP_var . json_encode($this->menuArr[$key]));
+        $cacheId = 'menu-generated-links-' . md5($key . $altTarget . $typeOverride . $MP_var . serialize($this->menuArr[$key]));
         $runtimeCachedLink = $runtimeCache->get($cacheId);
         if ($runtimeCachedLink !== false) {
             return $runtimeCachedLink;
         }
 
-        $tsfe = $this->getTypoScriptFrontendController();
-
-        // If a user script returned the value overrideId in the menu array we use that as page id
+        // Mount points:
+        $MP_params = $MP_var ? '&MP=' . rawurlencode($MP_var) : '';
+        // Setting override ID
         if ($this->mconf['overrideId'] || $this->menuArr[$key]['overrideId']) {
-            $overrideId = (int)($this->mconf['overrideId'] ?: $this->menuArr[$key]['overrideId']);
-            $overrideId = $overrideId > 0 ? $overrideId : null;
+            $overrideArray = [];
+            // If a user script returned the value overrideId in the menu array we use that as page id
+            $overrideArray['uid'] = $this->mconf['overrideId'] ?: $this->menuArr[$key]['overrideId'];
+            $overrideArray['alias'] = '';
             // Clear MP parameters since ID was changed.
             $MP_params = '';
         } else {
-            $overrideId = null;
-            // Mount points:
-            $MP_params = $MP_var ? '&MP=' . rawurlencode($MP_var) : '';
+            $overrideArray = '';
         }
         // Setting main target:
         if ($altTarget) {
@@ -1314,33 +1706,35 @@ abstract class AbstractMenuContentObject
         if ($this->mconf['collapse'] && $this->isActive($this->menuArr[$key]['uid'], $this->getMPvar($key))) {
             $thePage = $this->sys_page->getPage($this->menuArr[$key]['pid']);
             $addParams .= $this->menuArr[$key]['_ADD_GETVARS'];
-            $LD = $this->menuTypoLink($thePage, $mainTarget, $addParams, $typeOverride, $overrideId);
+            $LD = $this->menuTypoLink($thePage, $mainTarget, '', '', $overrideArray, $addParams, $typeOverride);
         } else {
             $addParams .= $this->I['val']['additionalParams'] . $this->menuArr[$key]['_ADD_GETVARS'];
-            $LD = $this->menuTypoLink($this->menuArr[$key], $mainTarget, $addParams, $typeOverride, $overrideId);
+            $LD = $this->menuTypoLink($this->menuArr[$key], $mainTarget, '', '', $overrideArray, $addParams, $typeOverride);
         }
         // Override default target configuration if option is set
         if ($this->menuArr[$key]['target']) {
             $LD['target'] = $this->menuArr[$key]['target'];
         }
         // Override URL if using "External URL"
-        if ((int)$this->menuArr[$key]['doktype'] === PageRepository::DOKTYPE_LINK) {
-            $externalUrl = $this->sys_page->getExtURL($this->menuArr[$key]);
+        if ($this->menuArr[$key]['doktype'] == PageRepository::DOKTYPE_LINK) {
+            $externalUrl = $this->getSysPage()->getExtURL($this->menuArr[$key]);
             // Create link using typolink (concerning spamProtectEmailAddresses) for email links
             $LD['totalURL'] = $this->parent_cObj->typoLink_URL(['parameter' => $externalUrl]);
             // Links to emails should not have any target
             if (stripos($externalUrl, 'mailto:') === 0) {
                 $LD['target'] = '';
             // use external target for the URL
-            } elseif (empty($LD['target']) && !empty($tsfe->extTarget)) {
-                $LD['target'] = $tsfe->extTarget;
+            } elseif (empty($LD['target']) && !empty($this->getTypoScriptFrontendController()->extTarget)) {
+                $LD['target'] = $this->getTypoScriptFrontendController()->extTarget;
             }
         }
 
+        $tsfe = $this->getTypoScriptFrontendController();
+
         // Override url if current page is a shortcut
         $shortcut = null;
-        if ((int)$this->menuArr[$key]['doktype'] === PageRepository::DOKTYPE_SHORTCUT && (int)$this->menuArr[$key]['shortcut_mode'] !== PageRepository::SHORTCUT_MODE_RANDOM_SUBPAGE) {
-            $menuItem = $this->determineOriginalShortcutPage($this->menuArr[$key]);
+        if ($this->menuArr[$key]['doktype'] == PageRepository::DOKTYPE_SHORTCUT && $this->menuArr[$key]['shortcut_mode'] != PageRepository::SHORTCUT_MODE_RANDOM_SUBPAGE) {
+            $menuItem = $this->menuArr[$key];
             try {
                 $shortcut = $tsfe->sys_page->getPageShortcut(
                     $menuItem['shortcut'],
@@ -1480,7 +1874,7 @@ abstract class AbstractMenuContentObject
                 ],
                 $this->mconf['showAccessRestrictedPages.']['addParams']
             );
-            $LD = $this->menuTypoLink($thePage, $mainTarget, $addParams, $typeOverride);
+            $LD = $this->menuTypoLink($thePage, $mainTarget, '', '', '', $addParams, $typeOverride);
         }
     }
 
@@ -1491,7 +1885,7 @@ abstract class AbstractMenuContentObject
      * @param string $objSuffix Object prefix, see ->start()
      * @return string HTML content of the submenu
      */
-    protected function subMenu($uid, $objSuffix)
+    protected function subMenu($uid, $objSuffix = '')
     {
         // Setting alternative menu item array if _SUB_MENU has been defined in the current ->menuArr
         $altArray = '';
@@ -1549,10 +1943,10 @@ abstract class AbstractMenuContentObject
      * @return bool TRUE if page with $uid is active
      * @see subMenu()
      */
-    protected function isNext($uid, $MPvar)
+    protected function isNext($uid, $MPvar = '')
     {
         // Check for always active PIDs:
-        if (in_array((int)$uid, $this->alwaysActivePIDlist, true)) {
+        if (!empty($this->alwaysActivePIDlist) && in_array((int)$uid, $this->alwaysActivePIDlist, true)) {
             return true;
         }
         $testUid = $uid . ($MPvar ? ':' . $MPvar : '');
@@ -1569,10 +1963,10 @@ abstract class AbstractMenuContentObject
      * @param string $MPvar MPvar for the current position of item.
      * @return bool TRUE if page with $uid is active
      */
-    protected function isActive($uid, $MPvar)
+    protected function isActive($uid, $MPvar = '')
     {
         // Check for always active PIDs:
-        if (in_array((int)$uid, $this->alwaysActivePIDlist, true)) {
+        if (!empty($this->alwaysActivePIDlist) && in_array((int)$uid, $this->alwaysActivePIDlist, true)) {
             return true;
         }
         $testUid = $uid . ($MPvar ? ':' . $MPvar : '');
@@ -1589,7 +1983,7 @@ abstract class AbstractMenuContentObject
      * @param string $MPvar MPvar for the current position of item.
      * @return bool TRUE if page $uid = $this->getTypoScriptFrontendController()->id
      */
-    protected function isCurrent($uid, $MPvar)
+    protected function isCurrent($uid, $MPvar = '')
     {
         $testUid = $uid . ($MPvar ? ':' . $MPvar : '');
         return $uid && end($this->rL_uidRegister) === 'ITEM:' . $testUid;
@@ -1622,7 +2016,7 @@ abstract class AbstractMenuContentObject
         $languageId = $this->getCurrentLanguageAspect()->getId();
         foreach ($recs as $theRec) {
             // no valid subpage if the document type is excluded from the menu
-            if (in_array((int)($theRec['doktype'] ?? 0), $this->excludedDoktypes, true)) {
+            if (GeneralUtility::inList($this->doktypeExcludeList, $theRec['doktype'] ?? '')) {
                 continue;
             }
             // No valid subpage if the page is hidden inside menus and
@@ -1644,7 +2038,7 @@ abstract class AbstractMenuContentObject
                 continue;
             }
             // No valid subpage if the subpage is banned by excludeUidList
-            if (in_array((int)$theRec['uid'], $bannedUids, true)) {
+            if (in_array($theRec['uid'], $bannedUids)) {
                 continue;
             }
             $hasSubPages = true;
@@ -1655,12 +2049,12 @@ abstract class AbstractMenuContentObject
     }
 
     /**
-     * Used by processItemStates() to evaluate if a menu item (identified by $key) is in a certain state.
+     * Used by procesItemStates() to evaluate if a menu item (identified by $key) is in a certain state.
      *
-     * @param string $kind The item state to evaluate (SPC, IFSUB, ACT etc...)
+     * @param string $kind The item state to evaluate (SPC, IFSUB, ACT etc... but no xxxRO states of course)
      * @param int $key Key pointing to menu item from ->menuArr
      * @return bool Returns TRUE if state matches
-     * @see processItemStates()
+     * @see procesItemStates()
      */
     protected function isItemState($kind, $key)
     {
@@ -1699,7 +2093,7 @@ abstract class AbstractMenuContentObject
     }
 
     /**
-     * Creates an access-key for a TMENU menu item based on the menu item titles first letter
+     * Creates an access-key for a TMENU/GMENU menu item based on the menu item titles first letter
      *
      * @param string $title Menu item title.
      * @return array Returns an array with keys "code" ("accesskey" attribute for the img-tag) and "alt" (text-addition to the "alt" attribute) if an access key was defined. Otherwise array was empty
@@ -1714,7 +2108,7 @@ abstract class AbstractMenuContentObject
         for ($a = 0; $a < $titleLen; $a++) {
             $key = strtoupper(substr($title, $a, 1));
             if (preg_match('/[A-Z]/', $key) && !isset($tsfe->accessKey[$key])) {
-                $tsfe->accessKey[$key] = true;
+                $tsfe->accessKey[$key] = 1;
                 $result['code'] = ' accesskey="' . $key . '"';
                 $result['alt'] = ' (ALT+' . $key . ')';
                 $result['key'] = $key;
@@ -1792,7 +2186,7 @@ abstract class AbstractMenuContentObject
      */
     protected function getDoktypeExcludeWhere()
     {
-        return !empty($this->excludedDoktypes) ? ' AND pages.doktype NOT IN (' . implode(',', $this->excludedDoktypes) . ')' : '';
+        return $this->doktypeExcludeList ? ' AND pages.doktype NOT IN (' . $this->doktypeExcludeList . ')' : '';
     }
 
     /**
@@ -1819,15 +2213,17 @@ abstract class AbstractMenuContentObject
      *
      * @param array $page Page record (uid points where to link to)
      * @param string $oTarget Target frame/window
+     * @param bool $no_cache TRUE if caching should be disabled
+     * @param string $script Alternative script name (unused)
+     * @param array|string $overrideArray Array to override values in $page, empty string to skip override
      * @param string $addParams Parameters to add to URL
      * @param int|string $typeOverride "type" value, empty string means "not set"
-     * @param int|null $overridePageId link to this page instead of the $page[uid] value
      * @return array See linkData
      */
-    protected function menuTypoLink($page, $oTarget, $addParams, $typeOverride, ?int $overridePageId = null)
+    protected function menuTypoLink($page, $oTarget, $no_cache, $script, $overrideArray = '', $addParams = '', $typeOverride = '')
     {
         $conf = [
-            'parameter' => $overridePageId ?? $page['uid']
+            'parameter' => is_array($overrideArray) && $overrideArray['uid'] ? $overrideArray['uid'] : $page['uid']
         ];
         if (MathUtility::canBeInterpretedAsInteger($typeOverride)) {
             $conf['parameter'] .= ',' . (int)$typeOverride;
@@ -1839,8 +2235,13 @@ abstract class AbstractMenuContentObject
         // Ensure that the typolink gets an info which language was actually requested. The $page record could be the record
         // from page translation language=1 as fallback but page translation language=2 was requested. Search for
         // "_PAGES_OVERLAY_REQUESTEDLANGUAGE" for more details
-        if (isset($page['_PAGES_OVERLAY_REQUESTEDLANGUAGE'])) {
+        if ($page['_PAGES_OVERLAY_REQUESTEDLANGUAGE'] ?? 0) {
             $conf['language'] = $page['_PAGES_OVERLAY_REQUESTEDLANGUAGE'];
+        }
+        if ($no_cache) {
+            $conf['no_cache'] = true;
+        } elseif ($this->useCacheHash) {
+            $conf['useCacheHash'] = true;
         }
         if ($oTarget) {
             $conf['target'] = $oTarget;
@@ -1950,7 +2351,7 @@ abstract class AbstractMenuContentObject
     /**
      * Returns the sys_page object
      *
-     * @return PageRepository
+     * @return \TYPO3\CMS\Frontend\Page\PageRepository
      */
     public function getSysPage()
     {
@@ -1960,7 +2361,7 @@ abstract class AbstractMenuContentObject
     /**
      * Returns the parent content object
      *
-     * @return ContentObjectRenderer
+     * @return \TYPO3\CMS\Frontend\ContentObject\ContentObjectRenderer
      */
     public function getParentContentObject()
     {
@@ -1993,7 +2394,7 @@ abstract class AbstractMenuContentObject
      */
     protected function getCache()
     {
-        return GeneralUtility::makeInstance(CacheManager::class)->getCache('hash');
+        return GeneralUtility::makeInstance(CacheManager::class)->getCache('cache_hash');
     }
 
     /**
@@ -2001,22 +2402,19 @@ abstract class AbstractMenuContentObject
      */
     protected function getRuntimeCache()
     {
-        return GeneralUtility::makeInstance(CacheManager::class)->getCache('runtime');
+        return GeneralUtility::makeInstance(CacheManager::class)->getCache('cache_runtime');
     }
 
     /**
      * Returns the currently configured "site" if a site is configured (= resolved) in the current request.
      *
      * @return SiteInterface
+     * @throws \TYPO3\CMS\Core\Exception\SiteNotFoundException
      */
     protected function getCurrentSite(): SiteInterface
     {
-        try {
-            return GeneralUtility::makeInstance(SiteFinder::class)
-                ->getSiteByPageId((int)$this->getTypoScriptFrontendController()->id);
-        } catch (SiteNotFoundException $e) {
-            return new NullSite();
-        }
+        $matcher = GeneralUtility::makeInstance(SiteMatcher::class);
+        return $matcher->matchByPageId((int)$this->getTypoScriptFrontendController()->id);
     }
 
     /**
@@ -2027,7 +2425,7 @@ abstract class AbstractMenuContentObject
      * @param int $menuItemKey
      * @internal
      */
-    public function setParentMenu(array $menuArr, $menuItemKey)
+    public function setParentMenu(array $menuArr = [], $menuItemKey)
     {
         // check if menuArr is a valid array and that menuItemKey matches an existing menuItem in menuArr
         if (is_array($menuArr)

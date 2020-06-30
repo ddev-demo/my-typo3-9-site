@@ -81,12 +81,12 @@ class DataStructureIdentifierHook
             }
 
             // Add bool - finisher override active or not
-            $identifier['ext-form-overrideFinishers'] = '';
+            $identifier['ext-form-overrideFinishers'] = false;
             if (
                 isset($currentFlexData['data']['sDEF']['lDEF']['settings.overrideFinishers']['vDEF'])
                 && (int)$currentFlexData['data']['sDEF']['lDEF']['settings.overrideFinishers']['vDEF'] === 1
             ) {
-                $identifier['ext-form-overrideFinishers'] = 'enabled';
+                $identifier['ext-form-overrideFinishers'] = true;
             }
         }
         return $identifier;
@@ -111,12 +111,17 @@ class DataStructureIdentifierHook
                 $formIsAccessible = false;
                 foreach ($formPersistenceManager->listForms() as $form) {
                     $invalidFormDefinition = $form['invalid'] ?? false;
+                    $hasDeprecatedFileExtension = $form['deprecatedFileExtension'] ?? false;
+
+                    if ($form['location'] === 'storage' && $hasDeprecatedFileExtension) {
+                        continue;
+                    }
 
                     if ($form['persistenceIdentifier'] === $identifier['ext-form-persistenceIdentifier']) {
                         $formIsAccessible = true;
                     }
 
-                    if ($invalidFormDefinition) {
+                    if ($invalidFormDefinition || $hasDeprecatedFileExtension) {
                         $dataStructure['sheets']['sDEF']['ROOT']['el']['settings.persistenceIdentifier']['TCEforms']['config']['items'][] = [
                             $form['name'] . ' (' . $form['persistenceIdentifier'] . ')',
                             $form['persistenceIdentifier'],
@@ -142,47 +147,18 @@ class DataStructureIdentifierHook
                 }
 
                 // If a specific form is selected and if finisher override is active, add finisher sheets
-                if (!empty($identifier['ext-form-persistenceIdentifier']) && $formIsAccessible) {
+                if (!empty($identifier['ext-form-persistenceIdentifier'])
+                    && $formIsAccessible
+                    && isset($identifier['ext-form-overrideFinishers'])
+                    && $identifier['ext-form-overrideFinishers'] === true
+                ) {
                     $persistenceIdentifier = $identifier['ext-form-persistenceIdentifier'];
                     $formDefinition = $formPersistenceManager->load($persistenceIdentifier);
-
-                    $translationFile = 'LLL:EXT:form/Resources/Private/Language/Database.xlf';
-                    $dataStructure['sheets']['sDEF']['ROOT']['el']['settings.overrideFinishers'] = [
-                        'TCEforms' => [
-                            'label' => $translationFile . ':tt_content.pi_flexform.formframework.overrideFinishers',
-                            'onChange' => 'reload',
-                            'config' => [
-                                'type' => 'check',
-                            ],
-                        ],
-                    ];
-
-                    $newSheets = [];
-
-                    if (isset($formDefinition['finishers']) && !empty($formDefinition['finishers'])) {
-                        $newSheets = $this->getAdditionalFinisherSheets($persistenceIdentifier, $formDefinition);
-                    }
-
-                    if (empty($newSheets)) {
-                        ArrayUtility::mergeRecursiveWithOverrule(
-                            $dataStructure['sheets']['sDEF']['ROOT']['el']['settings.overrideFinishers'],
-                            [
-                                'TCEforms' => [
-                                    'description' => $translationFile . ':tt_content.pi_flexform.formframework.overrideFinishers.empty',
-                                    'config' => [
-                                        'readOnly' => true,
-                                    ],
-                                ],
-                            ]
-                        );
-                    }
-
-                    if ($identifier['ext-form-overrideFinishers'] === 'enabled') {
-                        ArrayUtility::mergeRecursiveWithOverrule(
-                            $dataStructure,
-                            $newSheets
-                        );
-                    }
+                    $newSheets = $this->getAdditionalFinisherSheets($persistenceIdentifier, $formDefinition);
+                    ArrayUtility::mergeRecursiveWithOverrule(
+                        $dataStructure,
+                        $newSheets
+                    );
                 }
             } catch (NoSuchFileException $e) {
                 $dataStructure = $this->addSelectedPersistenceIdentifier($identifier['ext-form-persistenceIdentifier'], $dataStructure);
@@ -192,7 +168,6 @@ class DataStructureIdentifierHook
                 $this->addInvalidFrameworkConfigurationFlashMessage($e);
             }
         }
-
         return $dataStructure;
     }
 
@@ -257,8 +232,7 @@ class DataStructureIdentifierHook
                 GeneralUtility::makeInstance(
                     ArrayProcessing::class,
                     'convertToFlexFormSheets',
-                    // Either process leaf form field configuration not within a FlexForm section or FlexForm section
-                    '^(.*)(?:(?<!\.TCEforms)\.config\.type|\.section)$',
+                    '^(.*)\.config\.type$',
                     GeneralUtility::makeInstance(FinisherOptionGenerator::class, $converterDto)
                 )
             );
@@ -381,15 +355,15 @@ class DataStructureIdentifierHook
         array $finishersDefinition,
         array $prototypeConfiguration
     ): array {
-        if (isset($finishersDefinition[$finisherIdentifier]['FormEngine']['translationFiles'])) {
-            $translationFiles = $finishersDefinition[$finisherIdentifier]['FormEngine']['translationFiles'];
+        if (isset($finishersDefinition[$finisherIdentifier]['FormEngine']['translationFile'])) {
+            $translationFile = $finishersDefinition[$finisherIdentifier]['FormEngine']['translationFile'];
         } else {
-            $translationFiles = $prototypeConfiguration['formEngine']['translationFiles'];
+            $translationFile = $prototypeConfiguration['formEngine']['translationFile'];
         }
 
         $finishersDefinition[$finisherIdentifier]['FormEngine'] = TranslationService::getInstance()->translateValuesRecursive(
             $finishersDefinition[$finisherIdentifier]['FormEngine'],
-            $translationFiles
+            $translationFile
         );
 
         return $finishersDefinition;

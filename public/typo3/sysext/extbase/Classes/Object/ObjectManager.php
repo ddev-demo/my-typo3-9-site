@@ -1,6 +1,4 @@
 <?php
-declare(strict_types = 1);
-
 namespace TYPO3\CMS\Extbase\Object;
 
 /*
@@ -16,9 +14,7 @@ namespace TYPO3\CMS\Extbase\Object;
  * The TYPO3 project - inspiring people to share!
  */
 
-use Psr\Container\ContainerInterface;
-use TYPO3\CMS\Core\Utility\GeneralUtility;
-use TYPO3\CMS\Extbase\Object\Container\Container as ExtbaseContainer;
+use TYPO3\CMS\Extbase\Object\Container\Container;
 
 /**
  * Implementation of the default Extbase Object Manager
@@ -26,25 +22,16 @@ use TYPO3\CMS\Extbase\Object\Container\Container as ExtbaseContainer;
 class ObjectManager implements ObjectManagerInterface
 {
     /**
-     * @var ContainerInterface
-     */
-    private $container;
-
-    /**
-     * @var ExtbaseContainer
+     * @var \TYPO3\CMS\Extbase\Object\Container\Container
      */
     protected $objectContainer;
 
     /**
      * Constructs a new Object Manager
-     *
-     * @param ContainerInterface $container
-     * @param ExtbaseContainer $objectContainer
      */
-    public function __construct(ContainerInterface $container, ExtbaseContainer $objectContainer)
+    public function __construct()
     {
-        $this->container = $container;
-        $this->objectContainer = $objectContainer;
+        $this->objectContainer = \TYPO3\CMS\Core\Utility\GeneralUtility::makeInstance(\TYPO3\CMS\Extbase\Object\Container\Container::class);
     }
 
     /**
@@ -81,10 +68,7 @@ class ObjectManager implements ObjectManagerInterface
      */
     public function __wakeup()
     {
-        $this->__construct(
-            GeneralUtility::getContainer(),
-            GeneralUtility::getContainer()->get(ExtbaseContainer::class)
-        );
+        $this->__construct();
     }
 
     /**
@@ -94,7 +78,7 @@ class ObjectManager implements ObjectManagerInterface
      * @return bool TRUE if the object has been registered, otherwise FALSE
      * @internal only to be used within Extbase, not part of TYPO3 Core API.
      */
-    public function isRegistered(string $objectName): bool
+    public function isRegistered($objectName)
     {
         return class_exists($objectName, true);
     }
@@ -106,39 +90,29 @@ class ObjectManager implements ObjectManagerInterface
      * @param array $constructorArguments
      * @return object The object instance
      */
-    public function get(string $objectName, ...$constructorArguments): object
+    public function get($objectName, ...$constructorArguments)
     {
         if ($objectName === 'DateTime') {
-            return \TYPO3\CMS\Core\Utility\GeneralUtility::makeInstance($objectName, ...$constructorArguments);
+            $instance = \TYPO3\CMS\Core\Utility\GeneralUtility::makeInstance($objectName, ...$constructorArguments);
+        } else {
+            $instance = $this->objectContainer->getInstance($objectName, $constructorArguments);
         }
-
-        if ($this->container->has($objectName)) {
-            if ($constructorArguments === []) {
-                $instance = $this->container->get($objectName);
-                if (!is_object($instance)) {
-                    throw new \TYPO3\CMS\Extbase\Object\Exception('Invalid object name "' . $objectName . '". The PSR-11 container entry resolves to a non object.', 1562357346);
-                }
-                return $instance;
-            }
-            trigger_error($objectName . ' is available in the PSR-11 container. That means you should not try to instanciate it using constructor arguments. Falling back to legacy extbase based injection.', E_USER_DEPRECATED);
-        }
-
-        return $this->objectContainer->getInstance($objectName, $constructorArguments);
+        return $instance;
     }
 
     /**
      * Returns the scope of the specified object.
      *
      * @param string $objectName The object name
-     * @return int One of the ExtbaseContainer::SCOPE_ constants
+     * @return int One of the Container::SCOPE_ constants
      * @throws \TYPO3\CMS\Extbase\Object\Container\Exception\UnknownObjectException
      */
-    public function getScope(string $objectName): int
+    public function getScope($objectName)
     {
         if (!$this->isRegistered($objectName)) {
             throw new \TYPO3\CMS\Extbase\Object\Container\Exception\UnknownObjectException('Object "' . $objectName . '" is not registered.', 1265367590);
         }
-        return $this->objectContainer->isSingleton($objectName) ? ExtbaseContainer::SCOPE_SINGLETON : ExtbaseContainer::SCOPE_PROTOTYPE;
+        return $this->objectContainer->isSingleton($objectName) ? Container::SCOPE_SINGLETON : Container::SCOPE_PROTOTYPE;
     }
 
     /**
@@ -147,7 +121,7 @@ class ObjectManager implements ObjectManagerInterface
      * @param string $className
      * @return object
      */
-    public function getEmptyObject(string $className): object
+    public function getEmptyObject($className)
     {
         return $this->objectContainer->getEmptyObject($className);
     }

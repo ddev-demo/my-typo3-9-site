@@ -17,7 +17,6 @@ namespace TYPO3\CMS\Install\Controller;
 
 use Doctrine\DBAL\DBALException;
 use Doctrine\DBAL\DriverManager;
-use Psr\Container\ContainerInterface;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
 use TYPO3\CMS\Core\Configuration\ConfigurationManager;
@@ -51,7 +50,6 @@ use TYPO3\CMS\Install\Configuration\FeatureManager;
 use TYPO3\CMS\Install\FolderStructure\DefaultFactory;
 use TYPO3\CMS\Install\Service\EnableFileService;
 use TYPO3\CMS\Install\Service\Exception\ConfigurationChangedException;
-use TYPO3\CMS\Install\Service\LateBootService;
 use TYPO3\CMS\Install\Service\SilentConfigurationUpgradeService;
 use TYPO3\CMS\Install\SystemEnvironment\Check;
 use TYPO3\CMS\Install\SystemEnvironment\SetupCheck;
@@ -69,12 +67,7 @@ class InstallerController
      */
     public function initAction(): ResponseInterface
     {
-        $bust = $GLOBALS['EXEC_TIME'];
-        if (!GeneralUtility::getApplicationContext()->isDevelopment()) {
-            $bust = GeneralUtility::hmac(TYPO3_version . Environment::getProjectPath());
-        }
         $view = $this->initializeStandaloneView('Installer/Init.html');
-        $view->assign('bust', $bust);
         return new HtmlResponse(
             $view->render(),
             200,
@@ -635,7 +628,6 @@ class InstallerController
         $username = (string)$postValues['username'] !== '' ? $postValues['username'] : 'admin';
         // Check password and return early if not good enough
         $password = $postValues['password'];
-        $email = $postValues['email'] ?? '';
         if (empty($password) || strlen($password) < 8) {
             $messages[] = new FlashMessage(
                 'You are setting an important password here! It gives an attacker full control over your instance if cracked.'
@@ -675,7 +667,6 @@ class InstallerController
         $adminUserFields = [
             'username' => $username,
             'password' => $this->getHashedPassword($password),
-            'email' => GeneralUtility::validEmail($email) ? $email : '',
             'admin' => 1,
             'tstamp' => $GLOBALS['EXEC_TIME'],
             'crdate' => $GLOBALS['EXEC_TIME']
@@ -801,15 +792,7 @@ page.10.value (
       <h4 style="font-family: sans-serif;">Welcome to a default website made with <a href="https://typo3.org">TYPO3</a></h4>
    </div>
 )
-page.100 = CONTENT
-page.100 {
-    table = tt_content
-    select {
-        orderBy = sorting
-        where = {#colPos}=0
-    }
-}
-',
+page.100 =< styles.content.get',
                         'description' => 'This is an Empty Site Package TypoScript template.
 
 For each website you need a TypoScript template on the main page of your website (on the top level). For better maintenance all TypoScript should be extracted into external files via @import \'EXT:site_myproject/Configuration/TypoScript/setup.typoscript\''
@@ -1168,9 +1151,9 @@ For each website you need a TypoScript template on the main page of your website
         // Will load ext_localconf and ext_tables. This is pretty safe here since we are
         // in first install (database empty), so it is very likely that no extension is loaded
         // that could trigger a fatal at this point.
-        $container = $this->loadExtLocalconfDatabaseAndExtTables();
+        $this->loadExtLocalconfDatabaseAndExtTables();
 
-        $sqlReader = $container->get(SqlReader::class);
+        $sqlReader = GeneralUtility::makeInstance(SqlReader::class);
         $sqlCode = $sqlReader->getTablesDefinitionString(true);
         $schemaMigrationService = GeneralUtility::makeInstance(SchemaMigrator::class);
         $createTableStatements = $sqlReader->getCreateTableStatementArray($sqlCode);
@@ -1202,12 +1185,13 @@ For each website you need a TypoScript template on the main page of your website
      *
      * Those actions can potentially fatal if some old extension is loaded that triggers
      * a fatal in ext_localconf or ext_tables code! Use only if really needed.
-     *
-     * @return ContainerInterface
      */
-    protected function loadExtLocalconfDatabaseAndExtTables(): ContainerInterface
+    protected function loadExtLocalconfDatabaseAndExtTables()
     {
-        return GeneralUtility::makeInstance(LateBootService::class)->loadExtLocalconfDatabaseAndExtTables();
+        \TYPO3\CMS\Core\Core\Bootstrap::loadTypo3LoadedExtAndExtLocalconf(false);
+        \TYPO3\CMS\Core\Core\Bootstrap::unsetReservedGlobalVariables();
+        \TYPO3\CMS\Core\Core\Bootstrap::loadBaseTca(false);
+        \TYPO3\CMS\Core\Core\Bootstrap::loadExtTables(false);
     }
 
     /**
@@ -1235,6 +1219,26 @@ For each website you need a TypoScript template on the main page of your website
             SiteConfiguration::class,
             Environment::getConfigPath() . '/sites'
         );
-        $siteConfiguration->createNewBasicSite($identifier, $rootPageId, $normalizedParams->getSiteUrl());
+        $siteConfiguration->write($identifier, [
+            'rootPageId' => $rootPageId,
+            'base' => $normalizedParams->getSiteUrl(),
+            'languages' => [
+                0 => [
+                    'title' => 'English',
+                    'enabled' => true,
+                    'languageId' => 0,
+                    'base' => '/en/',
+                    'typo3Language' => 'default',
+                    'locale' => 'en_US.UTF-8',
+                    'iso-639-1' => 'en',
+                    'navigationTitle' => 'English',
+                    'hreflang' => 'en-us',
+                    'direction' => 'ltr',
+                    'flag' => 'us',
+                ],
+            ],
+            'errorHandling' => [],
+            'routes' => [],
+        ]);
     }
 }

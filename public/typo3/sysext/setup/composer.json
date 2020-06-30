@@ -13,18 +13,12 @@
 		"sort-packages": true
 	},
 	"require": {
-		"typo3/cms-core": "10.1.0"
+		"typo3/cms-core": "9.5.19"
 	},
 	"conflict": {
 		"typo3/cms": "*"
 	},
-	"replace": {
-		"setup": "*"
-	},
 	"extra": {
-		"branch-alias": {
-			"dev-master": "10.1.x-dev"
-		},
 		"typo3/cms": {
 			"Package": {
 				"partOfFactoryDefault": true

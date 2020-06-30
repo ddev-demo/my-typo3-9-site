@@ -20,8 +20,10 @@ use TYPO3\CMS\Backend\Routing\Exception\InvalidRequestTokenException;
 use TYPO3\CMS\Backend\Routing\Route;
 use TYPO3\CMS\Backend\Routing\Router;
 use TYPO3\CMS\Backend\Utility\BackendUtility;
+use TYPO3\CMS\Core\Configuration\Features;
 use TYPO3\CMS\Core\FormProtection\FormProtectionFactory;
 use TYPO3\CMS\Core\Http\Dispatcher;
+use TYPO3\CMS\Core\Http\Security\ReferrerEnforcer;
 use TYPO3\CMS\Core\Type\Bitmask\Permission;
 use TYPO3\CMS\Core\Utility\GeneralUtility;
 use TYPO3\CMS\Core\Utility\MathUtility;
@@ -35,16 +37,22 @@ class RouteDispatcher extends Dispatcher
      * Main method to resolve the route and checks the target of the route, and tries to call it.
      *
      * @param ServerRequestInterface $request the current server request
+     * @param ResponseInterface $response the prepared response @deprecated since TYPO3 v9, will be removed in TYPO3 v10.0
      * @return ResponseInterface the filled response by the callable / controller/action
      * @throws InvalidRequestTokenException if the route was not found
      * @throws \InvalidArgumentException if the defined target for the route is invalid
      */
-    public function dispatch(ServerRequestInterface $request): ResponseInterface
+    public function dispatch(ServerRequestInterface $request, ResponseInterface $response = null): ResponseInterface
     {
         $router = GeneralUtility::makeInstance(Router::class);
         $route = $router->matchRequest($request);
         $request = $request->withAttribute('route', $route);
         $request = $request->withAttribute('target', $route->getOption('target'));
+
+        $enforceReferrerResponse = $this->enforceReferrer($request);
+        if ($enforceReferrerResponse instanceof ResponseInterface) {
+            return $enforceReferrerResponse;
+        }
         if (!$this->isValidRequest($request)) {
             throw new InvalidRequestTokenException('Invalid request for route "' . $route->getPath() . '"', 1425389455);
         }
@@ -55,6 +63,33 @@ class RouteDispatcher extends Dispatcher
         $targetIdentifier = $route->getOption('target');
         $target = $this->getCallableFromTarget($targetIdentifier);
         $arguments = [$request];
+
+        // @deprecated Test if target accepts one (ok) or two (deprecated) arguments
+        $scanForResponse = !GeneralUtility::makeInstance(Features::class)
+            ->isFeatureEnabled('simplifiedControllerActionDispatching');
+        if ($scanForResponse) {
+            if (is_array($targetIdentifier)) {
+                $controllerActionName = implode('::', $targetIdentifier);
+                $targetReflection = new \ReflectionMethod($controllerActionName);
+            } elseif (is_string($targetIdentifier) && strpos($targetIdentifier, '::') !== false) {
+                $controllerActionName = $targetIdentifier;
+                $targetReflection = new \ReflectionMethod($controllerActionName);
+            } elseif (is_callable($targetIdentifier)) {
+                $controllerActionName = 'closure function';
+                $targetReflection = new \ReflectionFunction($targetIdentifier);
+            } else {
+                $controllerActionName = $targetIdentifier . '::__invoke';
+                $targetReflection = new \ReflectionMethod($controllerActionName);
+            }
+            if ($targetReflection->getNumberOfParameters() >= 2) {
+                trigger_error(
+                    'Handing over second argument $response to controller action ' . $controllerActionName . '() is deprecated and will be removed in TYPO3 v10.0.',
+                    E_USER_DEPRECATED
+                );
+                $arguments[] = $response;
+            }
+        }
+
         return call_user_func_array($target, $arguments);
     }
 
@@ -66,6 +101,35 @@ class RouteDispatcher extends Dispatcher
     protected function getFormProtection()
     {
         return FormProtectionFactory::get();
+    }
+
+    /**
+     * Evaluates HTTP `Referer` header (which is denied by client to be a custom
+     * value) - attempts to ensure the value is given using a HTML client refresh.
+     * see: https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Referer
+     *
+     * @param ServerRequestInterface $request
+     * @return ResponseInterface|null
+     */
+    protected function enforceReferrer(ServerRequestInterface $request): ?ResponseInterface
+    {
+        /** @var Features $features */
+        $features = GeneralUtility::makeInstance(Features::class);
+        if (!$features->isFeatureEnabled('security.backend.enforceReferrer')) {
+            return null;
+        }
+        /** @var Route $route */
+        $route = $request->getAttribute('route');
+        $referrerFlags = GeneralUtility::trimExplode(',', $route->getOption('referrer') ?? '', true);
+        if (!in_array('required', $referrerFlags, true)) {
+            return null;
+        }
+        /** @var ReferrerEnforcer $referrerEnforcer */
+        $referrerEnforcer = GeneralUtility::makeInstance(ReferrerEnforcer::class, $request);
+        return $referrerEnforcer->handle([
+            'flags' => $referrerFlags,
+            'subject' => $route->getPath(),
+        ]);
     }
 
     /**
@@ -87,7 +151,10 @@ class RouteDispatcher extends Dispatcher
         if ($token) {
             return $this->getFormProtection()->validateToken($token, 'route', $route->getOption('_identifier'));
         }
-        return false;
+        // backwards compatibility: check for M and module token params
+        // @deprecated since TYPO3 v9, will be removed in TYPO3 v10.0.
+        $token = (string)($request->getParsedBody()['moduleToken'] ?? $request->getQueryParams()['moduleToken']);
+        return $this->getFormProtection()->validateToken($token, 'moduleCall', $request->getParsedBody()['M'] ?? $request->getQueryParams()['M']);
     }
 
     /**

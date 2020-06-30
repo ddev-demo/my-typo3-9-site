@@ -11,6 +11,15 @@ lib.parseFunc {
         }
     }
     tags {
+        link = TEXT
+        link {
+            current = 1
+            typolink {
+                parameter.data = parameters : allParams
+                extTarget = {$styles.content.links.extTarget}
+            }
+            parseFunc.constants = 1
+        }
         a = TEXT
         a {
             current = 1
@@ -18,8 +27,14 @@ lib.parseFunc {
                 parameter.data = parameters:href
                 title.data = parameters:title
                 ATagParams.data = parameters:allParams
-                target.data = parameters:target
-                extTarget = {$styles.content.links.extTarget}
+                # the target attribute takes precedence over config.intTarget
+                target.ifEmpty.data = parameters:target
+                # the target attribute takes precedence over the constant (styles.content.links.extTarget)
+                # which takes precedence over config.extTarget
+                # do not pass extTarget as reference, as it might not be set resulting in the string being
+                # written to the target attribute
+                extTarget.ifEmpty < config.extTarget
+                extTarget.ifEmpty.override = {$styles.content.links.extTarget}
                 extTarget.override.data = parameters:target
             }
         }
@@ -73,10 +88,7 @@ lib.parseFunc_RTE {
                 # Recursive call to self but without wrapping non-wrapped cell content
                 default.stdWrap {
                     parseFunc = < lib.parseFunc_RTE
-                    parseFunc.nonTypoTagStdWrap.encapsLines {
-                        nonWrappedTag =
-                        innerStdWrap_all.ifBlank =
-                    }
+                    parseFunc.nonTypoTagStdWrap.encapsLines.nonWrappedTag =
                 }
                 addChr10BetweenParagraphs = 1
             }

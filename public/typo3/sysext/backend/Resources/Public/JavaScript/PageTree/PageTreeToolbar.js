@@ -20,7 +20,7 @@ define(['jquery',
     'TYPO3/CMS/Backend/PageTree/PageTreeDragDrop',
     'TYPO3/CMS/Backend/Tooltip',
     'TYPO3/CMS/Backend/SvgTree',
-    'TYPO3/CMS/Backend/Input/Clearable'
+    'TYPO3/CMS/Backend/jquery.clearable'
   ],
   function($, Icons, d3, PageTreeDragDrop) {
     'use strict';
@@ -159,6 +159,7 @@ define(['jquery',
 
         Icons.getIcon($this.attr('data-tree-icon'), Icons.sizes.small).done(function(icon) {
           $this.append(icon);
+          _this.tree.setWrapperHeight();
         });
       });
 
@@ -174,15 +175,11 @@ define(['jquery',
 
           $toolbar.find('[data-tree-submenu]').not($submenu).removeClass('active');
           $submenu.addClass('active');
-
-          let input = $submenu.find('input').get(0);
-          if (input) {
-            input.clearable({
-              onClear: function (input) {
-                $(input).trigger('input');
-              }
-            });
-          }
+          $submenu.find('input').clearable({
+            onClear: function(){
+              $submenu.find('input').trigger('input');
+            }
+          });
           $submenu.find('input').focus();
         });
       });

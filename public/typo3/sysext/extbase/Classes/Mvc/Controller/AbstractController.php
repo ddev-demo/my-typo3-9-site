@@ -14,7 +14,6 @@ namespace TYPO3\CMS\Extbase\Mvc\Controller;
  * The TYPO3 project - inspiring people to share!
  */
 
-use TYPO3\CMS\Core\Utility\MathUtility;
 use TYPO3\CMS\Extbase\Configuration\ConfigurationManagerInterface;
 use TYPO3\CMS\Extbase\Mvc\Exception\StopActionException;
 use TYPO3\CMS\Extbase\Mvc\Exception\UnsupportedRequestTypeException;
@@ -39,6 +38,11 @@ abstract class AbstractController implements ControllerInterface
      * @var \TYPO3\CMS\Extbase\Mvc\Web\Routing\UriBuilder
      */
     protected $uriBuilder;
+
+    /**
+     * @var string Key of the extension this controller belongs to
+     */
+    protected $extensionName;
 
     /**
      * Contains the settings of the current extension
@@ -113,6 +117,21 @@ abstract class AbstractController implements ControllerInterface
      * @var ConfigurationManagerInterface
      */
     protected $configurationManager;
+
+    /**
+     * Constructs the controller.
+     */
+    public function __construct()
+    {
+        $className = static::class;
+        $classNameParts = explode('\\', $className, 4);
+        // Skip vendor and product name for core classes
+        if (strpos($className, 'TYPO3\\CMS\\') === 0) {
+            $this->extensionName = $classNameParts[2];
+        } else {
+            $this->extensionName = $classNameParts[1];
+        }
+    }
 
     /**
      * @param ConfigurationManagerInterface $configurationManager
@@ -231,9 +250,9 @@ abstract class AbstractController implements ControllerInterface
      * without the need for a new request.
      *
      * @param string $actionName Name of the action to forward to
-     * @param string $controllerName Unqualified object name of the controller to forward to. If not specified, the current controller is used.
-     * @param string $extensionName Name of the extension containing the controller to forward to. If not specified, the current extension is assumed.
-     * @param array $arguments Arguments to pass to the target action
+     * @param string|null $controllerName Unqualified object name of the controller to forward to. If not specified, the current controller is used.
+     * @param string|null $extensionName Name of the extension containing the controller to forward to. If not specified, the current extension is assumed.
+     * @param array|null $arguments Arguments to pass to the target action
      * @throws StopActionException
      * @see redirect()
      */
@@ -264,10 +283,10 @@ abstract class AbstractController implements ControllerInterface
      * if used with other request types.
      *
      * @param string $actionName Name of the action to forward to
-     * @param string $controllerName Unqualified object name of the controller to forward to. If not specified, the current controller is used.
-     * @param string $extensionName Name of the extension containing the controller to forward to. If not specified, the current extension is assumed.
-     * @param array $arguments Arguments to pass to the target action
-     * @param int $pageUid Target page uid. If NULL, the current page uid is used
+     * @param string|null $controllerName Unqualified object name of the controller to forward to. If not specified, the current controller is used.
+     * @param string|null $extensionName Name of the extension containing the controller to forward to. If not specified, the current extension is assumed.
+     * @param array|null $arguments Arguments to pass to the target action
+     * @param int|null $pageUid Target page uid. If NULL, the current page uid is used
      * @param int $delay (optional) The delay in seconds. Default is no delay.
      * @param int $statusCode (optional) The HTTP status code for the redirect. Default is "303 See Other
      * @throws UnsupportedRequestTypeException If the request is not a web request
@@ -282,10 +301,7 @@ abstract class AbstractController implements ControllerInterface
         if ($controllerName === null) {
             $controllerName = $this->request->getControllerName();
         }
-        $this->uriBuilder->reset()->setCreateAbsoluteUri(true);
-        if (MathUtility::canBeInterpretedAsInteger($pageUid)) {
-            $this->uriBuilder->setTargetPageUid((int)$pageUid);
-        }
+        $this->uriBuilder->reset()->setTargetPageUid($pageUid)->setCreateAbsoluteUri(true);
         if (\TYPO3\CMS\Core\Utility\GeneralUtility::getIndpEnv('TYPO3_SSL')) {
             $this->uriBuilder->setAbsoluteUriScheme('https');
         }

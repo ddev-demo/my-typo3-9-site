@@ -63,7 +63,7 @@ class CodeStatistics extends NodeVisitorAbstract
                 $comments = $node->getAttribute('comments');
                 if (!empty($comments)) {
                     foreach ($comments as $comment) {
-                        if (strpos($comment->getText(), '@extensionScannerIgnoreFile') !== false) {
+                        if (strstr($comment->getText(), '@extensionScannerIgnoreFile') !== false) {
                             $this->isCurrentFileIgnored = true;
                             break;
                         }
@@ -75,7 +75,7 @@ class CodeStatistics extends NodeVisitorAbstract
             $comments = $node->getAttribute('comments');
             if (!empty($comments)) {
                 foreach ($comments as $comment) {
-                    if (strpos($comment->getText(), '@extensionScannerIgnoreLine') !== false) {
+                    if (strstr($comment->getText(), '@extensionScannerIgnoreLine') !== false) {
                         $this->numberOfIgnoreLines++;
                         break;
                     }

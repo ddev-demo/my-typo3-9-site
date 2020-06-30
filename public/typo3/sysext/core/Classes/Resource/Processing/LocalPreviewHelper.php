@@ -38,6 +38,19 @@ class LocalPreviewHelper
     ];
 
     /**
+     * @var LocalImageProcessor
+     */
+    protected $processor;
+
+    /**
+     * @param LocalImageProcessor $processor
+     */
+    public function __construct(LocalImageProcessor $processor)
+    {
+        $this->processor = $processor;
+    }
+
+    /**
      * Enforce default configuration for preview processing
      *
      * @param array $configuration

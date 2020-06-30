@@ -26,7 +26,6 @@ use TYPO3\CMS\Core\Database\Query\Restriction\HiddenRestriction;
 use TYPO3\CMS\Core\Database\Query\Restriction\StartTimeRestriction;
 use TYPO3\CMS\Core\Imaging\Icon;
 use TYPO3\CMS\Core\Imaging\IconFactory;
-use TYPO3\CMS\Core\Localization\LanguageService;
 use TYPO3\CMS\Core\Type\Bitmask\Permission;
 use TYPO3\CMS\Core\Utility\GeneralUtility;
 use TYPO3\CMS\Core\Utility\MathUtility;
@@ -280,7 +279,7 @@ class LiveSearch
      */
     protected function getTitleOfCurrentRecordType($tableName)
     {
-        return $this->getLanguageService()->sL($GLOBALS['TCA'][$tableName]['ctrl']['title']);
+        return $GLOBALS['LANG']->sL($GLOBALS['TCA'][$tableName]['ctrl']['title']);
     }
 
     /**
@@ -337,7 +336,7 @@ class LiveSearch
                     );
                 } elseif ($fieldType === 'text'
                     || $fieldType === 'flex'
-                    || ($fieldType === 'input' && (!$evalRules || !preg_match('/date|time|int/', $evalRules)))
+                    || ($fieldType === 'input' && (!$evalRules || !preg_match('/\b(?:date|time|int)\b/', $evalRules)))
                 ) {
                     // Otherwise and if the field makes sense to be searched, assemble a like condition
                     $constraints[] = $constraints[] = $queryBuilder->expr()->like(
@@ -388,7 +387,7 @@ class LiveSearch
                 // Assemble the search condition only if the field makes sense to be searched
                 if ($fieldType === 'text'
                     || $fieldType === 'flex'
-                    || ($fieldType === 'input' && (!$evalRules || !preg_match('/date|time|int/', $evalRules)))
+                    || ($fieldType === 'input' && (!$evalRules || !preg_match('/\b(?:date|time|int)\b/', $evalRules)))
                 ) {
                     if ($searchConstraint->count() !== 0) {
                         $constraints[] = $searchConstraint;
@@ -481,13 +480,5 @@ class LiveSearch
         // add workspace pid - workspace permissions are taken into account by where clause later
         $tree->ids[] = -1;
         return implode(',', $tree->ids);
-    }
-
-    /**
-     * @return LanguageService|null
-     */
-    protected function getLanguageService(): ?LanguageService
-    {
-        return $GLOBALS['LANG'] ?? null;
     }
 }

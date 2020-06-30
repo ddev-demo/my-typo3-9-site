@@ -10,4 +10,746 @@
  *
  * The TYPO3 project - inspiring people to share!
  */
-define(["require","exports","jquery","nprogress","TYPO3/CMS/Backend/Modal","TYPO3/CMS/Backend/Tooltip","TYPO3/CMS/Backend/Severity","TYPO3/CMS/Core/SecurityUtility","./Repository","./Update","./UploadForm","datatables","TYPO3/CMS/Backend/Input/Clearable"],function(e,t,n,a,o,i,r,s,l,c,d){"use strict";const p=new s;var u;!function(e){e.extensionlist="#typo3-extension-list",e.searchField="#Tx_Extensionmanager_extensionkey"}(u||(u={}));class m{constructor(){this.bindExtensionListActions=(()=>{n(".removeExtension").not(".transformed").each((e,t)=>{const a=n(t);a.data("href",a.attr("href")),a.attr("href","#"),a.addClass("transformed"),a.click(()=>{o.confirm(TYPO3.lang["extensionList.removalConfirmation.title"],TYPO3.lang["extensionList.removalConfirmation.question"],r.error,[{text:TYPO3.lang["button.cancel"],active:!0,btnClass:"btn-default",trigger:()=>{o.dismiss()}},{text:TYPO3.lang["button.remove"],btnClass:"btn-danger",trigger:()=>{this.removeExtensionFromDisk(a),o.dismiss()}}])})})}),n(()=>{n.fn.dataTableExt.oSort["extension-asc"]=((e,t)=>m.extensionCompare(e,t)),n.fn.dataTableExt.oSort["extension-desc"]=((e,t)=>{return-1*m.extensionCompare(e,t)}),n.fn.dataTableExt.oSort["version-asc"]=((e,t)=>{return-1*m.versionCompare(e,t)}),n.fn.dataTableExt.oSort["version-desc"]=((e,t)=>m.versionCompare(e,t)),this.Update=new c,this.UploadForm=new d,this.Repository=new l;const e=this.manageExtensionListing();let t;n(document).on("click",".onClickMaskExtensionManager",()=>{a.start()}).on("click","a[data-action=update-extension]",e=>{e.preventDefault(),n.ajax({url:n(this).attr("href"),dataType:"json",beforeSend:()=>{a.start()},success:this.updateExtension})}).on("change","input[name=unlockDependencyIgnoreButton]",e=>{n(".t3js-dependencies").toggleClass("disabled",!n(e.currentTarget).prop("checked"))}),null!==(t=document.querySelector(u.searchField))&&t.clearable({onClear:()=>{e.search("").draw()}}),n(document).on("click",".t3-button-action-installdistribution",()=>{a.start()}),this.Repository.initDom(),this.Update.initializeEvents(),this.UploadForm.initializeEvents(),i.initialize("#typo3-extension-list [title]",{delay:{show:500,hide:100},trigger:"hover",container:"body"})})}static getUrlVars(){let e=[],t=window.location.href.slice(window.location.href.indexOf("?")+1).split("&");for(let n of t){const[t,a]=n.split("=");e.push(t),e[t]=a}return e}static versionCompare(e,t){if(e===t)return 0;const n=e.split("."),a=t.split("."),o=Math.min(n.length,a.length);for(let e=0;e<o;e++){if(parseInt(n[e],10)>parseInt(a[e],10))return 1;if(parseInt(n[e],10)<parseInt(a[e],10))return-1}return n.length>a.length?1:n.length<a.length?-1:0}static extensionCompare(e,t){const n=document.createElement("div");n.innerHTML=e;const a=n.textContent||n.innerText||e;n.innerHTML=t;const o=n.textContent||n.innerText||t;return a.trim().localeCompare(o.trim())}manageExtensionListing(){const e=n(u.searchField),t=n(u.extensionlist).DataTable({paging:!1,dom:"lrtip",lengthChange:!1,pageLength:15,stateSave:!0,drawCallback:this.bindExtensionListActions,columns:[null,null,{type:"extension"},null,{type:"version"},{orderable:!1},null,null]});e.parents("form").on("submit",()=>!1);const a=m.getUrlVars(),o=a.search?a.search:t.search();return e.val(o),e.on("input",e=>{t.search(n(e.currentTarget).val()).draw()}),t}removeExtensionFromDisk(e){n.ajax({url:e.data("href"),beforeSend:()=>{a.start()},success:()=>{location.reload()},complete:()=>{a.done()}})}updateExtension(e){let t=0;const i=n("<form>");n.each(e.updateComments,(e,a)=>{const o=n("<input>").attr({type:"radio",name:"version"}).val(e);0===t&&o.attr("checked","checked"),i.append([n("<h3>").append([o," "+p.encodeHtml(e)]),n("<div>").append(a.replace(/(\r\n|\n\r|\r|\n)/g,"\n").split(/\n/).map(e=>p.encodeHtml(e)).join("<br>"))]),t++});const s=n("<div>").append([n("<h1>").text(TYPO3.lang["extensionList.updateConfirmation.title"]),n("<h2>").text(TYPO3.lang["extensionList.updateConfirmation.message"]),i]);a.done(),o.confirm(TYPO3.lang["extensionList.updateConfirmation.questionVersionComments"],s,r.warning,[{text:TYPO3.lang["button.cancel"],active:!0,btnClass:"btn-default",trigger:()=>{o.dismiss()}},{text:TYPO3.lang["button.updateExtension"],btnClass:"btn-warning",trigger:()=>{n.ajax({url:e.url,data:{tx_extensionmanager_tools_extensionmanagerextensionmanager:{version:n("input:radio[name=version]:checked",o.currentModal).val()}},dataType:"json",beforeSend:()=>{a.start()},complete:()=>{location.reload()}}),o.dismiss()}}])}}let g=new m;return void 0===TYPO3.ExtensionManager&&(TYPO3.ExtensionManager=g),g});
+/**
+ * Module: TYPO3/CMS/Extensionmanager/Main
+ * main logic holding everything together, consists of multiple parts
+ * ExtensionManager => Various functions for displaying the extension list / sorting
+ * Repository => Various AJAX functions for TER downloads
+ * ExtensionManager.Update => Various AJAX functions to display updates
+ * ExtensionManager.uploadForm => helper to show the upload form
+ */
+define([
+  'jquery',
+  'nprogress',
+  'TYPO3/CMS/Backend/Modal',
+  'TYPO3/CMS/Backend/SplitButtons',
+  'TYPO3/CMS/Backend/Tooltip',
+  'TYPO3/CMS/Backend/Notification',
+  'TYPO3/CMS/Backend/Severity',
+  'TYPO3/CMS/Core/SecurityUtility',
+  'datatables',
+  'TYPO3/CMS/Backend/jquery.clearable'
+], function($, NProgress, Modal, SplitButtons, Tooltip, Notification, Severity, SecurityUtility) {
+
+  var securityUtility = new SecurityUtility();
+
+  /**
+   *
+   * @type {{identifier: {extensionlist: string, searchField: string, extensionManager: string}}}
+   * @exports TYPO3/CMS/Extensionmanager/Main
+   */
+  var ExtensionManager = {
+    identifier: {
+      extensionlist: '#typo3-extension-list',
+      searchField: '#Tx_Extensionmanager_extensionkey'
+    }
+  };
+
+  /**
+   *
+   * @returns {Object}
+   */
+  ExtensionManager.manageExtensionListing = function() {
+    var $searchField = $(this.identifier.searchField),
+      dataTable = $(this.identifier.extensionlist).DataTable({
+        paging: false,
+        dom: 'lrtip',
+        lengthChange: false,
+        pageLength: 15,
+        stateSave: true,
+        drawCallback: this.bindExtensionListActions,
+        columns: [
+          null,
+          null,
+          {
+            type: 'extension'
+          },
+          null,
+          {
+            type: 'version'
+          }, {
+            orderable: false
+          },
+          null,
+          null
+        ]
+      });
+
+    $searchField.parents('form').on('submit', function() {
+      return false;
+    });
+
+    var getVars = ExtensionManager.getUrlVars();
+
+    // restore filter
+    var currentSearch = (getVars['search'] ? getVars['search'] : dataTable.search());
+    $searchField.val(currentSearch);
+
+    $searchField.on('input', function(e) {
+      dataTable.search($(this).val()).draw();
+    });
+
+    return dataTable;
+  };
+
+  /**
+   *
+   */
+  ExtensionManager.bindExtensionListActions = function() {
+    $('.removeExtension').not('.transformed').each(function() {
+      var $me = $(this);
+      $me.data('href', $me.attr('href'));
+      $me.attr('href', '#');
+      $me.addClass('transformed');
+      $me.click(function() {
+        Modal.confirm(
+          TYPO3.lang['extensionList.removalConfirmation.title'],
+          TYPO3.lang['extensionList.removalConfirmation.question'],
+          Severity.error,
+          [
+            {
+              text: TYPO3.lang['button.cancel'],
+              active: true,
+              btnClass: 'btn-default',
+              trigger: function() {
+                Modal.dismiss();
+              }
+            }, {
+            text: TYPO3.lang['button.remove'],
+            btnClass: 'btn-danger',
+            trigger: function() {
+              ExtensionManager.removeExtensionFromDisk($me);
+              Modal.dismiss();
+            }
+          }
+          ]
+        );
+      });
+    });
+  };
+
+  /**
+   *
+   * @param {Object} $extension
+   */
+  ExtensionManager.removeExtensionFromDisk = function($extension) {
+    $.ajax({
+      url: $extension.data('href'),
+      beforeSend: function() {
+        NProgress.start();
+      },
+      success: function() {
+        location.reload();
+      },
+      complete: function() {
+        NProgress.done();
+      }
+    });
+  };
+
+  /**
+   *
+   * @returns {Array}
+   */
+  ExtensionManager.getUrlVars = function() {
+    var vars = [], hash;
+    var hashes = window.location.href.slice(window.location.href.indexOf('?') + 1).split('&');
+    for (var i = 0; i < hashes.length; i++) {
+      hash = hashes[i].split('=');
+      vars.push(hash[0]);
+      vars[hash[0]] = hash[1];
+    }
+    return vars;
+  };
+
+  $.fn.dataTableExt.oSort['extension-asc'] = function(a, b) {
+    return ExtensionManager.extensionCompare(a, b);
+  };
+
+  $.fn.dataTableExt.oSort['extension-desc'] = function(a, b) {
+    var result = ExtensionManager.extensionCompare(a, b);
+    return result * -1;
+  };
+
+  $.fn.dataTableExt.oSort['version-asc'] = function(a, b) {
+    var result = ExtensionManager.versionCompare(a, b);
+    return result * -1;
+  };
+
+  $.fn.dataTableExt.oSort['version-desc'] = function(a, b) {
+    return ExtensionManager.versionCompare(a, b);
+  };
+
+  /**
+   * Special sorting for the extension version column
+   *
+   * @param {String} a
+   * @param {String} b
+   * @returns {Number}
+   */
+  ExtensionManager.versionCompare = function(a, b) {
+    if (a === b) {
+      return 0;
+    }
+
+    var a_components = a.split(".");
+    var b_components = b.split(".");
+
+    var len = Math.min(a_components.length, b_components.length);
+
+    // loop while the components are equal
+    for (var i = 0; i < len; i++) {
+      // A bigger than B
+      if (parseInt(a_components[i]) > parseInt(b_components[i])) {
+        return 1;
+      }
+
+      // B bigger than A
+      if (parseInt(a_components[i]) < parseInt(b_components[i])) {
+        return -1;
+      }
+    }
+
+    // If one's a prefix of the other, the longer one is greaRepository.
+    if (a_components.length > b_components.length) {
+      return 1;
+    }
+
+    if (a_components.length < b_components.length) {
+      return -1;
+    }
+    // Otherwise they are the same.
+    return 0;
+  };
+
+  /**
+   * The extension name column can contain various forms of HTML that
+   * break a direct comparison of values
+   *
+   * @param {String} a
+   * @param {String} b
+   * @returns {Number}
+   */
+  ExtensionManager.extensionCompare = function(a, b) {
+    var div = document.createElement("div");
+    div.innerHTML = a;
+    var aStr = div.textContent || div.innerText || a;
+
+    div.innerHTML = b;
+    var bStr = div.textContent || div.innerText || b;
+
+    return aStr.trim().localeCompare(bStr.trim());
+  }
+
+  /**
+   *
+   * @param {Object} data
+   */
+  ExtensionManager.updateExtension = function(data) {
+    var i = 0;
+    var $form = $('<form>');
+    $.each(data.updateComments, function(version, comment) {
+      var $input = $('<input>').attr({type: 'radio', name: 'version'}).val(version);
+      if (i === 0) {
+        $input.attr('checked', 'checked');
+      }
+      $form.append([
+        $('<h3>').append([
+          $input,
+          ' ' + securityUtility.encodeHtml(version)
+        ]),
+        $('<div>')
+          .append(
+            comment
+              .replace(/(\r\n|\n\r|\r|\n)/g, '\n')
+              .split(/\n/).map(function(line) {
+                return securityUtility.encodeHtml(line);
+              })
+              .join('<br>')
+          )
+      ]);
+      i++;
+    });
+    var $container = $('<div>').append([
+      $('<h1>').text(TYPO3.lang['extensionList.updateConfirmation.title']),
+      $('<h2>').text(TYPO3.lang['extensionList.updateConfirmation.message']),
+      $form
+    ]);
+
+    NProgress.done();
+
+    Modal.confirm(
+      TYPO3.lang['extensionList.updateConfirmation.questionVersionComments'],
+      $container,
+      Severity.warning,
+      [
+        {
+          text: TYPO3.lang['button.cancel'],
+          active: true,
+          btnClass: 'btn-default',
+          trigger: function() {
+            Modal.dismiss();
+          }
+        }, {
+        text: TYPO3.lang['button.updateExtension'],
+        btnClass: 'btn-warning',
+        trigger: function() {
+          $.ajax({
+            url: data.url,
+            data: {
+              tx_extensionmanager_tools_extensionmanagerextensionmanager: {
+                version: $('input:radio[name=version]:checked', Modal.currentModal).val()
+              }
+            },
+            dataType: 'json',
+            beforeSend: function() {
+              NProgress.start();
+            },
+            complete: function() {
+              location.reload();
+            }
+          });
+          Modal.dismiss();
+        }
+      }
+      ]
+    );
+  };
+
+  /**
+   *
+   * @type {{downloadPath: string}}
+   */
+  var Repository = {
+    downloadPath: ''
+  };
+
+  /**
+   *
+   */
+  Repository.initDom = function() {
+    NProgress.configure({parent: '.module-loading-indicator', showSpinner: false});
+
+    $('#terTable').DataTable({
+      lengthChange: false,
+      pageLength: 15,
+      stateSave: false,
+      info: false,
+      paging: false,
+      searching: false,
+      ordering: false,
+      drawCallback: Repository.bindDownload
+    });
+
+    $('#terVersionTable').DataTable({
+      lengthChange: false,
+      pageLength: 15,
+      stateSave: false,
+      info: false,
+      paging: false,
+      searching: false,
+      drawCallback: Repository.bindDownload,
+      order: [
+        [2, 'asc']
+      ],
+      columns: [
+        {orderable: false},
+        null,
+        {type: 'version'},
+        null,
+        null,
+        null
+      ]
+    });
+
+    $('#terSearchTable').DataTable({
+      paging: false,
+      lengthChange: false,
+      stateSave: false,
+      searching: false,
+      language: {
+        search: 'Filter results:'
+      },
+      ordering: false,
+      drawCallback: Repository.bindDownload
+    });
+
+    Repository.bindDownload();
+    Repository.bindSearchFieldResetter();
+  };
+
+  /**
+   *
+   */
+  Repository.bindDownload = function() {
+    var installButtons = $('.downloadFromTer form.download button[type=submit]');
+    installButtons.off('click');
+    installButtons.on('click', function(event) {
+      event.preventDefault();
+      var url = $(event.currentTarget.form).attr('data-href');
+      Repository.downloadPath = $(event.currentTarget.form).find('input.downloadPath:checked').val();
+      $.ajax({
+        url: url,
+        dataType: 'json',
+        beforeSend: function() {
+          NProgress.start();
+        },
+        success: Repository.getDependencies
+      });
+    });
+  };
+
+  /**
+   *
+   * @param {Object} data
+   * @returns {Boolean}
+   */
+  Repository.getDependencies = function(data) {
+    NProgress.done();
+    if (data.hasDependencies) {
+      Modal.confirm(data.title, $(data.message), Severity.info, [
+        {
+          text: TYPO3.lang['button.cancel'],
+          active: true,
+          btnClass: 'btn-default',
+          trigger: function() {
+            Modal.dismiss();
+          }
+        }, {
+          text: TYPO3.lang['button.resolveDependencies'],
+          btnClass: 'btn-info',
+          trigger: function() {
+            Repository.getResolveDependenciesAndInstallResult(data.url + '&tx_extensionmanager_tools_extensionmanagerextensionmanager[downloadPath]=' + Repository.downloadPath);
+            Modal.dismiss();
+          }
+        }
+      ]);
+    } else {
+      if (data.hasErrors) {
+        Notification.error(data.title, data.message, 15);
+      } else {
+        Repository.getResolveDependenciesAndInstallResult(data.url + '&tx_extensionmanager_tools_extensionmanagerextensionmanager[downloadPath]=' + Repository.downloadPath);
+      }
+    }
+    return false;
+  };
+
+  /**
+   *
+   * @param {String} url
+   */
+  Repository.getResolveDependenciesAndInstallResult = function(url) {
+    $.ajax({
+      url: url,
+      dataType: 'json',
+      beforeSend: function() {
+        NProgress.start();
+      },
+      success: function(data) {
+        if (data.errorCount > 0) {
+          Modal.confirm(data.errorTitle, $(data.errorMessage), Severity.error, [
+            {
+              text: TYPO3.lang['button.cancel'],
+              active: true,
+              btnClass: 'btn-default',
+              trigger: function() {
+                Modal.dismiss();
+              }
+            }, {
+              text: TYPO3.lang['button.resolveDependenciesIgnore'],
+              btnClass: 'btn-danger disabled t3js-dependencies',
+              trigger: function() {
+                if (!$(this).hasClass('disabled')) {
+                  Repository.getResolveDependenciesAndInstallResult(data.skipDependencyUri);
+                  Modal.dismiss();
+                }
+              }
+            }
+          ]);
+          Modal.currentModal.on('shown.bs.modal', function() {
+            var $actionButton = Modal.currentModal.find('.t3js-dependencies');
+            $('input[name="unlockDependencyIgnoreButton"]', Modal.currentModal).on('change', function() {
+              $actionButton.toggleClass('disabled', !$(this).prop('checked'));
+            });
+          });
+        } else {
+          var successMessage = TYPO3.lang['extensionList.dependenciesResolveDownloadSuccess.message' + data.installationTypeLanguageKey].replace(/\{0\}/g, data.extension);
+
+          successMessage += '\n' + TYPO3.lang['extensionList.dependenciesResolveDownloadSuccess.header'] + ': ';
+          $.each(data.result, function(index, value) {
+            successMessage += '\n\n' + TYPO3.lang['extensionList.dependenciesResolveDownloadSuccess.item'] + ' ' + index + ': ';
+            $.each(value, function(extkey) {
+              successMessage += '\n* ' + extkey
+            });
+          });
+          Notification.info(TYPO3.lang['extensionList.dependenciesResolveFlashMessage.title' + data.installationTypeLanguageKey].replace(/\{0\}/g, data.extension), successMessage, 15);
+          top.TYPO3.ModuleMenu.App.refreshMenu();
+        }
+      },
+      complete: function() {
+        NProgress.done();
+      }
+    });
+  };
+
+  /**
+   *
+   */
+  Repository.bindSearchFieldResetter = function() {
+    var $searchFields = $('.typo3-extensionmanager-searchTerForm input[type="text"]');
+    var searchResultShown = ('' !== $searchFields.first().val());
+
+    $searchFields.clearable(
+      {
+        onClear: function() {
+          if (searchResultShown) {
+            $(this).closest('form').submit();
+          }
+        }
+      }
+    );
+  };
+
+  /**
+   *
+   * @type {{identifier: {extensionTable: string, terUpdateAction: string, pagination: string, splashscreen: string, terTableWrapper: string, terTableDataTableWrapper: string}}}
+   */
+  ExtensionManager.Update = {
+    identifier: {
+      extensionTable: '#terTable',
+      terUpdateAction: '.update-from-ter',
+      pagination: '.pagination-wrap',
+      splashscreen: '.splash-receivedata',
+      terTableWrapper: '#terTableWrapper',
+      terTableDataTableWrapper: '#terTableWrapper .dataTables_wrapper'
+    }
+  };
+
+  /**
+   * Register "update from ter" action
+   */
+  ExtensionManager.Update.initializeEvents = function() {
+    $(ExtensionManager.Update.identifier.terUpdateAction).each(function() {
+
+      // "this" is the form which updates the extension list from
+      // TER on submit
+      var $me = $(this),
+        updateURL = $(this).attr('action');
+
+      $me.attr('action', '#');
+      $me.submit(function() {
+        // Force update on click.
+        ExtensionManager.Update.updateFromTer(updateURL, true);
+
+        // Prevent normal submit action.
+        return false;
+      });
+
+      // This might give problems when there are more "update"-buttons,
+      // each one would trigger a TER-ExtensionManager.Update.
+      ExtensionManager.Update.updateFromTer(updateURL, false);
+    });
+  };
+
+  /**
+   *
+   * @param {String} url
+   * @param {Boolean} forceUpdate
+   */
+  ExtensionManager.Update.updateFromTer = function(url, forceUpdate) {
+    if (forceUpdate) {
+      url = url + '&tx_extensionmanager_tools_extensionmanagerextensionmanager%5BforceUpdateCheck%5D=1';
+    }
+
+    // Hide triggers for TER update
+    $(ExtensionManager.Update.identifier.terUpdateAction).addClass('is-hidden');
+
+    // Hide extension table
+    $(ExtensionManager.Update.identifier.extensionTable).hide();
+
+    // Show loaders
+    $(ExtensionManager.Update.identifier.splashscreen).addClass('is-shown');
+    $(ExtensionManager.Update.identifier.terTableDataTableWrapper).addClass('is-loading');
+    $(ExtensionManager.Update.identifier.pagination).addClass('is-loading');
+
+    var reload = false;
+
+    $.ajax({
+      url: url,
+      dataType: 'json',
+      cache: false,
+      beforeSend: function() {
+        NProgress.start();
+      },
+      success: function(data) {
+        // Something went wrong, show message
+        if (data.errorMessage.length) {
+          Notification.error(TYPO3.lang['extensionList.updateFromTerFlashMessage.title'], data.errorMessage, 10);
+        }
+
+        // Message with latest updates
+        var $lastUpdate = $(ExtensionManager.Update.identifier.terUpdateAction + ' .time-since-last-update');
+        $lastUpdate.text(data.timeSinceLastUpdate);
+        $lastUpdate.attr(
+          'title',
+          TYPO3.lang['extensionList.updateFromTer.lastUpdate.timeOfLastUpdate'] + data.lastUpdateTime
+        );
+
+        if (data.updated) {
+          // Reload page
+          reload = true;
+          window.location.replace(window.location.href);
+        }
+      },
+      error: function(jqXHR, textStatus, errorThrown) {
+        // Create an error message with diagnosis info.
+        var errorMessage = textStatus + '(' + errorThrown + '): ' + jqXHR.responseText;
+
+        Notification.warning(
+          TYPO3.lang['extensionList.updateFromTerFlashMessage.title'],
+          errorMessage,
+          10
+        );
+      },
+      complete: function() {
+        NProgress.done();
+
+        if (!reload) {
+          // Hide loaders
+          $(ExtensionManager.Update.identifier.splashscreen).removeClass('is-shown');
+          $(ExtensionManager.Update.identifier.terTableDataTableWrapper).removeClass('is-loading');
+          $(ExtensionManager.Update.identifier.pagination).removeClass('is-loading');
+
+          // Show triggers for TER-update
+          $(ExtensionManager.Update.identifier.terUpdateAction).removeClass('is-hidden');
+
+          // Show extension table
+          $(ExtensionManager.Update.identifier.extensionTable).show();
+        }
+      }
+    });
+  };
+
+  /**
+   *
+   */
+  ExtensionManager.Update.transformPaginatorToAjax = function() {
+    $(ExtensionManager.Update.identifier.pagination + ' a').each(function() {
+      var $me = $(this);
+      $me.data('href', $(this).attr('href'));
+      $me.attr('href', '#');
+      $me.click(function() {
+        var $terTableWrapper = $(ExtensionManager.Update.identifier.terTableWrapper);
+        NProgress.start();
+        $.ajax({
+          url: $(this).data('href'),
+          dataType: 'json',
+          success: function(data) {
+            $terTableWrapper.html(data);
+            ExtensionManager.Update.transformPaginatorToAjax();
+          },
+          complete: function() {
+            NProgress.done();
+          }
+        });
+      });
+    });
+  };
+
+  /**
+   * show the uploading form
+   */
+  ExtensionManager.UploadForm = {
+    expandedUploadFormClass: 'transformed'
+  };
+
+  /**
+   *
+   */
+  ExtensionManager.UploadForm.initializeEvents = function() {
+    // Show upload form
+    $(document).on('click', '.t3js-upload', function(event) {
+      var $me = $(this),
+        $uploadForm = $('.uploadForm');
+
+      event.preventDefault();
+      if ($me.hasClass(ExtensionManager.UploadForm.expandedUploadFormClass)) {
+        $uploadForm.stop().slideUp();
+        $me.removeClass(ExtensionManager.UploadForm.expandedUploadFormClass);
+      } else {
+        $me.addClass(ExtensionManager.UploadForm.expandedUploadFormClass);
+        $uploadForm.stop().slideDown();
+
+        $.ajax({
+          url: $me.attr('href'),
+          dataType: 'html',
+          success: function(data) {
+            $uploadForm.html(data);
+          }
+        });
+      }
+    });
+  };
+
+  $(function() {
+    var dataTable = ExtensionManager.manageExtensionListing();
+
+    $(document).on('click', '.onClickMaskExtensionManager', function() {
+      NProgress.start();
+    }).on('click', 'a[data-action=update-extension]', function(e) {
+      e.preventDefault();
+      $.ajax({
+        url: $(this).attr('href'),
+        dataType: 'json',
+        beforeSend: function() {
+          NProgress.start();
+        },
+        success: ExtensionManager.updateExtension
+      });
+    }).on('change', 'input[name=unlockDependencyIgnoreButton]', function() {
+      var $actionButton = $('.t3js-dependencies');
+      $actionButton.toggleClass('disabled', !$(this).prop('checked'));
+    });
+
+    $(ExtensionManager.identifier.searchField).clearable({
+      onClear: function() {
+        dataTable.search('').draw();
+      }
+    });
+
+    $(document).on('click', '.t3-button-action-installdistribution', function() {
+      NProgress.start();
+    });
+
+    SplitButtons.addPreSubmitCallback(function(e) {
+      if ($(e.target).hasClass('t3js-save-close')) {
+        $('#configurationform').append($('<input />', {
+          type: 'hidden',
+          name: 'tx_extensionmanager_tools_extensionmanagerextensionmanager[action]',
+          value: 'saveAndClose'
+        }));
+      }
+    });
+
+    // initialize the repository
+    Repository.initDom();
+
+    ExtensionManager.Update.initializeEvents();
+    ExtensionManager.UploadForm.initializeEvents();
+
+    Tooltip.initialize('#typo3-extension-list [title]', {
+      delay: {
+        show: 500,
+        hide: 100
+      },
+      trigger: 'hover',
+      container: 'body'
+    });
+  });
+
+  if (typeof TYPO3.ExtensionManager === 'undefined') {
+    TYPO3.ExtensionManager = ExtensionManager;
+  }
+
+  return ExtensionManager;
+});

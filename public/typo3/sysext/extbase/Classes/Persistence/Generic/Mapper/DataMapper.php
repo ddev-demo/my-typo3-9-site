@@ -15,12 +15,13 @@ namespace TYPO3\CMS\Extbase\Persistence\Generic\Mapper;
  */
 
 use TYPO3\CMS\Core\Database\Query\QueryHelper;
+use TYPO3\CMS\Extbase\Configuration\ConfigurationManagerInterface;
 use TYPO3\CMS\Extbase\DomainObject\DomainObjectInterface;
 use TYPO3\CMS\Extbase\Object\Exception\CannotReconstituteObjectException;
 use TYPO3\CMS\Extbase\Persistence;
 use TYPO3\CMS\Extbase\Persistence\Generic\Exception\UnexpectedTypeException;
 use TYPO3\CMS\Extbase\Persistence\QueryInterface;
-use TYPO3\CMS\Extbase\Reflection\ClassSchema\Exception\NoSuchPropertyException;
+use TYPO3\CMS\Extbase\Reflection\ClassSchema;
 use TYPO3\CMS\Extbase\Utility\TypeHandlingUtility;
 
 /**
@@ -45,6 +46,13 @@ class DataMapper
     protected $persistenceSession;
 
     /**
+     * A reference to the page select object providing methods to perform language and work space overlays
+     *
+     * @var \TYPO3\CMS\Frontend\Page\PageRepository
+     */
+    protected $pageSelectObject;
+
+    /**
      * @var \TYPO3\CMS\Extbase\Persistence\Generic\Mapper\DataMapFactory
      */
     protected $dataMapFactory;
@@ -65,55 +73,86 @@ class DataMapper
     protected $signalSlotDispatcher;
 
     /**
+     * @var ConfigurationManagerInterface
+     */
+    protected $configurationManager;
+
+    /**
      * @var ?QueryInterface
      */
     protected $query;
 
     /**
      * DataMapper constructor.
-     * @param \TYPO3\CMS\Extbase\Reflection\ReflectionService $reflectionService
-     * @param \TYPO3\CMS\Extbase\Persistence\Generic\Qom\QueryObjectModelFactory $qomFactory
-     * @param \TYPO3\CMS\Extbase\Persistence\Generic\Session $persistenceSession
-     * @param \TYPO3\CMS\Extbase\Persistence\Generic\Mapper\DataMapFactory $dataMapFactory
-     * @param \TYPO3\CMS\Extbase\Persistence\Generic\QueryFactoryInterface $queryFactory
-     * @param \TYPO3\CMS\Extbase\Object\ObjectManagerInterface $objectManager
-     * @param \TYPO3\CMS\Extbase\SignalSlot\Dispatcher $signalSlotDispatcher
-     * @param QueryInterface|null $query
+     * @param ?QueryInterface $query
      */
-    public function __construct(
-        \TYPO3\CMS\Extbase\Reflection\ReflectionService $reflectionService,
-        \TYPO3\CMS\Extbase\Persistence\Generic\Qom\QueryObjectModelFactory $qomFactory,
-        \TYPO3\CMS\Extbase\Persistence\Generic\Session $persistenceSession,
-        \TYPO3\CMS\Extbase\Persistence\Generic\Mapper\DataMapFactory $dataMapFactory,
-        \TYPO3\CMS\Extbase\Persistence\Generic\QueryFactoryInterface $queryFactory,
-        \TYPO3\CMS\Extbase\Object\ObjectManagerInterface $objectManager,
-        \TYPO3\CMS\Extbase\SignalSlot\Dispatcher $signalSlotDispatcher,
-        ?QueryInterface $query = null
-    ) {
+    public function __construct(?QueryInterface $query = null)
+    {
         $this->query = $query;
-        $this->reflectionService = $reflectionService;
-        $this->qomFactory = $qomFactory;
-        $this->persistenceSession = $persistenceSession;
-        $this->dataMapFactory = $dataMapFactory;
-        $this->queryFactory = $queryFactory;
-        $this->objectManager = $objectManager;
-        $this->signalSlotDispatcher = $signalSlotDispatcher;
-
-        if ($query !== null) {
-            trigger_error(
-                'Constructor argument $query will be removed in TYPO3 v11.0, use setQuery method instead.',
-                E_USER_DEPRECATED
-            );
-            $this->query = $query;
-        }
     }
 
     /**
-     * @param QueryInterface $query
+     * @param \TYPO3\CMS\Extbase\Reflection\ReflectionService $reflectionService
      */
-    public function setQuery(QueryInterface $query): void
+    public function injectReflectionService(\TYPO3\CMS\Extbase\Reflection\ReflectionService $reflectionService)
     {
-        $this->query = $query;
+        $this->reflectionService = $reflectionService;
+    }
+
+    /**
+     * @param \TYPO3\CMS\Extbase\Persistence\Generic\Qom\QueryObjectModelFactory $qomFactory
+     */
+    public function injectQomFactory(\TYPO3\CMS\Extbase\Persistence\Generic\Qom\QueryObjectModelFactory $qomFactory)
+    {
+        $this->qomFactory = $qomFactory;
+    }
+
+    /**
+     * @param \TYPO3\CMS\Extbase\Persistence\Generic\Session $persistenceSession
+     */
+    public function injectPersistenceSession(\TYPO3\CMS\Extbase\Persistence\Generic\Session $persistenceSession)
+    {
+        $this->persistenceSession = $persistenceSession;
+    }
+
+    /**
+     * @param \TYPO3\CMS\Extbase\Persistence\Generic\Mapper\DataMapFactory $dataMapFactory
+     */
+    public function injectDataMapFactory(\TYPO3\CMS\Extbase\Persistence\Generic\Mapper\DataMapFactory $dataMapFactory)
+    {
+        $this->dataMapFactory = $dataMapFactory;
+    }
+
+    /**
+     * @param \TYPO3\CMS\Extbase\Persistence\Generic\QueryFactoryInterface $queryFactory
+     */
+    public function injectQueryFactory(\TYPO3\CMS\Extbase\Persistence\Generic\QueryFactoryInterface $queryFactory)
+    {
+        $this->queryFactory = $queryFactory;
+    }
+
+    /**
+     * @param \TYPO3\CMS\Extbase\Object\ObjectManagerInterface $objectManager
+     */
+    public function injectObjectManager(\TYPO3\CMS\Extbase\Object\ObjectManagerInterface $objectManager)
+    {
+        $this->objectManager = $objectManager;
+    }
+
+    /**
+     * @param \TYPO3\CMS\Extbase\SignalSlot\Dispatcher $signalSlotDispatcher
+     */
+    public function injectSignalSlotDispatcher(\TYPO3\CMS\Extbase\SignalSlot\Dispatcher $signalSlotDispatcher)
+    {
+        $this->signalSlotDispatcher = $signalSlotDispatcher;
+    }
+
+    /**
+     * @param \TYPO3\CMS\Extbase\Configuration\ConfigurationManagerInterface $configurationManager
+     */
+    public function injectConfigurationManager(ConfigurationManagerInterface $configurationManager)
+    {
+        $this->configurationManager = $configurationManager;
     }
 
     /**
@@ -211,6 +250,8 @@ class DataMapper
      *
      * @param DomainObjectInterface $object The object to set properties on
      * @param array $row
+     * @throws Exception\NonExistentPropertyException
+     * @throws Exception\UnknownPropertyTypeException
      */
     protected function thawProperties(DomainObjectInterface $object, array $row)
     {
@@ -237,18 +278,36 @@ class DataMapper
             }
             $columnMap = $dataMap->getColumnMap($propertyName);
             $columnName = $columnMap->getColumnName();
-            $propertyType = $classSchema->getProperty($propertyName)->getType();
+
+            $property = $classSchema->getProperty($propertyName);
+            if (empty($property)) {
+                throw new Exception\NonExistentPropertyException(
+                    'The type of property ' . $className . '::' . $propertyName . ' could not be identified, ' .
+                    'as property ' . $propertyName . ' is unknown to the ' . ClassSchema::class . ' instance of class ' .
+                    $className . '. Please make sure said property exists and that you cleared all caches to trigger ' .
+                    'a new build of said ' . ClassSchema::class . ' instance.',
+                    1580056272
+                );
+            }
+
+            $propertyType = $property['type'] ?? null;
+            if ($propertyType === null) {
+                throw new Exception\UnknownPropertyTypeException(
+                    'The type of property ' . $className . '::' . $propertyName . ' could not be identified, therefore the desired value (' .
+                    var_export($propertyValue, true) . ') cannot be mapped onto it. The type of a class property is usually defined via php doc blocks. ' .
+                    'Make sure the property has a valid @var tag set which defines the type.',
+                    1579965021
+                );
+            }
             $propertyValue = null;
             if (isset($row[$columnName])) {
                 switch ($propertyType) {
-                    case 'int':
                     case 'integer':
                         $propertyValue = (int)$row[$columnName];
                         break;
                     case 'float':
                         $propertyValue = (double)$row[$columnName];
                         break;
-                    case 'bool':
                     case 'boolean':
                         $propertyValue = (bool)$row[$columnName];
                         break;
@@ -266,15 +325,14 @@ class DataMapper
                             $this->fetchRelated($object, $propertyName, $row[$columnName])
                         );
                         break;
-                    case is_subclass_of($propertyType, \DateTimeInterface::class):
+                    default:
+                        if (is_subclass_of($propertyType, \DateTimeInterface::class)) {
                             $propertyValue = $this->mapDateTime(
                                 $row[$columnName],
                                 $columnMap->getDateTimeStorageFormat(),
                                 $propertyType
                             );
-                        break;
-                    default:
-                        if (TypeHandlingUtility::isCoreType($propertyType)) {
+                        } elseif (TypeHandlingUtility::isCoreType($propertyType)) {
                             $propertyValue = $this->mapCoreType($propertyType, $row[$columnName]);
                         } else {
                             $propertyValue = $this->mapObjectToClassProperty(
@@ -343,9 +401,9 @@ class DataMapper
      */
     public function fetchRelated(DomainObjectInterface $parentObject, $propertyName, $fieldValue = '', $enableLazyLoading = true)
     {
-        $property = $this->reflectionService->getClassSchema(get_class($parentObject))->getProperty($propertyName);
-        if ($enableLazyLoading === true && $property->isLazy()) {
-            if ($property->getType() === Persistence\ObjectStorage::class) {
+        $propertyMetaData = $this->reflectionService->getClassSchema(get_class($parentObject))->getProperty($propertyName);
+        if ($enableLazyLoading === true && $propertyMetaData['annotations']['lazy']) {
+            if ($propertyMetaData['type'] === Persistence\ObjectStorage::class) {
                 $result = $this->objectManager->get(\TYPO3\CMS\Extbase\Persistence\Generic\LazyObjectStorage::class, $parentObject, $propertyName, $fieldValue, $this);
             } else {
                 if (empty($fieldValue)) {
@@ -417,17 +475,19 @@ class DataMapper
         $query->getQuerySettings()->setRespectStoragePage(false);
         $query->getQuerySettings()->setRespectSysLanguage(false);
 
-        // we always want to overlay relations as most of the time they are stored in db using default lang uids
-        $query->getQuerySettings()->setLanguageOverlayMode(true);
-        if ($this->query) {
-            $query->getQuerySettings()->setLanguageUid($this->query->getQuerySettings()->getLanguageUid());
+        if ($this->configurationManager->isFeatureEnabled('consistentTranslationOverlayHandling')) {
+            //we always want to overlay relations as most of the time they are stored in db using default lang uids
+            $query->getQuerySettings()->setLanguageOverlayMode(true);
+            if ($this->query) {
+                $query->getQuerySettings()->setLanguageUid($this->query->getQuerySettings()->getLanguageUid());
 
-            if ($dataMap->getLanguageIdColumnName() !== null && !$this->query->getQuerySettings()->getRespectSysLanguage()) {
-                //pass language of parent record to child objects, so they can be overlaid correctly in case
-                //e.g. findByUid is used.
-                //the languageUid is used for getRecordOverlay later on, despite RespectSysLanguage being false
-                $languageUid = (int)$parentObject->_getProperty('_languageUid');
-                $query->getQuerySettings()->setLanguageUid($languageUid);
+                if ($dataMap->getLanguageIdColumnName() !== null && !$this->query->getQuerySettings()->getRespectSysLanguage()) {
+                    //pass language of parent record to child objects, so they can be overlaid correctly in case
+                    //e.g. findByUid is used.
+                    //the languageUid is used for getRecordOverlay later on, despite RespectSysLanguage being false
+                    $languageUid = (int)$parentObject->_getProperty('_languageUid');
+                    $query->getQuerySettings()->setLanguageUid($languageUid);
+                }
             }
         }
 
@@ -519,9 +579,9 @@ class DataMapper
             if ($fieldValue === '') {
                 $propertyValue = $this->getEmptyRelationValue($parentObject, $propertyName);
             } else {
-                $property = $this->reflectionService->getClassSchema(get_class($parentObject))->getProperty($propertyName);
-                if ($this->persistenceSession->hasIdentifier($fieldValue, $property->getType())) {
-                    $propertyValue = $this->persistenceSession->getObjectByIdentifier($fieldValue, $property->getType());
+                $propertyMetaData = $this->reflectionService->getClassSchema(get_class($parentObject))->getProperty($propertyName);
+                if ($this->persistenceSession->hasIdentifier($fieldValue, $propertyMetaData['type'])) {
+                    $propertyValue = $this->persistenceSession->getObjectByIdentifier($fieldValue, $propertyMetaData['type']);
                 } else {
                     $result = $this->fetchRelated($parentObject, $propertyName, $fieldValue);
                     $propertyValue = $this->mapResultToPropertyValue($parentObject, $propertyName, $result);
@@ -559,15 +619,15 @@ class DataMapper
         if ($result instanceof Persistence\Generic\LoadingStrategyInterface) {
             $propertyValue = $result;
         } else {
-            $property = $this->reflectionService->getClassSchema(get_class($parentObject))->getProperty($propertyName);
-            if (in_array($property->getType(), ['array', 'ArrayObject', 'SplObjectStorage', Persistence\ObjectStorage::class], true)) {
+            $propertyMetaData = $this->reflectionService->getClassSchema(get_class($parentObject))->getProperty($propertyName);
+            if (in_array($propertyMetaData['type'], ['array', 'ArrayObject', 'SplObjectStorage', Persistence\ObjectStorage::class], true)) {
                 $objects = [];
                 foreach ($result as $value) {
                     $objects[] = $value;
                 }
-                if ($property->getType() === 'ArrayObject') {
+                if ($propertyMetaData['type'] === 'ArrayObject') {
                     $propertyValue = new \ArrayObject($objects);
-                } elseif ($property->getType() === Persistence\ObjectStorage::class) {
+                } elseif ($propertyMetaData['type'] === Persistence\ObjectStorage::class) {
                     $propertyValue = new Persistence\ObjectStorage();
                     foreach ($objects as $object) {
                         $propertyValue->attach($object);
@@ -576,8 +636,7 @@ class DataMapper
                 } else {
                     $propertyValue = $objects;
                 }
-            } elseif (strpbrk($property->getType(), '_\\') !== false) {
-                // @todo: check the strpbrk function call. Seems to be a check for Tx_Foo_Bar style class names
+            } elseif (strpbrk($propertyMetaData['type'], '_\\') !== false) {
                 if (is_object($result) && $result instanceof Persistence\QueryResultInterface) {
                     $propertyValue = $result->getFirst();
                 } else {
@@ -673,20 +732,15 @@ class DataMapper
      */
     public function getType($parentClassName, $propertyName)
     {
-        try {
-            $property = $this->reflectionService->getClassSchema($parentClassName)->getProperty($propertyName);
-
-            if ($property->getElementType() !== null) {
-                return $property->getElementType();
-            }
-
-            if ($property->getType() !== null) {
-                return $property->getType();
-            }
-        } catch (NoSuchPropertyException $e) {
+        $propertyMetaData = $this->reflectionService->getClassSchema($parentClassName)->getProperty($propertyName);
+        if (!empty($propertyMetaData['elementType'])) {
+            $type = $propertyMetaData['elementType'];
+        } elseif (!empty($propertyMetaData['type'])) {
+            $type = $propertyMetaData['type'];
+        } else {
+            throw new UnexpectedTypeException('Could not determine the child object type.', 1251315967);
         }
-
-        throw new UnexpectedTypeException('Could not determine the child object type.', 1251315967);
+        return $type;
     }
 
     /**

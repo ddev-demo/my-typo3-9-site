@@ -393,9 +393,6 @@ class EvaluateDisplayConditions implements FormDataProviderInterface
                     );
                 }
                 $namedConditionArray['uid'] = $databaseRow['uid'];
-                if (array_key_exists('t3ver_oid', $databaseRow)) {
-                    $namedConditionArray['t3ver_oid'] = $databaseRow['t3ver_oid'];
-                }
                 if (array_key_exists('pid', $databaseRow)) {
                     $namedConditionArray['pid'] = $databaseRow['pid'];
                 }
@@ -427,7 +424,7 @@ class EvaluateDisplayConditions implements FormDataProviderInterface
                 break;
             default:
                 throw new \RuntimeException(
-                    'Unknown condition rule type "' . $namedConditionArray['type'] . '" with display condition "' . $conditionString . '"".',
+                    'Unknown condition rule type "' . $namedConditionArray['type'] . '" with display condition "' . $conditionString . '".',
                     1481381950
                 );
         }
@@ -893,7 +890,9 @@ class EvaluateDisplayConditions implements FormDataProviderInterface
         $isNewRecord = !((int)$condition['uid'] > 0);
         // Detection of version can be done by detecting the workspace of the user
         $isUserInWorkspace = $this->getBackendUser()->workspace > 0;
-        if ((int)($condition['t3ver_oid'] ?? 0) > 0) {
+        if ((array_key_exists('pid', $condition) && (int)$condition['pid'] === -1)
+            || (array_key_exists('_ORIG_pid', $condition) && (int)$condition['_ORIG_pid'] === -1)
+        ) {
             $isRecordDetectedAsVersion = true;
         } else {
             $isRecordDetectedAsVersion = false;
@@ -901,7 +900,7 @@ class EvaluateDisplayConditions implements FormDataProviderInterface
         // New records in a workspace are not handled as a version record
         // if it's no new version, we detect versions like this:
         // * if user is in workspace: always TRUE
-        // * if editor is in live ws: only TRUE if t3ver_oid > 0
+        // * if editor is in live ws: only TRUE if pid == -1
         $result = ($isUserInWorkspace || $isRecordDetectedAsVersion) && !$isNewRecord;
         if (!$condition['isVersion']) {
             $result = !$result;

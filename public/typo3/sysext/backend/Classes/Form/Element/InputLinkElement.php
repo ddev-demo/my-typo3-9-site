@@ -147,11 +147,9 @@ class InputLinkElement extends AbstractFormElement
             }
         }
 
-        $fieldId = StringUtility::getUniqueId('formengine-input-');
-
         $attributes = [
             'value' => '',
-            'id' => $fieldId,
+            'id' => StringUtility::getUniqueId('formengine-input-'),
             'class' => implode(' ', [
                 'form-control',
                 't3js-clearable',
@@ -221,9 +219,9 @@ class InputLinkElement extends AbstractFormElement
         $expansionHtml[] =  '<div class="form-wizards-wrap">';
         $expansionHtml[] =      '<div class="form-wizards-element">';
         $expansionHtml[] =          '<div class="input-group t3js-form-field-inputlink">';
-        $expansionHtml[] =              '<span class="input-group-addon">' . $linkExplanation['icon'] . '</span>';
+        $expansionHtml[] =              '<span class="t3js-form-field-inputlink-icon input-group-addon">' . $linkExplanation['icon'] . '</span>';
         $expansionHtml[] =              '<input class="form-control form-field-inputlink-explanation t3js-form-field-inputlink-explanation" data-toggle="tooltip" data-title="' . $explanation . '" value="' . $explanation . '" readonly>';
-        $expansionHtml[] =              '<input type="text"' . GeneralUtility::implodeAttributes($attributes, true) . ' />';
+        $expansionHtml[] =              '<input type="text" ' . GeneralUtility::implodeAttributes($attributes, true) . ' />';
         $expansionHtml[] =              '<span class="input-group-btn">';
         $expansionHtml[] =                  '<button class="btn btn-default t3js-form-field-inputlink-explanation-toggle" type="button" title="' . htmlspecialchars($toggleButtonTitle) . '">';
         $expansionHtml[] =                      $this->iconFactory->getIcon('actions-version-workspaces-preview-link', Icon::SIZE_SMALL)->render();
@@ -295,7 +293,7 @@ class InputLinkElement extends AbstractFormElement
             $fullElement[] = '</div>';
             $fullElement[] = '<div class="t3js-formengine-placeholder-placeholder">';
             $fullElement[] =    '<div class="form-control-wrap" style="max-width:' . $width . 'px">';
-            $fullElement[] =        '<input type="text" class="form-control" disabled="disabled" value="' . $shortenedPlaceholder . '" />';
+            $fullElement[] =        '<input type="text" class="form-control" disabled="disabled" value="' . htmlspecialchars($shortenedPlaceholder) . '" />';
             $fullElement[] =    '</div>';
             $fullElement[] = '</div>';
             $fullElement[] = '<div class="t3js-formengine-placeholder-formfield">';
@@ -304,11 +302,6 @@ class InputLinkElement extends AbstractFormElement
             $fullElement = implode(LF, $fullElement);
         }
 
-        $resultArray['requireJsModules'][] = ['TYPO3/CMS/Backend/FormEngine/Element/InputLinkElement' => '
-            function(InputLinkElement) {
-                new InputLinkElement(' . GeneralUtility::quoteJSvalue($fieldId) . ');
-            }'
-        ];
         $resultArray['html'] = '<div class="formengine-field-item t3js-formengine-field-item">' . $fieldInformationHtml . $fullElement . '</div>';
         return $resultArray;
     }

@@ -24,6 +24,7 @@ use Symfony\Component\Finder\Finder;
 use Symfony\Component\Finder\SplFileInfo;
 use TYPO3\CMS\Core\Core\Environment;
 use TYPO3\CMS\Core\Database\ConnectionPool;
+use TYPO3\CMS\Core\Database\Schema\Exception\StatementException;
 use TYPO3\CMS\Core\FormProtection\FormProtectionFactory;
 use TYPO3\CMS\Core\FormProtection\InstallToolFormProtection;
 use TYPO3\CMS\Core\Http\JsonResponse;
@@ -31,8 +32,10 @@ use TYPO3\CMS\Core\Messaging\FlashMessage;
 use TYPO3\CMS\Core\Messaging\FlashMessageQueue;
 use TYPO3\CMS\Core\Migrations\TcaMigration;
 use TYPO3\CMS\Core\Package\Package;
+use TYPO3\CMS\Core\Package\PackageInterface;
 use TYPO3\CMS\Core\Package\PackageManager;
 use TYPO3\CMS\Core\Registry;
+use TYPO3\CMS\Core\Service\OpcodeCacheService;
 use TYPO3\CMS\Core\Utility\ExtensionManagementUtility;
 use TYPO3\CMS\Core\Utility\GeneralUtility;
 use TYPO3\CMS\Install\ExtensionScanner\Php\CodeStatistics;
@@ -42,6 +45,7 @@ use TYPO3\CMS\Install\ExtensionScanner\Php\Matcher\ArrayGlobalMatcher;
 use TYPO3\CMS\Install\ExtensionScanner\Php\Matcher\ClassConstantMatcher;
 use TYPO3\CMS\Install\ExtensionScanner\Php\Matcher\ClassNameMatcher;
 use TYPO3\CMS\Install\ExtensionScanner\Php\Matcher\ConstantMatcher;
+use TYPO3\CMS\Install\ExtensionScanner\Php\Matcher\ConstructorArgumentMatcher;
 use TYPO3\CMS\Install\ExtensionScanner\Php\Matcher\FunctionCallMatcher;
 use TYPO3\CMS\Install\ExtensionScanner\Php\Matcher\InterfaceMethodChangedMatcher;
 use TYPO3\CMS\Install\ExtensionScanner\Php\Matcher\MethodAnnotationMatcher;
@@ -57,9 +61,9 @@ use TYPO3\CMS\Install\ExtensionScanner\Php\Matcher\PropertyExistsStaticMatcher;
 use TYPO3\CMS\Install\ExtensionScanner\Php\Matcher\PropertyProtectedMatcher;
 use TYPO3\CMS\Install\ExtensionScanner\Php\Matcher\PropertyPublicMatcher;
 use TYPO3\CMS\Install\ExtensionScanner\Php\MatcherFactory;
+use TYPO3\CMS\Install\Service\ClearCacheService;
 use TYPO3\CMS\Install\Service\CoreUpdateService;
 use TYPO3\CMS\Install\Service\CoreVersionService;
-use TYPO3\CMS\Install\Service\LateBootService;
 use TYPO3\CMS\Install\Service\LoadTcaService;
 use TYPO3\CMS\Install\Service\UpgradeWizardsService;
 use TYPO3\CMS\Install\UpgradeAnalysis\DocumentationFile;
@@ -86,18 +90,11 @@ class UpgradeController extends AbstractController
     protected $packageManager;
 
     /**
-     * @var LateBootService
+     * @param PackageManager|null $packageManager
      */
-    private $lateBootService;
-
-    /**
-     * @param PackageManager $packageManager
-     * @param LateBootService $lateBootService
-     */
-    public function __construct(PackageManager $packageManager, LateBootService $lateBootService)
+    public function __construct(PackageManager $packageManager = null)
     {
-        $this->packageManager = $packageManager;
-        $this->lateBootService = $lateBootService;
+        $this->packageManager = $packageManager ?? GeneralUtility::makeInstance(PackageManager::class);
     }
 
     /**
@@ -126,6 +123,10 @@ class UpgradeController extends AbstractController
         [
             'class' => ConstantMatcher::class,
             'configurationFile' => 'EXT:install/Configuration/ExtensionScanner/Php/ConstantMatcher.php',
+        ],
+        [
+            'class' => ConstructorArgumentMatcher::class,
+            'configurationFile' => 'EXT:install/Configuration/ExtensionScanner/Php/ConstructorArgumentMatcher.php',
         ],
         [
             'class' => PropertyAnnotationMatcher::class,
@@ -194,6 +195,7 @@ class UpgradeController extends AbstractController
     public function cardsAction(ServerRequestInterface $request): ResponseInterface
     {
         $view = $this->initializeStandaloneView($request, 'Upgrade/Cards.html');
+        $view->assign('extensionFoldersInTypo3conf', (new Finder())->directories()->in(Environment::getExtensionsPath())->depth(0)->count());
         return new JsonResponse([
             'success' => true,
             'html' => $view->render(),
@@ -256,37 +258,15 @@ class UpgradeController extends AbstractController
         $view = $this->initializeStandaloneView($request, 'Upgrade/CoreUpdate.html');
         $coreUpdateService = GeneralUtility::makeInstance(CoreUpdateService::class);
         $coreVersionService = GeneralUtility::makeInstance(CoreVersionService::class);
-
-        $coreUpdateEnabled = $coreUpdateService->isCoreUpdateEnabled();
-        $coreUpdateComposerMode = Environment::isComposerMode();
-        $coreUpdateIsReleasedVersion = $coreVersionService->isInstalledVersionAReleasedVersion();
-        $coreUpdateIsSymLinkedCore = is_link(Environment::getPublicPath() . '/typo3_src');
-        $isUpdatable = !$coreUpdateComposerMode && $coreUpdateEnabled && $coreUpdateIsReleasedVersion && $coreUpdateIsSymLinkedCore;
-
         $view->assignMultiple([
-            'coreIsUpdatable' => $isUpdatable,
-            'coreUpdateEnabled' => $coreUpdateEnabled,
-            'coreUpdateComposerMode' => $coreUpdateComposerMode,
-            'coreUpdateIsReleasedVersion' => $coreUpdateIsReleasedVersion,
-            'coreUpdateIsSymLinkedCore' => $coreUpdateIsSymLinkedCore,
+            'coreUpdateEnabled' => $coreUpdateService->isCoreUpdateEnabled(),
+            'coreUpdateComposerMode' => Environment::isComposerMode(),
+            'coreUpdateIsReleasedVersion' => $coreVersionService->isInstalledVersionAReleasedVersion(),
+            'coreUpdateIsSymLinkedCore' => is_link(Environment::getPublicPath() . '/typo3_src'),
         ]);
-
-        $buttons = [];
-        if ($isUpdatable) {
-            $buttons[] = [
-                'btnClass' => 'btn-warning t3js-coreUpdate-button t3js-coreUpdate-init',
-                'name' => 'coreUpdateCheckForUpdate',
-                'text' => 'Check for core updates',
-                'dataAttributes' => [
-                    'action' => 'checkForUpdate',
-                ],
-            ];
-        }
-
         return new JsonResponse([
             'success' => true,
             'html' => $view->render(),
-            'buttons' => $buttons,
         ]);
     }
 
@@ -300,9 +280,10 @@ class UpgradeController extends AbstractController
         $this->coreUpdateInitialize();
         $messageQueue = new FlashMessageQueue('install');
         if ($this->coreVersionService->isInstalledVersionAReleasedVersion()) {
+            $isDevelopmentUpdateAvailable = $this->coreVersionService->isYoungerPatchDevelopmentReleaseAvailable();
             $isUpdateAvailable = $this->coreVersionService->isYoungerPatchReleaseAvailable();
             $isUpdateSecurityRelevant = $this->coreVersionService->isUpdateSecurityRelevant();
-            if (!$isUpdateAvailable) {
+            if (!$isUpdateAvailable && !$isDevelopmentUpdateAvailable) {
                 $messageQueue->enqueue(new FlashMessage(
                     '',
                     'No regular update available',
@@ -325,6 +306,14 @@ class UpgradeController extends AbstractController
                     ));
                     $action = ['title' => 'Update now', 'action' => 'updateRegular'];
                 }
+            } elseif ($isDevelopmentUpdateAvailable) {
+                $newVersion = $this->coreVersionService->getYoungestPatchDevelopmentRelease();
+                $messageQueue->enqueue(new FlashMessage(
+                    '',
+                    'Update to development release ' . $newVersion . ' is available!',
+                    FlashMessage::INFO
+                ));
+                $action = ['title' => 'Update now', 'action' => 'updateDevelopment'];
             }
         } else {
             $messageQueue->enqueue(new FlashMessage(
@@ -406,18 +395,7 @@ class UpgradeController extends AbstractController
 
         return new JsonResponse([
             'success' => true,
-            'extensions' => array_keys($this->packageManager->getActivePackages()),
             'html' => $view->render(),
-            'buttons' => [
-                [
-                    'btnClass' => 'btn-default disabled t3js-extensionCompatTester-check',
-                    'text' => 'Check extensions',
-                ],
-                [
-                    'btnClass' => 'btn-default hidden t3js-extensionCompatTester-uninstall',
-                    'text' => 'Uninstall extension',
-                ],
-            ],
         ]);
     }
 
@@ -429,22 +407,20 @@ class UpgradeController extends AbstractController
      */
     public function extensionCompatTesterLoadExtLocalconfAction(ServerRequestInterface $request): ResponseInterface
     {
-        $container = $this->lateBootService->getContainer();
-        $backup = $this->lateBootService->makeCurrent($container);
-
-        $extension = $request->getParsedBody()['install']['extension'];
+        $brokenExtensions = [];
         foreach ($this->packageManager->getActivePackages() as $package) {
-            $this->extensionCompatTesterLoadExtLocalconfForExtension($package);
-            if ($package->getPackageKey() === $extension) {
-                break;
+            try {
+                $this->extensionCompatTesterLoadExtLocalconfForExtension($package);
+            } catch (\Throwable $e) {
+                $brokenExtensions[] = [
+                    'name' => $package->getPackageKey(),
+                    'isProtected' => $package->isProtected()
+                ];
             }
         }
-
-        $this->lateBootService->makeCurrent(null, $backup);
-
         return new JsonResponse([
-            'success' => true,
-        ]);
+            'brokenExtensions' => $brokenExtensions,
+        ], empty($brokenExtensions) ? 200 : 500);
     }
 
     /**
@@ -455,27 +431,25 @@ class UpgradeController extends AbstractController
      */
     public function extensionCompatTesterLoadExtTablesAction(ServerRequestInterface $request): ResponseInterface
     {
-        $container = $this->lateBootService->getContainer();
-        $backup = $this->lateBootService->makeCurrent($container);
-
-        $extension = $request->getParsedBody()['install']['extension'];
+        $brokenExtensions = [];
         $activePackages = $this->packageManager->getActivePackages();
         foreach ($activePackages as $package) {
             // Load all ext_localconf files first
             $this->extensionCompatTesterLoadExtLocalconfForExtension($package);
         }
         foreach ($activePackages as $package) {
-            $this->extensionCompatTesterLoadExtTablesForExtension($package);
-            if ($package->getPackageKey() === $extension) {
-                break;
+            try {
+                $this->extensionCompatTesterLoadExtTablesForExtension($package);
+            } catch (\Throwable $e) {
+                $brokenExtensions[] = [
+                    'name' => $package->getPackageKey(),
+                    'isProtected' => $package->isProtected()
+                ];
             }
         }
-
-        $this->lateBootService->makeCurrent(null, $backup);
-
         return new JsonResponse([
-            'success' => true,
-        ]);
+            'brokenExtensions' => $brokenExtensions,
+        ], empty($brokenExtensions) ? 200 : 500);
     }
 
     /**
@@ -498,6 +472,9 @@ class UpgradeController extends AbstractController
         if (ExtensionManagementUtility::isLoaded($extension)) {
             try {
                 ExtensionManagementUtility::unloadExtension($extension);
+                GeneralUtility::makeInstance(ClearCacheService::class)->clearAll();
+                GeneralUtility::makeInstance(OpcodeCacheService::class)->clearAllActive();
+
                 $messageQueue->enqueue(new FlashMessage(
                     'Extension "' . $extension . '" unloaded.',
                     '',
@@ -537,12 +514,6 @@ class UpgradeController extends AbstractController
         return new JsonResponse([
             'success' => true,
             'html' => $view->render(),
-            'buttons' => [
-                [
-                    'btnClass' => 'btn-default t3js-extensionScanner-scan-all',
-                    'text' => 'Scan all',
-                ],
-            ],
         ]);
     }
 
@@ -676,11 +647,17 @@ class UpgradeController extends AbstractController
         // Parse PHP file to AST and traverse tree calling visitors
         $statements = $parser->parse(file_get_contents($absoluteFilePath));
 
-        $traverser = new NodeTraverser();
         // The built in NameResolver translates class names shortened with 'use' to fully qualified
         // class names at all places. Incredibly useful for us and added as first visitor.
+        // IMPORTANT: first process completely to resolve fully qualified names of arguments
+        // (otherwise GeneratorClassesResolver will NOT get reliable results)
+        $traverser = new NodeTraverser();
         $traverser->addVisitor(new NameResolver());
-        // Understand makeInstance('My\\Package\\Foo\\Bar') as fqdn class name in first argument
+        $statements = $traverser->traverse($statements);
+
+        // IMPORTANT: second process to actually work on the pre-resolved statements
+        $traverser = new NodeTraverser();
+        // Understand GeneralUtility::makeInstance('My\\Package\\Foo\\Bar') as fqdn class name in first argument
         $traverser->addVisitor(new GeneratorClassesResolver());
         // Count ignored lines, effective code lines, ...
         $statistics = new CodeStatistics();
@@ -766,6 +743,8 @@ class UpgradeController extends AbstractController
         $loadTcaService->loadExtensionTablesWithoutMigration();
         $baseTca = $GLOBALS['TCA'];
         foreach ($this->packageManager->getActivePackages() as $package) {
+            $this->extensionCompatTesterLoadExtLocalconfForExtension($package);
+
             $extensionKey = $package->getPackageKey();
             $extTablesPath = $package->getPackagePath() . 'ext_tables.php';
             if (@file_exists($extTablesPath)) {
@@ -785,12 +764,6 @@ class UpgradeController extends AbstractController
             'success' => true,
             'status' => $messageQueue,
             'html' => $view->render(),
-            'buttons' => [
-                [
-                    'btnClass' => 'btn-default t3js-tcaExtTablesCheck-check',
-                    'text' => 'Check loaded extensions',
-                ],
-            ],
         ]);
     }
 
@@ -819,12 +792,6 @@ class UpgradeController extends AbstractController
             'success' => true,
             'status' => $messageQueue,
             'html' => $view->render(),
-            'buttons' => [
-                [
-                    'btnClass' => 'btn-default t3js-tcaMigrationsCheck-check',
-                    'text' => 'Check TCA Migrations',
-                ],
-            ],
         ]);
     }
 
@@ -918,9 +885,14 @@ class UpgradeController extends AbstractController
         // ext_localconf, db and ext_tables must be loaded for the updates :(
         $this->loadExtLocalconfDatabaseAndExtTables();
         $upgradeWizardsService = new UpgradeWizardsService();
-        $adds = $upgradeWizardsService->getBlockingDatabaseAdds();
+        $adds = [];
         $needsUpdate = false;
-        if (!empty($adds)) {
+        try {
+            $adds = $upgradeWizardsService->getBlockingDatabaseAdds();
+            if (!empty($adds)) {
+                $needsUpdate = true;
+            }
+        } catch (StatementException $exception) {
             $needsUpdate = true;
         }
         return new JsonResponse([
@@ -1157,19 +1129,33 @@ class UpgradeController extends AbstractController
                 1380975303
             );
         }
-        return $this->coreVersionService->getYoungestPatchRelease();
+        if ($type === 'development') {
+            $versionToHandle = $this->coreVersionService->getYoungestPatchDevelopmentRelease();
+        } else {
+            $versionToHandle = $this->coreVersionService->getYoungestPatchRelease();
+        }
+        return $versionToHandle;
     }
 
     /**
      * Loads ext_localconf.php for a single extension. Method is a modified copy of
      * the original bootstrap method.
      *
-     * @param Package $package
+     * @param PackageInterface $package
      */
-    protected function extensionCompatTesterLoadExtLocalconfForExtension(Package $package)
+    protected function extensionCompatTesterLoadExtLocalconfForExtension(PackageInterface $package)
     {
         $extLocalconfPath = $package->getPackagePath() . 'ext_localconf.php';
+        // This is the main array meant to be manipulated in the ext_localconf.php files
+        // In general it is recommended to not rely on it to be globally defined in that
+        // scope but to use $GLOBALS['TYPO3_CONF_VARS'] instead.
+        // Nevertheless we define it here as global for backwards compatibility.
+        global $TYPO3_CONF_VARS;
         if (@file_exists($extLocalconfPath)) {
+            // $_EXTKEY and $_EXTCONF are available in ext_localconf.php
+            // and are explicitly set in cached file as well
+            $_EXTKEY = $package->getPackageKey();
+            $_EXTCONF = $GLOBALS['TYPO3_CONF_VARS']['EXT']['extConf'][$_EXTKEY] ?? null;
             require $extLocalconfPath;
         }
     }
@@ -1178,12 +1164,23 @@ class UpgradeController extends AbstractController
      * Loads ext_tables.php for a single extension. Method is a modified copy of
      * the original bootstrap method.
      *
-     * @param Package $package
+     * @param PackageInterface $package
      */
-    protected function extensionCompatTesterLoadExtTablesForExtension(Package $package)
+    protected function extensionCompatTesterLoadExtTablesForExtension(PackageInterface $package)
     {
         $extTablesPath = $package->getPackagePath() . 'ext_tables.php';
+        // In general it is recommended to not rely on it to be globally defined in that
+        // scope, but we can not prohibit this without breaking backwards compatibility
+        global $T3_SERVICES, $T3_VAR, $TYPO3_CONF_VARS;
+        global $TBE_MODULES, $TBE_MODULES_EXT, $TCA;
+        global $PAGES_TYPES, $TBE_STYLES;
+        global $_EXTKEY;
+        // Load each ext_tables.php file of loaded extensions
+        $_EXTKEY = $package->getPackageKey();
         if (@file_exists($extTablesPath)) {
+            // $_EXTKEY and $_EXTCONF are available in ext_tables.php
+            // and are explicitly set in cached file as well
+            $_EXTCONF = $GLOBALS['TYPO3_CONF_VARS']['EXT']['extConf'][$_EXTKEY] ?? null;
             require $extTablesPath;
         }
     }
@@ -1212,7 +1209,6 @@ class UpgradeController extends AbstractController
         $documentationFiles = $documentationFileService->findDocumentationFiles(
             str_replace('\\', '/', realpath(ExtensionManagementUtility::extPath('core') . 'Documentation/Changelog/' . $version))
         );
-        $documentationFiles = array_reverse($documentationFiles);
 
         $queryBuilder = GeneralUtility::makeInstance(ConnectionPool::class)->getQueryBuilderForTable('sys_registry');
         $filesMarkedAsRead = $queryBuilder

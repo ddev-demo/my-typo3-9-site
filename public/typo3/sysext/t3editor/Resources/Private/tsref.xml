@@ -90,6 +90,13 @@ This property is used only in some cases where CARRAY is used. Please look out f
 			<description><![CDATA[The default object, if not defined, nothing is returned in the default case.
 ]]></description>
 		</property>
+		<property name="cache" type="cache">
+			<description><![CDATA[
+			Stores the rendered content into the caching framework and reads it from there.
+			This allows you to reuse this content without prior rendering. The presence of cache.key will trigger this feature.
+]]></description>
+			<default><![CDATA[0]]></default>
+		</property>
 		<property name="if" type="if">
 			<description><![CDATA[if "if" returns false nothing is returned
 
@@ -152,8 +159,22 @@ helloWorld.value = this item will be returned
 		</property>
 	</type>
 	<type id="COA" extends="COBJ_ARRAY">
+		<property name="cache" type="cache">
+			<description><![CDATA[
+			Stores the rendered content into the caching framework and reads it from there.
+			This allows you to reuse this content without prior rendering. The presence of cache.key will trigger this feature.
+]]></description>
+			<default><![CDATA[0]]></default>
+		</property>
   </type>
 	<type id="COA_INT" extends="COBJ_ARRAY">
+		<property name="cache" type="cache">
+			<description><![CDATA[
+			Stores the rendered content into the caching framework and reads it from there.
+			This allows you to reuse this content without prior rendering. The presence of cache.key will trigger this feature.
+]]></description>
+			<default><![CDATA[0]]></default>
+		</property>
 	</type>
 	<type id="CONFIG">
 		<property name="ATagParams" type="string">
@@ -187,6 +208,16 @@ This will by default add "&MP=2-207" to all links pointing to pages 36,37 and 48
 The result is used just like MP_defaults are used to find MP-vars if none has been specified prior to the call to \TYPO3\CMS\Core\TypoScript\TemplateService::linkData().
 You can specify "root" as a special keyword in the list of IDs and that will create a map-tree for the whole site (but this may be VERY processing intensive if there are many pages!).
 The order of IDs specified may have a significance; Any ID in a branch which is processed already (by a previous ID root point) will not be processed again.]]></description>
+			<default><![CDATA[
+]]></default>
+		</property>
+		<property name="USERNAME_substToken" type="string">
+			<description><![CDATA[The is the token used on the page, which should be substituted with the current username IF a front-end user is logged in! If no login, the substitution will not happen.]]></description>
+			<default><![CDATA[<!--###USERNAME###-->]]></default>
+		</property>
+		<property name="USERUID_substToken" type="string">
+			<description><![CDATA[The is the token used on the page, which should be substituted with the current users UID IF a front-end user is logged in! If no login, the substitution will not happen.
+This value has no default value and only if you specify a value for this token will a substitution process take place.]]></description>
 			<default><![CDATA[
 ]]></default>
 		</property>
@@ -294,6 +325,21 @@ This value is overridden by the value set in the page-record (field="cache_timeo
 			<default><![CDATA[
 ]]></default>
 		</property>
+		<property name="defaultGetVars" type="array">
+			<description><![CDATA[Allows to set default values for GET parameters. Default value is taken only if the GET parameter isn't defined. Array notation is done with dots, e.g.:
+
+test[var1] will be written as text.var1
+
+Example:
+
+config.defaultgetVars {
+    test.var1.var2.p3 = 15
+    L = 3
+}
+			]]></description>
+			<default><![CDATA[
+]]></default>
+		</property>
 		<property name="disableAllHeaderCode" type="boolean">
 			<description><![CDATA[If this is set, none of the features of the PAGE-object is processed and the content of the page will be the result of the cObject array (1,2,3,4...) of the PAGE-object.  This means that the result of the cObject should include everything from the <HTML> .... to the </HTML> tag !!
 Use this feature in templates supplying other content-types than HTML. That could be an image or a WAP-page!]]></description>
@@ -332,7 +378,7 @@ Use this feature in templates supplying other content-types than HTML. That coul
 
 Note that the keywords also change the way TYPO3 generates some of the XHTML tags to ensure valid XML. If you set doctype to a string, then you must also set config.xhtmlDoctype (see below).
 
-See "config.htmlTag_setParams" for more details on the effect on the html tag.
+See "config.htmlTag_setParams" and "config.htmlTag_langKey" for more details on the effect on the html tag.
 ]]></description>
 			<default><![CDATA[Default is a DOCTYPE like this:
 <!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN">
@@ -379,10 +425,44 @@ Useful if you run a template with special content at - say &type=95 - but still 
 			<description><![CDATA[If set, then frontend editing is enabled (requires EXT:frontend_editing being installed).]]></description>
 			<default><![CDATA[false]]></default>
 		</property>
+		<property name="ftu" type="boolean">
+			<description><![CDATA[If set, the "&ftu=...." GET-fallback identification is inserted.
+"&ftu=[hash]" is always inserted in the links on the first page a user hits. If it turns out in the next hit that the user has cookies enabled, this variable is not set anymore as the cookies does the job. If no cookies is accepted the "ftu" remains set for all links on the site and thereby we can still track the user.
+
+You should not set this feature if grabber-spiders like Teleport are going to grab your site!
+You should not set this feature if you want search-engines to index your site.
+
+You can also ignore this feature if you're certain, website users will use cookies.
+ "ftu" means fe_typo_user ("fe" is "frontend").]]></description>
+			<default><![CDATA[false]]></default>
+		</property>
 		<property name="headerComment " type="string">
 			<description><![CDATA[The content is added before the "TYPO3 Content Management Framework" comment in the <head> section of the page. Use this to insert a note like that "Programmed by My-Agency" ...]]></description>
 			<default><![CDATA[
 ]]></default>
+		</property>
+		<property name="htmlTag_dir" type="string">
+			<description><![CDATA[Sets text direction for whole document (useful for display of Arabic, Hebrew pages).
+
+Basically the value becomes the attribute value of "dir" for the <html> tag.
+
+Values:
+rtl = Right-To-Left (for Arabic / Hebrew)
+ltr = Left-To-Right (Default for other languages)
+
+Example:
+config.htmlTag_dir = rtl]]></description>
+			<default><![CDATA[
+]]></default>
+		</property>
+		<property name="htmlTag_langKey" type="string">
+			<description><![CDATA[Allows you to set the language value for the attributes "xml:lang" and "lang" in the <html> tag (when using "config.doctype = xhtml*").
+
+The values must follow the format specified in IETF RFC 3066
+
+Example:
+config.htmlTag_langKey = en-US]]></description>
+			<default><![CDATA[en]]></default>
 		</property>
 		<property name="htmlTag_setParams" type="string">
 			<description><![CDATA[Sets the attributes for the <html> tag on the page. If you set "config.doctype" to a keyword enabling XHTML then some attributes are already set. This property allows you to override any preset attributes with you own content if needed.
@@ -431,6 +511,26 @@ config.inlineStyle2TempFile = 1]]></description>
 			<default><![CDATA[
 ]]></default>
 		</property>
+		<property name="language" type="string">
+			<description><![CDATA[Language key. See stdWrap.lang for more information.
+Select between:
+English  (default) = [empty]
+Danish = dk
+German = de
+Norwegian = no
+Italian = it
+etc...
+
+Value must correspond with the key used for backend system language if there is one. Look at the translation page on TYPO3.org for the official 2-byte key for a given language. Notice that selecting the official key is important if you want labels in the correct language from "locallang" files.
+If the language you need is not yet a system language in TYPO3 you can use an artificial string of your choice and provide values for it via the TypoScript template where the property "_LOCAL_LANG" for most plugins will provide a way to override/add values for labels. The keys to use must be looked up in the locallang-file used by the plugin of course.]]></description>
+			<default><![CDATA[
+]]></default>
+		</property>
+		<property name="language_alt" type="string">
+			<description><![CDATA[If "config.language" (above) is used, this can be set to another language key which will be used for labels if a label was not found for the main language. For instance a brazil portuguese website might specify "pt" as alternative language which means the portuguese label will be shown if none was available in the main language, brazil portuguese. This feature makes sense if one language is incompletely translated and close to another language.]]></description>
+			<default><![CDATA[
+]]></default>
+		</property>
 		<property name="linkVars" type="string">
 			<description><![CDATA[HTTP_GET_VARS, which should be passed on with links in TYPO3. This is compiled into a string stored in $GLOBALS["TSFE"]->linkVars
 
@@ -448,6 +548,17 @@ This will add "&L=[L-value]&print=[print-value]" to all links in TYPO3.
 config.linkVars = L(1-3), print
 Same as above, but "&L=[L-value]" will only be added if the current value is 1, 2 or 3.
 ]]></description>
+			<default><![CDATA[
+]]></default>
+		</property>
+		<property name="locale_all" type="string">
+			<description><![CDATA[PHP: setlocale("LC_ALL", [value]);
+value-examples: deutsch, de_DE, danish, portuguese, spanish, french, norwegian, italian. See www.php.net for other value. Also on linux, look at /usr/share/locale/
+
+Example:
+This will render dates in danish made with stdWrap/strftime:
+locale_all = danish
+locale_all = da_DK]]></description>
 			<default><![CDATA[
 ]]></default>
 		</property>
@@ -526,6 +637,13 @@ pageRendererTemplateFile = fileadmin/test_pagerender.html
 			<description><![CDATA[The signs which should be printed in the title tag between the website name and the page title.]]></description>
 			<default><![CDATA[:]]></default>
 		</property>
+		<property name="prefixLocalAnchors" type="string">
+			<description><![CDATA[If set to one of the keywords, the content will have all local anchors in links prefixed with the path of the script. Basically this means that <a href="#"> will be transformed to <a href="path/path/script?params#">. This procedure is necessary if the <base> tag is set in the script (eg. if "realurl" extension is used to produce Speaking URLs).
+
+Keywords are the same as for "xhtml_cleaning", see above.]]></description>
+			<default><![CDATA[
+]]></default>
+		</property>
 		<property name="removeDefaultCss" type="boolean">
 			<description><![CDATA[Remove CSS generated by _CSS_DEFAULT_STYLE configuration of extensions.]]></description>
 			<default><![CDATA[false]]></default>
@@ -584,7 +702,7 @@ Note: TYPO3 comes with a built-in concatenation handler, but you can also regist
 
 Example:
 
-$GLOBALS['TYPO3_CONF_VARS']['FE']['jsConcatenateHandler'] = \TYPO3\CMS\Core\Utility\ExtensionManagementUtility::extPath('myext') . 'Classes/class.tx_myext_jsConcatenateHandler.php:tx_myext_jsConcatenateHandler->concatenateJs';]]></description>
+$GLOBALS['TYPO3_CONF_VARS']['FE']['jsConcatenateHandler'] = \TYPO3\CMS\Core\Utility\ExtensionManagementUtility::extPath($_EXTKEY) . 'Classes/class.tx_myext_jsConcatenateHandler.php:tx_myext_jsConcatenateHandler->concatenateJs';]]></description>
 			<default><![CDATA[false]]></default>
 		</property>
 		<property name="concatenateCss" type="boolean">
@@ -598,7 +716,7 @@ Note: TYPO3 comes with a built-in concatenation handler, but you can also regist
 
 Example:
 
-$GLOBALS['TYPO3_CONF_VARS']['FE']['cssConcatenateHandler'] = \TYPO3\CMS\Core\Utility\ExtensionManagementUtility::extPath('myext') . 'Classes/class.tx_myext_cssConcatenateHandler.php:tx_myext_cssConcatenateHandler->concatenateCss';]]></description>
+$GLOBALS['TYPO3_CONF_VARS']['FE']['cssConcatenateHandler'] = \TYPO3\CMS\Core\Utility\ExtensionManagementUtility::extPath($_EXTKEY) . 'Classes/class.tx_myext_cssConcatenateHandler.php:tx_myext_cssConcatenateHandler->concatenateCss';]]></description>
 			<default><![CDATA[false]]></default>
 		</property>
 		<property name="sendCacheHeaders" type="boolean">
@@ -672,6 +790,62 @@ If set, the words MUST be surrounded by whitespace in order to be marked up.]]><
 			<default><![CDATA[
 ]]></default>
 		</property>
+		<property name="sys_language_mode" type="string">
+			<description><![CDATA[Setting various modes of handling localization.
+The syntax is "[keyword] ; [value]".
+
+Possible keywords are:
+
+[default] - The system will look for a translation of the page (from "Alternative Page Language" table) and if it is not found it will fall back to the default language and display that.
+
+content_fallback - [ Recommended ] The system will always operate with the selected language even if the page is not translated with a page overlay record. This will keep menus etc. translated. However, the content on the page can still fall back to another language, defined by the value of this keyword, eg. "content_fallback ; 1,0" to fall back to the content of sys_language_uid 1 and if that is not present either, to default (0)
+
+strict - The system will report an error if the requested translation does not exist. Basically this means that all pages with gray background in the Web>Info / Localization overview module will fail (they would otherwise fall back to default language in one or another way)
+
+ignore - The system will stay with the selected language even if the page is not translated and there's no content available in this language, so you can handle that situation on your own then.]]></description>
+			<default><![CDATA[
+]]></default>
+		</property>
+		<property name="sys_language_overlay" type="string">
+			<description><![CDATA[boolean / keyword
+			If set, records from certain tables selected by the CONTENT cObject using the "languageField" setting will select the default language (0) instead of any language set by sys_language_uid / sys_language_mode. In addition the system will look for a translation of the selected record and overlay configured fields.
+The requirements for this is that the table is configured with "languageField" and "transOrigPointerField" in the [ctrl] section of $TCA. Also, exclusion of certain fields can be done with the "l10n_mode" directive in the field-configuration of $TCA.
+
+For backend administration this requires that you configure the "Web>Page" module to display content elements accordingly; That each default element is shown and next to it any translation found. This configuration can be done with Page TSconfig for a section of the website using the object path "mod.web_layout.defLangBinding = 1".
+
+Keyword:
+hideNonTranslated : If this keyword is used a record that has no translation will not be shown. The default is that records with no translation will show up in the default language.]]></description>
+			<default><![CDATA[
+]]></default>
+		</property>
+		<property name="sys_language_uid" type="int">
+			<description><![CDATA[This value points to the uid of a record from the "sys_language" table and if set, this means that various parts of the frontend display code will select records which are assigned to this language. See ->SELECT
+
+Internally, the value is depending on whether a Alternative Page Language record can be found with that language. If not, the value will default to zero (default language) except if "sys_language_mode" is set to a value like "content_fallback".]]></description>
+			<default><![CDATA[
+]]></default>
+		</property>
+		<property name="titleTagFunction " type="string">
+			<description><![CDATA[function-name
+			Passes the default <title>-tag content to this function. No typoScript parameters are passed though.]]></description>
+			<default><![CDATA[
+]]></default>
+		</property>
+		<property name="typolinkEnableLinksAcrossDomains" type="boolean">
+			<description><![CDATA[This option enables to create links across domains using current domain's linking scheme.
+
+If this option is not set, then all cross-domain links will be generated as
+
+"http://domain.tld/index.php?id=12345" (where 12345 is page id). Setting this option requires that domains, where pages are linked, have the same configuration for:
+
+- linking scheme (i.e. all use RealURL or CoolURI but not any mixture)
+- all domains have identical localization settings (config.sys_language_XXX directives)
+- all domains have the same set of languages defined
+
+Disclaimer: it must be understood that while link is generated to another domain, it is still generated in the context of current domain. No side effects are known at the time of writing of this documentation but they may exist. If any side effects are found, this documentation will be updated to include them.]]></description>
+			<default><![CDATA[
+]]></default>
+		</property>
 		<property name="typolinkLinkAccessRestrictedPages" type="string">
 			<description><![CDATA[integer (page id) / keyword "NONE"
 			If set, typolinks pointing to access restricted pages will still link to the page even though the page cannot be accessed. If the value of this setting is an integer it will be interpreted as a page id to which the link will be directed.
@@ -717,6 +891,35 @@ same as config.doctype if set to a keyword]]></description>
 			<default><![CDATA[
 ]]></default>
 		</property>
+		<property name="xhtml_cleaning" type="string">
+			<description><![CDATA[Tries to clean up the output to make it XHTML compliant and a bit more. THIS IS NOT COMPLETE YET, but a "pilot" to see if it makes sense anyways. For now this is what is done:
+
+What it does at this point:
+- All tags (img,br,hr) is ended with "/>" - others?
+- Lowercase for elements and attributes
+- All attributes in quotes
+- Add "alt" attribute to img-tags if it's not there already.
+
+What it does NOT do (yet) according to XHTML specs.:
+- Wellformedness: Nesting is NOT checked
+- name/id attribute issue is not observed at this point.
+- Certain nesting of elements not allowed. Most interesting, <PRE> cannot contain img, big,small,sub,sup ...
+- Wrapping scripts and style element contents in CDATA - or alternatively they should have entitites converted.
+- Setting charsets may put some special requirements on both XML declaration/ meta-http-equiv. (C.9)
+- UTF-8 encoding is in fact expected by XML!!
+- stylesheet element and attribute names are NOT converted to lowercase
+- ampersands (and entities in general I think) MUST be converted to an entity reference! (&amps;). This may mean further conversion of non-tag content before output to page. May be related to the charset issue as a whole.
+- Minimized values not allowed: Must do this: selected="selected"
+
+Please see the class \TYPO3\CMS\Core\Html\HtmlParser for details.
+You can enable this function by the following values:
+
+all = the content is always processed before it may be stored in cache.
+cached = only if the page is put into the cache,
+output = only the output code just before it's echoed out.]]></description>
+			<default><![CDATA[
+]]></default>
+		</property>
 		<property name="xmlprologue" type="string">
 			<description><![CDATA[If empty (not set) then the default XML 1.0 prologue is set, when the doctype is set to a known keyword (eg xhtml_11):
 
@@ -737,6 +940,13 @@ Any other string is used as the XML prologue itself.]]></description>
 			<description><![CDATA[
 ]]></description>
 			<default><![CDATA[< [tablename]]]></default>
+		</property>
+		<property name="cache" type="cache">
+			<description><![CDATA[
+			Stores the rendered content into the caching framework and reads it from there.
+			This allows you to reuse this content without prior rendering. The presence of cache.key will trigger this feature.
+]]></description>
+			<default><![CDATA[0]]></default>
 		</property>
 		<property name="select" type="select">
 			<description><![CDATA[The SQL-statement is set here!]]></description>
@@ -778,6 +988,31 @@ NOTE: Only tables allowed are "pages" or tables prefixed with one of these: "tt_
 ]]></default>
 		</property>
 	</type>
+	<type id="cache">
+		<property name="key" type="stdWrap">
+			<description><![CDATA[ string / stdwrap
+			The cache identifier that is used to store the rendered content into the cache and to read it from there.
+]]></description>
+			<default><![CDATA[
+]]></default>
+		</property>
+		<property name="lifetime" type="stdWrap">
+			<description><![CDATA["unlimited"/"default"/integer/stdWrap
+			Lifetime of the content within the cache. Allows you to determine the lifetime of the cached object. This does not depend on the lifetime of the cached version of the page on which it is used.
+			Possible values are any positive integer and the keywords "unlimited" and "default".
+]]></description>
+			<default><![CDATA[
+]]></default>
+		</property>
+		<property name="tags" type="stdWrap">
+			<description><![CDATA[boolean/stdWrap
+			Can hold a comma-separated list of tags. These tags will be attached to the entry within cache_hash
+			cache (but not to cache_pages cache) and can be used to purge the cached content.
+]]></description>
+			<default><![CDATA[
+]]></default>
+		</property>
+	</type>
 	<type id="slide" extends="stdWrap">
 		<property name="collect" type="stdWrap">
 			<description><![CDATA[int/stdWrap
@@ -814,6 +1049,13 @@ toolbar,edit,new,delete,move,hide
 			<description><![CDATA[If set, then the record edited is displayed above the editing form.]]></description>
 			<default><![CDATA[
 ]]></default>
+		</property>
+		<property name="cache" type="cache">
+			<description><![CDATA[
+			Stores the rendered content into the caching framework and reads it from there.
+			This allows you to reuse this content without prior rendering. The presence of cache.key will trigger this feature.
+]]></description>
+			<default><![CDATA[0]]></default>
 		</property>
 		<property name="innerWrap" type="wrap">
 			<description><![CDATA[Wraps the edit panel]]></description>
@@ -909,6 +1151,13 @@ If no alttext is specified, it will use an empty alttext]]></description>
 			<default><![CDATA[useAlt
 ]]></default>
 		</property>
+		<property name="cache" type="cache">
+			<description><![CDATA[
+			Stores the rendered content into the caching framework and reads it from there.
+			This allows you to reuse this content without prior rendering. The presence of cache.key will trigger this feature.
+]]></description>
+			<default><![CDATA[0]]></default>
+		</property>
 		<property name="file" type="stdWrap">
 			<description><![CDATA[resource/stdWrap
 			If the resource is jpg,gif,jpeg,png the image is inserted as an image-tag. Al other formats is read and inserted into the HTML-code.
@@ -950,6 +1199,13 @@ The maximum filesize of documents to be read is set to 1024 kb internally!]]></d
 			or you have to specify a table, uid and field name in the according sub-properties of "references".
 			See further documentation of these sub-properties in the table below.]]></description>
 			<default><![CDATA[]]></default>
+		</property>
+		<property name="cache" type="cache">
+			<description><![CDATA[
+			Stores the rendered content into the caching framework and reads it from there.
+			This allows you to reuse this content without prior rendering. The presence of cache.key will trigger this feature.
+]]></description>
+			<default><![CDATA[0]]></default>
 		</property>
 		<property name="files" type="stdWrap">
 			<description><![CDATA[string/stdWrap
@@ -1009,6 +1265,13 @@ Use this property to define a content object, which should be used as template f
 			<description><![CDATA[string/stdWrap
 The fluid template file. It is an alternative to ".template" and is used only, if ".template" is not set.]]></description>
 			<default><![CDATA[]]></default>
+		</property>
+		<property name="cache" type="cache">
+			<description><![CDATA[
+			Stores the rendered content into the caching framework and reads it from there.
+			This allows you to reuse this content without prior rendering. The presence of cache.key will trigger this feature.
+]]></description>
+			<default><![CDATA[0]]></default>
 		</property>
 		<property name="templateRootPaths" type="array">
 			<description><![CDATA[array of file paths with stdWrap
@@ -2038,7 +2301,7 @@ Example:
 		</property>
 		<property name="text" type="stdWrap">
 			<description><![CDATA[This is text text-string on the gif-file. The item is rendered only if this string is not empty.
-The cObj->data-array is loaded with the page-record, if for the GIFBUILDER-object is used]]></description>
+The cObj->data-array is loaded with the page-record, if for example the GIFBUILDER-object is used by GMENU or IMGMENU]]></description>
 			<default><![CDATA[
 ]]></default>
 		</property>
@@ -2075,7 +2338,7 @@ Defines which menuObj that should render the menuitems on the various levels.
 
 Example:
 temp.sidemenu = HMENU
-temp.sidemenu.1 = TMENU  ]]></description>
+temp.sidemenu.1 = GMENU  ]]></description>
 			<default><![CDATA[ (no menu)]]></default>
 		</property>
 		<property name="2" type="mObj">
@@ -2084,7 +2347,7 @@ temp.sidemenu.1 = TMENU  ]]></description>
 
 Example:
 temp.sidemenu = HMENU
-temp.sidemenu.1 = TMENU  ]]></description>
+temp.sidemenu.1 = GMENU  ]]></description>
 			<default><![CDATA[ (no menu)]]></default>
 		</property>
 		<property name="3" type="mObj">
@@ -2093,7 +2356,7 @@ temp.sidemenu.1 = TMENU  ]]></description>
 
 Example:
 temp.sidemenu = HMENU
-temp.sidemenu.1 = TMENU  ]]></description>
+temp.sidemenu.1 = GMENU  ]]></description>
 			<default><![CDATA[ (no menu)]]></default>
 		</property>
 		<property name="4" type="mObj">
@@ -2102,7 +2365,7 @@ temp.sidemenu.1 = TMENU  ]]></description>
 
 Example:
 temp.sidemenu = HMENU
-temp.sidemenu.1 = TMENU  ]]></description>
+temp.sidemenu.1 = GMENU  ]]></description>
 			<default><![CDATA[ (no menu)]]></default>
 		</property>
 		<property name="addQueryString" type="string">
@@ -2129,6 +2392,13 @@ This results in a menu, where the first two items are skipped starting with item
 Notice: Affects all sub menus as well. (See "minItems" for notice)]]></description>
 			<default><![CDATA[
 ]]></default>
+		</property>
+		<property name="cache" type="cache">
+			<description><![CDATA[
+			Stores the rendered content into the caching framework and reads it from there.
+			This allows you to reuse this content without prior rendering. The presence of cache.key will trigger this feature.
+]]></description>
+			<default><![CDATA[0]]></default>
 		</property>
 		<property name="entryLevel" type="int">
 			<description><![CDATA[Defines at which level in the rootLine, the menu should start.
@@ -2182,7 +2452,9 @@ Notice: Affects all sub menus as well. To set the value for each menu level indi
 The check is only carried out if a translation is requested ("config.sys_language_uid" is not zero).
 
 Keyword: "all"
-When set to "all" the same check is carried out but it will not look if "Hide page if no translation for current language exists" is set - it always reverts to default language if no translation is found.]]></description>
+When set to "all" the same check is carried out but it will not look if "Hide page if no translation for current language exists" is set - it always reverts to default language if no translation is found.
+
+For these options to make sense, they should only be used when "config.sys_language_mode" is not set to "content_fallback".]]></description>
 			<default><![CDATA[
 ]]></default>
 		</property>
@@ -2651,7 +2923,717 @@ The result can be seen in the image below (applied on the testsite package):
 
 
 
-Applies to TMENU on >= 2nd level in a menu.]]></description>
+Applies to GMENU, TMENU on >= 2nd level in a menu.]]></description>
+			<default><![CDATA[
+]]></default>
+		</property>
+	</type>
+	<type id="GMENU" extends="mObj">
+		<property name="ACT" type="GMENU_itemState">
+			<description><![CDATA[Boolean / (config)
+			Enable/Configuration for menu items which are found in the rootLine]]></description>
+			<default><![CDATA[0]]></default>
+		</property>
+		<property name="ACTRO" type="GMENU_itemState">
+			<description><![CDATA[Boolean / (config)
+			Enable/Configuration for menu items which are found in the rootLine]]></description>
+			<default><![CDATA[0]]></default>
+		</property>
+		<property name="ACTIFSUB" type="GMENU_itemState">
+			<description><![CDATA[Boolean / (config)
+			Enable/Configuration for menu items which are found in the rootLine and has subpages]]></description>
+			<default><![CDATA[0]]></default>
+		</property>
+		<property name="ACTIFSUBRO" type="GMENU_itemState">
+			<description><![CDATA[Boolean / (config)
+			Enable/Configuration for menu items which are found in the rootLine and has subpages]]></description>
+			<default><![CDATA[0]]></default>
+		</property>
+		<property name="CUR" type="GMENU_itemState">
+			<description><![CDATA[Boolean / (config)
+			Enable/Configuration for a menu item if the item is the current page.]]></description>
+			<default><![CDATA[0]]></default>
+		</property>
+		<property name="CURRO" type="GMENU_itemState">
+			<description><![CDATA[Boolean / (config)
+			Enable/Configuration for a menu item if the item is the current page.]]></description>
+			<default><![CDATA[0]]></default>
+		</property>
+		<property name="CURIFSUB" type="GMENU_itemState">
+			<description><![CDATA[Boolean / (config)
+			Enable/Configuration for a menu item if the item is the current page and has subpages.]]></description>
+			<default><![CDATA[0]]></default>
+		</property>
+		<property name="CURIFSUBRO" type="GMENU_itemState">
+			<description><![CDATA[Boolean / (config)
+			Enable/Configuration for a menu item if the item is the current page and has subpages.]]></description>
+			<default><![CDATA[0]]></default>
+		</property>
+		<property name="IFSUB" type="GMENU_itemState">
+			<description><![CDATA[Boolean / (config)
+			Enable/Configuration for menu items which has subpages]]></description>
+			<default><![CDATA[0]]></default>
+		</property>
+		<property name="IFSUBRO" type="GMENU_itemState">
+			<description><![CDATA[Boolean / (config)
+			Enable/Configuration for menu items which has subpages]]></description>
+			<default><![CDATA[0]]></default>
+		</property>
+		<property name="NO" type="GMENU_itemState">
+			<description><![CDATA[Boolean / (config)
+			The default "Normal" state rendering of Item. This is required for all menus.
+If you specify properties for the "NO" property you do not have to set it "1". Otherwise with no properties setting "NO=1" will render the menu anyways (for TMENU this may make sense).
+
+The simplest menu TYPO3 can generate is then:
+
+page.20 = HMENU
+page.20.1 = TMENU
+page.20.1.NO = 1
+
+That will be pure <a> tags wrapped around page titles.]]></description>
+			<default><![CDATA[1]]></default>
+		</property>
+		<property name="SPC" type="GMENU_itemState">
+			<description><![CDATA[Boolean / (config)
+			Enable/Configuration for 'Spacer' pages.
+Spacers are pages of the doktype "Spacer". These are not viewable pages but "placeholders" which can be used to divide menuitems.
+
+Note: Rollovers doesn't work with spacers, if you use GMENU!]]></description>
+			<default><![CDATA[0]]></default>
+		</property>
+		<property name="USERDEF1" type="GMENU_itemState">
+			<description><![CDATA[Boolean / (config)
+			Userdefined, see .itemArrayProcFunc for details on how to use this.
+You can set the ITEM_STATE values USERDEF1 and USERDEF2 (+...RO) from a script/userfunction processing the menu item array. See HMENU/special=userdefined or the property .itemArrayProcFunc of the menu objects.]]></description>
+			<default><![CDATA[
+]]></default>
+		</property>
+		<property name="USERDEF1RO" type="GMENU_itemState">
+			<description><![CDATA[Boolean / (config)
+			Userdefined, see .itemArrayProcFunc for details on how to use this.
+You can set the ITEM_STATE values USERDEF1 and USERDEF2 (+...RO) from a script/userfunction processing the menu item array. See HMENU/special=userdefined or the property .itemArrayProcFunc of the menu objects.]]></description>
+			<default><![CDATA[
+]]></default>
+		</property>
+		<property name="USERDEF2" type="GMENU_itemState">
+			<description><![CDATA[Boolean / (config)
+			(See above)]]></description>
+			<default><![CDATA[
+]]></default>
+		</property>
+		<property name="USERDEF2RO" type="GMENU_itemState">
+			<description><![CDATA[Boolean / (config)
+			(See above)]]></description>
+			<default><![CDATA[
+]]></default>
+		</property>
+		<property name="USR" type="GMENU_itemState">
+			<description><![CDATA[Boolean / (config)
+			Enable/Configuration for menu items which are access restricted pages that a user has access to.]]></description>
+			<default><![CDATA[0]]></default>
+		</property>
+		<property name="USRRO" type="GMENU_itemState">
+			<description><![CDATA[Boolean / (config)
+			Enable/Configuration for menu items which are access restricted pages that a user has access to.]]></description>
+			<default><![CDATA[0]]></default>
+		</property>
+		<property name="addParams" type="string">
+			<description><![CDATA[Additional parameter for the menu-links.
+Example:
+"&some_var=some%20value"
+Must be rawurlencoded.
+Applies to GMENU, TMENU, IMGMENU]]></description>
+			<default><![CDATA[
+]]></default>
+		</property>
+		<property name="IProcFunc" type="string">
+			<description><![CDATA[The internal array "I" is passed to this function and expected returned as well. Subsequent to this function call the menu item is compiled by implode()'ing the array $I[parts] in the passed array. Thus you may modify this if you need to.
+See example on the testsite and in media/scripts/example_itemArrayProcFunc.php]]></description>
+			<default><![CDATA[
+]]></default>
+		</property>
+		<property name="RO" type="boolean">
+			<description><![CDATA[RollOver configuration enabled / disabled.
+If this is true, RO becomes a GIFBUILDER-object defining the layout of the menuitem when the mouse rolls over it]]></description>
+			<default><![CDATA[0]]></default>
+		</property>
+		<property name="accessKey" type="boolean">
+			<description><![CDATA[If set access-keys are set on the menu-links]]></description>
+			<default><![CDATA[
+]]></default>
+		</property>
+		<property name="applyTotalH" type="string">
+			<description><![CDATA[objNumsList (offset)
+
+			This adds the total height of the previously generated menuitems to the offset of the GifBuilderObj's mentioned in this list.
+
+Example:
+This is useful it you want to create a menu with individual items but a common background image that extends to the whole area behind the menu. Then you should setup the background image in each GIFBUILDER-object and include the object-number in this list.
+]]></description>
+			<default><![CDATA[
+]]></default>
+		</property>
+		<property name="applyTotalW" type="string">
+			<description><![CDATA[objNumsList (offset)
+			This adds the total width of the previously generated menuitems to the offset of the GifBuilderObj's mentioned in this list.]]></description>
+			<default><![CDATA[
+]]></default>
+		</property>
+		<property name="collapse" type="boolean">
+			<description><![CDATA[If set, "active" menuitems that has expanded the next level on the menu will now collapse that menu again.]]></description>
+			<default><![CDATA[
+]]></default>
+		</property>
+		<property name="debugItemConf" type="string">
+			<description><![CDATA[Outputs (by the debug()-function) the configuration arrays for each menuitem. Useful to debug optionSplit things and such...
+Applies to GMENU, TMENU, IMGMENU]]></description>
+			<default><![CDATA[
+]]></default>
+		</property>
+		<property name="disableAltText" type="boolean">
+			<description><![CDATA[If set, the alt-parameter of the images are not set. You can do it manually by "imgParams" (see below)]]></description>
+			<default><![CDATA[
+]]></default>
+		</property>
+		<property name="distributeX" type="int">
+			<description><![CDATA[int+
+			If set, the total width of all the menuitems will be equal to this number of pixels by adding/subtracting an equal amount of pixels to each menu items width.
+Will overrule any setting for ".useLargestItemX"]]></description>
+			<default><![CDATA[
+]]></default>
+		</property>
+		<property name="distributeY" type="int">
+			<description><![CDATA[int+
+			If set, the total height of all the menuitems will be equal to this number of pixels by adding/subtracting an equal amount of pixels to each menu items height.
+Will overrule any setting for ".useLargestItemY"]]></description>
+			<default><![CDATA[
+]]></default>
+		</property>
+		<property name="expAll" type="Boolean">
+			<description><![CDATA[If this is true, the menu will always show the menu on the level underneath the menuitem. This corresponds to a situation where a user has clicked a menuitem and the menu folds out the next level. This can enable that to happen on all items as default.]]></description>
+			<default><![CDATA[
+]]></default>
+		</property>
+		<property name="forceTypeValue" type="int">
+			<description><![CDATA[If set, the &type parameter of the link is forced to this value regardless of target. Overrides the global equivalent in 'config' if set.]]></description>
+			<default><![CDATA[
+]]></default>
+		</property>
+		<property name="JSWindow" type="boolean">
+			<description><![CDATA[If set, the links of the menu-items will open by JavaScript in a pop-up window.
+
+.newWindow boolean, that lets every menuitem open in its own window opposite to opening in the same window for each click.
+
+.params is the list of parameters sent to the JavaScript open-window function, eg:
+width=200,height=300,status=0,menubar=0
+]]></description>
+			<default><![CDATA[
+]]></default>
+		</property>
+		<property name="max" type="string">
+			<description><![CDATA[x,y (calcInt)"
+
+			Forces the menu as a whole to these maximum dimensions]]></description>
+			<default><![CDATA[
+]]></default>
+		</property>
+		<property name="min" type="x,y (calcInt)">
+			<description><![CDATA[Forces the menu as a whole to these minimum dimensions]]></description>
+			<default><![CDATA[
+]]></default>
+		</property>
+		<property name="overrideId" type="int">
+			<description><![CDATA[integer (page-id)
+			If set, then all links in the menu will point to this pageid. Instead the real uid of the page is sent by the parameter "&real_uid=[uid]".
+This feature is smart, if you have inserted a menu from somewhere else, perhaps a shared menu, but wants the menuitems to call the same page, which then generates a proper output based on the real_uid.
+Applies to GMENU, TMENU, IMGMENU]]></description>
+			<default><![CDATA[
+]]></default>
+		</property>
+		<property name="removeObjectsOfDummy" type="string">
+			<description><![CDATA[objNumsList
+
+			If the menu is forced to a certain minimum dimension, this is a list of objects in the gifbuilder-object that is removed for this last item. This is important to do if the menuitems has elements that should only be applied if the item is actually a menuitem!!]]></description>
+			<default><![CDATA[
+]]></default>
+		</property>
+		<property name="stdWrap" type="stdWrap">
+			<description><![CDATA[Wraps the whole item using stdWrap
+
+Example:
+2 = TMENU
+2 {
+  stdWrap.dataWrap = <ul class="{register :
+     parentProperty}"> | </ul>
+  NO {
+    ...
+  }
+}]]></description>
+			<default><![CDATA[
+]]></default>
+		</property>
+		<property name="target" type="string">
+			<description><![CDATA[target
+
+			Target of the menulinks]]></description>
+			<default><![CDATA[self]]></default>
+		</property>
+		<property name="submenuObjSuffixes" type="string">
+			<description><![CDATA[Defines a suffix for alternative sub-level menu objects. Useful to create special submenus depending on their parent menu element. See example below.
+
+Example:
+This example will generate a menu where the menu objects for the second level will differ depending on the number of the first level item for which the submenu is rendered. The second level objects used are "2" (the default), "2a" and "2b" (the alternatives). Which of them is used is defined by "1.submenuObjSuffixes" which has the configuration "a |*| |*| b". This configuration means that the first menu element will use configuration "2a" and the last will use "2b" while anything in between will use "2" (no suffix applied)
+
+page.200 = HMENU
+page.200 {
+  1 = TMENU
+  1.wrap = <div style="width:200px; border: 1px solid;">|</div>
+  1.expAll = 1
+  1.submenuObjSuffixes = a |*|  |*| b
+  1.NO.allWrap = <b>|</b><br/>
+
+  2 = TMENU
+  2.NO.allWrap = <div style="background:red;">|</div>
+
+  2a = TMENU
+  2a.NO.allWrap = <div style="background:yellow;">|</div>
+
+  2b = TMENU
+  2b.NO.allWrap = <div style="background:green;">|</div>
+}
+
+The result can be seen in the image below (applied on the testsite package):
+
+
+
+Applies to GMENU, TMENU on >= 2nd level in a menu.]]></description>
+			<default><![CDATA[
+]]></default>
+		</property>
+		<property name="useLargestItemX" type="boolean">
+			<description><![CDATA[If set, then the width of all menuitems will be equal to the largest of them all.]]></description>
+			<default><![CDATA[
+]]></default>
+		</property>
+		<property name="useLargestItemY" type="boolean">
+			<description><![CDATA[If set, then the height of all menuitems will be equal to the largest of them all.]]></description>
+			<default><![CDATA[
+]]></default>
+		</property>
+		<property name="wrap" type="wrap">
+			<description><![CDATA[Wraps only if there were items in the menu!]]></description>
+			<default><![CDATA[
+]]></default>
+		</property>
+	</type>
+	<type id="GMENU_itemState" extends="GIFBUILDER">
+		<property name="ATagParams" type="string">
+			<description><![CDATA[Additional parameters]]></description>
+			<default><![CDATA[
+]]></default>
+		</property>
+		<property name="ATagTitle" type="stdWrap">
+			<description><![CDATA[string /stdWrap
+
+			which defines the title attribute of the a-tag. (See TMENUITEM also)]]></description>
+			<default><![CDATA[
+]]></default>
+		</property>
+		<property name="additionalParams" type="string">
+			<description><![CDATA[string /stdWrap
+
+			Define parameters that are added to the end of the URL. This must be code ready to insert after the last parameter.
+
+For details, see typolink->additionalParams]]></description>
+			<default><![CDATA[
+]]></default>
+		</property>
+		<property name="allStdWrap" type="stdWrap">
+			<description><![CDATA[stdWrap of the whole item]]></description>
+			<default><![CDATA[
+]]></default>
+		</property>
+		<property name="allWrap" type="stdWrap">
+			<description><![CDATA[wrap /stdWrap
+
+			Wraps the whole item]]></description>
+			<default><![CDATA[
+]]></default>
+		</property>
+		<property name="altImgResource" type="imgResouce">
+			<description><![CDATA[Defines an alternative image to use. If an image returns here, it will override any GIFBUILDER configuration.]]></description>
+			<default><![CDATA[
+]]></default>
+		</property>
+		<property name="altTarget" type="string">
+			<description><![CDATA[Alternative target which overrides the target defined for the GMENU]]></description>
+			<default><![CDATA[
+]]></default>
+		</property>
+		<property name="imgParams" type="string">
+			<description><![CDATA[params
+
+			Parameters for the <img>-tag]]></description>
+			<default><![CDATA[
+]]></default>
+		</property>
+		<property name="noLink" type="boolean">
+			<description><![CDATA[If set, the item is NOT linked!]]></description>
+			<default><![CDATA[
+]]></default>
+		</property>
+		<property name="subst_elementUid" type="boolean">
+			<description><![CDATA[If set, "{elementUid}" is substituted with the item uid.]]></description>
+			<default><![CDATA[
+]]></default>
+		</property>
+		<property name="wrap" type="wrap">
+			<description><![CDATA[Wrap of the menu item]]></description>
+			<default><![CDATA[
+]]></default>
+		</property>
+	</type>
+	<type id="IMGMENU" extends="mObj">
+		<property name="ACT" type="IMGMENUITEM">
+			<description><![CDATA[Boolean / (config)
+			Enable/Configuration for menu items which are found in the rootLine]]></description>
+			<default><![CDATA[0]]></default>
+		</property>
+		<property name="ACTRO" type="IMGMENUITEM">
+			<description><![CDATA[Boolean / (config)
+			Enable/Configuration for menu items which are found in the rootLine]]></description>
+			<default><![CDATA[0]]></default>
+		</property>
+		<property name="ACTIFSUB" type="IMGMENUITEM">
+			<description><![CDATA[Boolean / (config)
+			Enable/Configuration for menu items which are found in the rootLine and has subpages]]></description>
+			<default><![CDATA[0]]></default>
+		</property>
+		<property name="ACTIFSUBRO" type="IMGMENUITEM">
+			<description><![CDATA[Boolean / (config)
+			Enable/Configuration for menu items which are found in the rootLine and has subpages]]></description>
+			<default><![CDATA[0]]></default>
+		</property>
+		<property name="CUR" type="IMGMENUITEM">
+			<description><![CDATA[Boolean / (config)
+			Enable/Configuration for a menu item if the item is the current page.]]></description>
+			<default><![CDATA[0]]></default>
+		</property>
+		<property name="CURRO" type="IMGMENUITEM">
+			<description><![CDATA[Boolean / (config)
+			Enable/Configuration for a menu item if the item is the current page.]]></description>
+			<default><![CDATA[0]]></default>
+		</property>
+		<property name="CURIFSUB" type="IMGMENUITEM">
+			<description><![CDATA[Boolean / (config)
+			Enable/Configuration for a menu item if the item is the current page and has subpages.]]></description>
+			<default><![CDATA[0]]></default>
+		</property>
+		<property name="CURIFSUBRO" type="IMGMENUITEM">
+			<description><![CDATA[Boolean / (config)
+			Enable/Configuration for a menu item if the item is the current page and has subpages.]]></description>
+			<default><![CDATA[0]]></default>
+		</property>
+		<property name="IFSUB" type="IMGMENUITEM">
+			<description><![CDATA[Boolean / (config)
+			Enable/Configuration for menu items which has subpages]]></description>
+			<default><![CDATA[0]]></default>
+		</property>
+		<property name="IFSUBRO" type="IMGMENUITEM">
+			<description><![CDATA[Boolean / (config)
+			Enable/Configuration for menu items which has subpages]]></description>
+			<default><![CDATA[0]]></default>
+		</property>
+		<property name="NO" type="IMGMENUITEM">
+			<description><![CDATA[Boolean / (config)
+			The default "Normal" state rendering of Item. This is required for all menus.
+If you specify properties for the "NO" property you do not have to set it "1". Otherwise with no properties setting "NO=1" will render the menu anyways (for TMENU this may make sense).
+
+The simplest menu TYPO3 can generate is then:
+
+page.20 = HMENU
+page.20.1 = TMENU
+page.20.1.NO = 1
+
+That will be pure <a> tags wrapped around page titles.]]></description>
+			<default><![CDATA[1]]></default>
+		</property>
+		<property name="SPC" type="IMGMENUITEM">
+			<description><![CDATA[Boolean / (config)
+			Enable/Configuration for 'Spacer' pages.
+Spacers are pages of the doktype "Spacer". These are not viewable pages but "placeholders" which can be used to divide menuitems.
+
+Note: Rollovers doesn't work with spacers, if you use GMENU!]]></description>
+			<default><![CDATA[0]]></default>
+		</property>
+		<property name="USERDEF1" type="IMGMENUITEM">
+			<description><![CDATA[Boolean / (config)
+			Userdefined, see .itemArrayProcFunc for details on how to use this.
+You can set the ITEM_STATE values USERDEF1 and USERDEF2 (+...RO) from a script/userfunction processing the menu item array. See HMENU/special=userdefined or the property .itemArrayProcFunc of the menu objects.]]></description>
+			<default><![CDATA[
+]]></default>
+		</property>
+		<property name="USERDEF1RO" type="IMGMENUITEM">
+			<description><![CDATA[Boolean / (config)
+			Userdefined, see .itemArrayProcFunc for details on how to use this.
+You can set the ITEM_STATE values USERDEF1 and USERDEF2 (+...RO) from a script/userfunction processing the menu item array. See HMENU/special=userdefined or the property .itemArrayProcFunc of the menu objects.]]></description>
+			<default><![CDATA[
+]]></default>
+		</property>
+		<property name="USERDEF2" type="IMGMENUITEM">
+			<description><![CDATA[Boolean / (config)
+			(See above)]]></description>
+			<default><![CDATA[
+]]></default>
+		</property>
+		<property name="USERDEF2RO" type="IMGMENUITEM">
+			<description><![CDATA[Boolean / (config)
+			(See above)]]></description>
+			<default><![CDATA[
+]]></default>
+		</property>
+		<property name="USR" type="IMGMENUITEM">
+			<description><![CDATA[Boolean / (config)
+			Enable/Configuration for menu items which are access restricted pages that a user has access to.]]></description>
+			<default><![CDATA[0]]></default>
+		</property>
+		<property name="USRRO" type="IMGMENUITEM">
+			<description><![CDATA[Boolean / (config)
+			Enable/Configuration for menu items which are access restricted pages that a user has access to.]]></description>
+			<default><![CDATA[0]]></default>
+		</property>
+		<property name="addParams" type="string">
+			<description><![CDATA[Additional parameter for the menu-links.
+Example:
+"&some_var=some%20value"
+Must be rawurlencoded.
+Applies to GMENU, TMENU, IMGMENU]]></description>
+			<default><![CDATA[
+]]></default>
+		</property>
+		<property name="dWorkArea" type="string">
+			<description><![CDATA[offset + calc
+			Main offset of the GIFBUILDER-items (also called the "distribution")]]></description>
+			<default><![CDATA[
+]]></default>
+		</property>
+		<property name="debugItemConf" type="string">
+			<description><![CDATA[Outputs (by the debug()-function) the configuration arrays for each menuitem. Useful to debug optionSplit things and such...
+Applies to GMENU, TMENU, IMGMENU]]></description>
+			<default><![CDATA[
+]]></default>
+		</property>
+		<property name="debugRenumberedObject" type="boolean">
+			<description><![CDATA[if set, the final GIFBUILDER object configuration is output in order for you to debug your configuration]]></description>
+			<default><![CDATA[
+]]></default>
+		</property>
+		<property name="forceTypeValue" type="int">
+			<description><![CDATA[If set, the &type parameter of the link is forced to this value regardless of target.]]></description>
+			<default><![CDATA[
+]]></default>
+		</property>
+		<property name="imgMapExtras" type="string">
+			<description><![CDATA[<area...>-tags
+			Extra <area...>tags for the image-map]]></description>
+			<default><![CDATA[
+]]></default>
+		</property>
+		<property name="JSWindow" type="boolean">
+			<description><![CDATA[If set, the links of the menu-items will open by JavaScript in a pop-up window.
+
+.newWindow boolean, that lets every menuitem open in its own window opposite to opening in the same window for each click.
+
+.params is the list of parameters sent to the JavaScript open-window function, eg:
+width=200,height=300,status=0,menubar=0
+]]></description>
+			<default><![CDATA[
+]]></default>
+		</property>
+		<property name="main" type="GIFBUILDER">
+			<description><![CDATA[Main configuration of the image-map! This defines the "underlay"!]]></description>
+			<default><![CDATA[
+]]></default>
+		</property>
+		<property name="overrideId" type="int">
+			<description><![CDATA[integer (page-id)
+			If set, then all links in the menu will point to this pageid. Instead the real uid of the page is sent by the parameter "&real_uid=[uid]".
+This feature is smart, if you have inserted a menu from somewhere else, perhaps a shared menu, but wants the menuitems to call the same page, which then generates a proper output based on the real_uid.
+Applies to GMENU, TMENU, IMGMENU]]></description>
+			<default><![CDATA[
+]]></default>
+		</property>
+		<property name="params" type="string">
+			<description><![CDATA[<img>-params
+]]></description>
+			<default><![CDATA[
+]]></default>
+		</property>
+		<property name="target" type="string">
+			<description><![CDATA[target
+			Target of the menulinks]]></description>
+			<default><![CDATA[self]]></default>
+		</property>
+		<property name="wrap" type="wrap">
+			<description><![CDATA[
+]]></description>
+			<default><![CDATA[
+]]></default>
+		</property>
+	</type>
+	<type id="IMGMENUITEM">
+		<property name="1" type="GifBuilderObj">
+			<description><![CDATA[NOTE:
+The way a imagemap is made is this; All IMGMENUITEMS are included in one big Gifbuilderobj (and renumbered!!). Because of this, Gifbuilderobjects on the next level will not be able to access the data of each menuitem.
+Also the feature of using [##.w] and [##.h] with +calc is currently not supported by IMGMENUITEMs.
+Therefore all IMAGE-objects on the first level is checked; if "file" or "mask" for any IMAGE-objects are set to "GIFBUILDER", the Gifbuilder-object is parsed to see if any TEXT-objects are present and if so, the TEXT-object is "checked" - which means, that the stdWrap-function is called at a time where the $cObj->data-array is set to the actual menuitem.
+In the example below, the text of each menuitem is rendered by letting the title be rendered on a mask instead of directly on the image. Please observe that the "NO.10"-object is present in order for the image-map coordinates to be generated!!
+
+  NO.6 = IMAGE
+  NO.6.file = masked_pencolor*.gif
+  NO.6.mask = GIFBUILDER
+  NO.6.mask {
+    XY = 500, 200
+    backColor = black
+    10 = TEXT
+    10 {
+      text.field = title
+      fontFile = fileadmin/fonts/caflisch.ttf
+      fontSize = 34
+      fontColor = white
+      angle = 15
+      offset = 48,110
+    }
+    20 = EFFECT
+    20.value = blur=80
+  }
+  NO.10 = TEXT
+  NO.10 {
+    text.field = title
+    fontFile = fileadmin/fonts/caflisch.ttf
+    fontSize = 34
+    angle = 15
+    offset = 48,110
+    hideButCreateMap = 1
+  }]]></description>
+			<default><![CDATA[
+]]></default>
+		</property>
+		<property name="2" type="GifBuilderObj">
+			<description><![CDATA[NOTE:
+The way a imagemap is made is this; All IMGMENUITEMS are included in one big Gifbuilderobj (and renumbered!!). Because of this, Gifbuilderobjects on the next level will not be able to access the data of each menuitem.
+Also the feature of using [##.w] and [##.h] with +calc is currently not supported by IMGMENUITEMs.
+Therefore all IMAGE-objects on the first level is checked; if "file" or "mask" for any IMAGE-objects are set to "GIFBUILDER", the Gifbuilder-object is parsed to see if any TEXT-objects are present and if so, the TEXT-object is "checked" - which means, that the stdWrap-function is called at a time where the $cObj->data-array is set to the actual menuitem.
+In the example below, the text of each menuitem is rendered by letting the title be rendered on a mask instead of directly on the image. Please observe that the "NO.10"-object is present in order for the image-map coordinates to be generated!!
+
+  NO.6 = IMAGE
+  NO.6.file = masked_pencolor*.gif
+  NO.6.mask = GIFBUILDER
+  NO.6.mask {
+    XY = 500, 200
+    backColor = black
+    10 = TEXT
+    10 {
+      text.field = title
+      fontFile = fileadmin/fonts/caflisch.ttf
+      fontSize = 34
+      fontColor = white
+      angle = 15
+      offset = 48,110
+    }
+    20 = EFFECT
+    20.value = blur=80
+  }
+  NO.10 = TEXT
+  NO.10 {
+    text.field = title
+    fontFile = fileadmin/fonts/caflisch.ttf
+    fontSize = 34
+    angle = 15
+    offset = 48,110
+    hideButCreateMap = 1
+  }]]></description>
+			<default><![CDATA[
+]]></default>
+		</property>
+		<property name="3" type="GifBuilderObj">
+			<description><![CDATA[NOTE:
+The way a imagemap is made is this; All IMGMENUITEMS are included in one big Gifbuilderobj (and renumbered!!). Because of this, Gifbuilderobjects on the next level will not be able to access the data of each menuitem.
+Also the feature of using [##.w] and [##.h] with +calc is currently not supported by IMGMENUITEMs.
+Therefore all IMAGE-objects on the first level is checked; if "file" or "mask" for any IMAGE-objects are set to "GIFBUILDER", the Gifbuilder-object is parsed to see if any TEXT-objects are present and if so, the TEXT-object is "checked" - which means, that the stdWrap-function is called at a time where the $cObj->data-array is set to the actual menuitem.
+In the example below, the text of each menuitem is rendered by letting the title be rendered on a mask instead of directly on the image. Please observe that the "NO.10"-object is present in order for the image-map coordinates to be generated!!
+
+  NO.6 = IMAGE
+  NO.6.file = masked_pencolor*.gif
+  NO.6.mask = GIFBUILDER
+  NO.6.mask {
+    XY = 500, 200
+    backColor = black
+    10 = TEXT
+    10 {
+      text.field = title
+      fontFile = fileadmin/fonts/caflisch.ttf
+      fontSize = 34
+      fontColor = white
+      angle = 15
+      offset = 48,110
+    }
+    20 = EFFECT
+    20.value = blur=80
+  }
+  NO.10 = TEXT
+  NO.10 {
+    text.field = title
+    fontFile = fileadmin/fonts/caflisch.ttf
+    fontSize = 34
+    angle = 15
+    offset = 48,110
+    hideButCreateMap = 1
+  }]]></description>
+			<default><![CDATA[
+]]></default>
+		</property>
+		<property name="4" type="GifBuilderObj">
+			<description><![CDATA[NOTE:
+The way a imagemap is made is this; All IMGMENUITEMS are included in one big Gifbuilderobj (and renumbered!!). Because of this, Gifbuilderobjects on the next level will not be able to access the data of each menuitem.
+Also the feature of using [##.w] and [##.h] with +calc is currently not supported by IMGMENUITEMs.
+Therefore all IMAGE-objects on the first level is checked; if "file" or "mask" for any IMAGE-objects are set to "GIFBUILDER", the Gifbuilder-object is parsed to see if any TEXT-objects are present and if so, the TEXT-object is "checked" - which means, that the stdWrap-function is called at a time where the $cObj->data-array is set to the actual menuitem.
+In the example below, the text of each menuitem is rendered by letting the title be rendered on a mask instead of directly on the image. Please observe that the "NO.10"-object is present in order for the image-map coordinates to be generated!!
+
+  NO.6 = IMAGE
+  NO.6.file = masked_pencolor*.gif
+  NO.6.mask = GIFBUILDER
+  NO.6.mask {
+    XY = 500, 200
+    backColor = black
+    10 = TEXT
+    10 {
+      text.field = title
+      fontFile = fileadmin/fonts/caflisch.ttf
+      fontSize = 34
+      fontColor = white
+      angle = 15
+      offset = 48,110
+    }
+    20 = EFFECT
+    20.value = blur=80
+  }
+  NO.10 = TEXT
+  NO.10 {
+    text.field = title
+    fontFile = fileadmin/fonts/caflisch.ttf
+    fontSize = 34
+    angle = 15
+    offset = 48,110
+    hideButCreateMap = 1
+  }]]></description>
+			<default><![CDATA[
+]]></default>
+		</property>
+		<property name="distrib" type="string">
+			<description><![CDATA[.distrib is (x,y,v,h +calc) of the distribution of the menuitems. This provides a way to space each item from the other. The codes "textX" and "textY" can be used for the width (X) and height (Y) dimension of each link.
+This works by adding a WORKAREA-GifBuilderObj between each of the IMGMENUITEM ("subset" of a GIFBUILDER-object) and this workarea defines where the text should be printed. As such the "x,y" defines the offset the next item will have (this should be the width of the previous in many cases!) and "v,h" defines the dimensions of the current item.
+In the future TypoScript may provide better ways to position GIFBUILDER-objects on the image-maps! ]]></description>
 			<default><![CDATA[
 ]]></default>
 		</property>
@@ -2724,7 +3706,9 @@ That will be pure <a> tags wrapped around page titles.]]></description>
 		<property name="SPC" type="TMENUITEM">
 			<description><![CDATA[Boolean / (config)
 			Enable/Configuration for 'Spacer' pages.
-Spacers are pages of the doktype "Spacer". These are not viewable pages but "placeholders" which can be used to divide menuitems.]]></description>
+Spacers are pages of the doktype "Spacer". These are not viewable pages but "placeholders" which can be used to divide menuitems.
+
+Note: Rollovers doesn't work with spacers, if you use GMENU!]]></description>
 			<default><![CDATA[0]]></default>
 		</property>
 		<property name="USERDEF1" type="TMENUITEM">
@@ -2763,6 +3747,15 @@ You can set the ITEM_STATE values USERDEF1 and USERDEF2 (+...RO) from a script/u
 			Enable/Configuration for menu items which are access restricted pages that a user has access to.]]></description>
 			<default><![CDATA[0]]></default>
 		</property>
+		<property name="addParams" type="string">
+			<description><![CDATA[Additional parameter for the menu-links.
+Example:
+"&some_var=some%20value"
+Must be rawurlencoded.
+Applies to GMENU, TMENU, IMGMENU]]></description>
+			<default><![CDATA[
+]]></default>
+		</property>
 		<property name="IProcFunc" type="string">
 			<description><![CDATA[function-name
 			The internal array "I" is passed to this function and expected returned as well. Subsequent to this function call the menu item is compiled by implode()'ing the array $I[parts] in the passed array. Thus you may modify this if you need to.
@@ -2782,7 +3775,7 @@ See example on the testsite and in media/scripts/example_itemArrayProcFunc.php]]
 		</property>
 		<property name="debugItemConf" type="string">
 			<description><![CDATA[Outputs (by the debug()-function) the configuration arrays for each menuitem. Useful to debug optionSplit things and such...
-Applies to TMENU]]></description>
+Applies to GMENU, TMENU, IMGMENU]]></description>
 			<default><![CDATA[
 ]]></default>
 		</property>
@@ -2811,13 +3804,14 @@ width=200,height=300,status=0,menubar=0
 			<description><![CDATA[integer (page-id)
 			If set, then all links in the menu will point to this pageid. Instead the real uid of the page is sent by the parameter "&real_uid=[uid]".
 This feature is smart, if you have inserted a menu from somewhere else, perhaps a shared menu, but wants the menuitems to call the same page, which then generates a proper output based on the real_uid.
-Applies to TMENU]]></description>
+Applies to GMENU, TMENU, IMGMENU]]></description>
 			<default><![CDATA[
 ]]></default>
 		</property>
 		<property name="stdWrap" type="stdWrap">
 			<description><![CDATA[Wraps the whole item using stdWrap
-]]></description>
+
+Example: see GMENU.stdWrap]]></description>
 			<default><![CDATA[
 ]]></default>
 		</property>
@@ -2849,7 +3843,7 @@ The result can be seen in the image below (applied on the testsite package):
 
 
 
-Applies to TMENU on >= 2nd level in a menu.]]></description>
+Applies to GMENU, TMENU on >= 2nd level in a menu.]]></description>
 			<default><![CDATA[
 ]]></default>
 		</property>
@@ -3090,6 +4084,11 @@ Default is to REMOVE all tags, which are not specifically assigned to be allowed
 			<default><![CDATA[
 ]]></default>
 		</property>
+		<property name="xhtml_cleaning" type="boolean">
+			<description><![CDATA[Cleans up the content for XHTML compliance. Still slightly experimental and supports only some clean up operations (like conversion tags and attributes to lower case).]]></description>
+			<default><![CDATA[
+]]></default>
+		</property>
 	</type>
 	<type id="HTMLparser_tags">
 		<property name="allowedAttribs" type="string">
@@ -3228,6 +4227,13 @@ Example:
 			<default><![CDATA[useAlt
 ]]></default>
 		</property>
+		<property name="cache" type="cache">
+			<description><![CDATA[
+			Stores the rendered content into the caching framework and reads it from there.
+			This allows you to reuse this content without prior rendering. The presence of cache.key will trigger this feature.
+]]></description>
+			<default><![CDATA[0]]></default>
+		</property>
 		<property name="file" type="imgResource">
 			<description><![CDATA[
 ]]></description>
@@ -3284,6 +4290,13 @@ Additional Note: ONLY active if linkWrap is NOT set and file is NOT GIFBUILDER (
 		</property>
 	</type>
 	<type id="IMG_RESOURCE">
+		<property name="cache" type="cache">
+			<description><![CDATA[
+			Stores the rendered content into the caching framework and reads it from there.
+			This allows you to reuse this content without prior rendering. The presence of cache.key will trigger this feature.
+]]></description>
+			<default><![CDATA[0]]></default>
+		</property>
 		<property name="file" type="imgResource">
 			<description><![CDATA[ ]]></description>
 			<default><![CDATA[]]></default>
@@ -3308,7 +4321,7 @@ Additional Note: ONLY active if linkWrap is NOT set and file is NOT GIFBUILDER (
 		</property>
 		<property name="target" type="target">
 			<description><![CDATA[target for link]]></description>
-			<default><![CDATA[]]></default>
+			<default><![CDATA[For IMGMENU menu objects provided automatically]]></default>
 		</property>
 		<property name="titleText" type="string">
 			<description><![CDATA[Value of the title attribute.
@@ -3319,7 +4332,7 @@ Additional Note: ONLY active if linkWrap is NOT set and file is NOT GIFBUILDER (
 		</property>
 		<property name="url" type="string">
 			<description><![CDATA[url to link]]></description>
-			<default><![CDATA[]]></default>
+			<default><![CDATA[For IMGMENU menu objects provided automatically]]></default>
 		</property>
 	</type>
 	<type id="IMGTEXT" extends="cObjArray">
@@ -3597,6 +4610,13 @@ page.27 {
 			<default><![CDATA[
 ]]></default>
 		</property>
+		<property name="cache" type="cache">
+			<description><![CDATA[
+			Stores the rendered content into the caching framework and reads it from there.
+			This allows you to reuse this content without prior rendering. The presence of cache.key will trigger this feature.
+]]></description>
+			<default><![CDATA[0]]></default>
+		</property>
 	</type>
 	<type id="META" extends="array">
 		<property name="REFRESH" type="stdWrap">
@@ -3669,6 +4689,13 @@ An empty string will remove the parameter from the embed-tag]]></description>
 		</property>
 	</type>
 	<type id="RECORDS">
+		<property name="cache" type="cache">
+			<description><![CDATA[
+			Stores the rendered content into the caching framework and reads it from there.
+			This allows you to reuse this content without prior rendering. The presence of cache.key will trigger this feature.
+]]></description>
+			<default><![CDATA[0]]></default>
+		</property>
 		<property name="conf" type="array">
 			<description><![CDATA[Config-array which renders records from table tablename]]></description>
 			<default><![CDATA[If this is NOT defined, the rendering of the records is done with the toplevel-object [tablename] - just like the cObject, CONTENT!]]></default>
@@ -3805,6 +4832,13 @@ uid]]></description>
 		</property>
 	</type>
 	<type id="TEMPLATE">
+		<property name="cache" type="cache">
+			<description><![CDATA[
+			Stores the rendered content into the caching framework and reads it from there.
+			This allows you to reuse this content without prior rendering. The presence of cache.key will trigger this feature.
+]]></description>
+			<default><![CDATA[0]]></default>
+		</property>
 		<property name="markerWrap" type="wrap">
 			<description><![CDATA[This is the wrap the markers is wrapped with. The default value is ### | ### resulting in the markers to be presented as ###[marker_key]###.
 Any whitespace around the wrap-items is stripped before they are set around the marker_key.]]></description>
@@ -3896,13 +4930,27 @@ In this example the MYLINK subpart will be substituted by the wrap which is the 
 		</property>
 	</type>
 	<type id="TEXT" extends="stdWrap">
-		<property name="value" type="value">
+		<property name="cache" type="cache">
+			<description><![CDATA[
+			Stores the rendered content into the caching framework and reads it from there.
+			This allows you to reuse this content without prior rendering. The presence of cache.key will trigger this feature.
+]]></description>
+			<default><![CDATA[0]]></default>
+		</property>
+		<property name="value" type="stdWrap">
 			<description><![CDATA[text, wrap with stdWrap properties]]></description>
 			<default><![CDATA[
 ]]></default>
 		</property>
 	</type>
 	<type id="USER">
+		<property name="cache" type="cache">
+			<description><![CDATA[
+			Stores the rendered content into the caching framework and reads it from there.
+			This allows you to reuse this content without prior rendering. The presence of cache.key will trigger this feature.
+]]></description>
+			<default><![CDATA[0]]></default>
+		</property>
 		<property name="userFunc" type="string">
 			<description><![CDATA[The name of the function. If you specify the name with a '->' in, it's intepreted as a call to a method in a class.
 Two parameters are sent: A content variable (which is empty in this case, but not when used from stdWrap function .postUserFunc and .preUserFunc) and the second parameter is an array with the properties of this cObject if any.
@@ -3924,6 +4972,13 @@ page.30 {
 		</property>
 	</type>
 	<type id="USER_INT">
+		<property name="cache" type="cache">
+			<description><![CDATA[
+			Stores the rendered content into the caching framework and reads it from there.
+			This allows you to reuse this content without prior rendering. The presence of cache.key will trigger this feature.
+]]></description>
+			<default><![CDATA[0]]></default>
+		</property>
 		<property name="userFunc" type="string">
 			<description><![CDATA[The name of the function. If you specify the name with a '->' in, it's intepreted as a call to a method in a class.
 Two parameters are sent: A content variable (which is empty in this case, but not when used from stdWrap function .postUserFunc and .preUserFunc) and the second parameter is an array with the properties of this cObject if any.
@@ -4139,7 +5194,7 @@ The file definition must be a valid "resource" datatype, otherwise nothing is in
 
 Each file has optional properties:
 
-.type - setting the MIME type of the script (default: empty, set it to "text/javascript" for backwards-compatibility)
+.type - setting the MIME type of the script (default: text/javascript)
 
 .forceOnTop - boolean flag. If set, this file will be added on top of all other files.
 
@@ -4278,6 +5333,22 @@ By this property you can globally configure mapping of font files for certain ch
 In the GIFBUILDER object this is possible with the "splitRendering" option but if you have hundreds of GIFBUILDER objects around your site it is not very efficient to add 5-10 lines of configuration for each time you render text. Therefore this global setting allows you to match the basename of the main font face with an alternative font.]]></description>
 			<default><![CDATA[
 ]]></default>
+		</property>
+	</type>
+	<type id="addParams" extends="array">
+		<property name="[myTagProperty]" type="stdWrap">
+			<description><![CDATA[This defines the content of each added property to the tag.
+If there is a tag-property with this name already (case-sensitive!) that property will be overridden!
+If the returned value is a blank string (but not zero!) then the existing (if any) property will not be overridden.
+Example:
+img.addParams.border = 0]]></description>
+			<default><![CDATA[
+]]></default>
+		</property>
+		<property name="_offset" type="int">
+			<description><![CDATA[Use this to define which tag you want to manipulate.
+1 is the first tag in the input, 2 is the second, -1 is the last, -2 is the second last]]></description>
+			<default><![CDATA[1]]></default>
 		</property>
 	</type>
 	<type id="CONSTANTS">
@@ -4588,11 +5659,6 @@ instead.]]></description>
 			<default><![CDATA[
 ]]></default>
 		</property>
-		<property name="alternativeTempPath" type="string">
-			<description><![CDATA[Enter an alternative path to use for temp images.]]></description>
-			<default><![CDATA[
-]]></default>
-		</property>
 		<property name="bodyTag" type="string">
 			<description><![CDATA[Body tag of the new window]]></description>
 			<default><![CDATA[
@@ -4672,11 +5738,6 @@ If you add "m" to either the width or height, the image will be held in proporti
 		</property>
 	</type>
 	<type id="imgResource">
-		<property name="alternativeTempPath" type="string">
-			<description><![CDATA[Enter an alternative path to use for temp images.]]></description>
-			<default><![CDATA[
-]]></default>
-		</property>
 		<property name="ext" type="stdWrap">
 			<description><![CDATA[
 ]]></description>
@@ -5252,6 +6313,11 @@ Value must be set and properties are those of ->HTMLparser.
 			<default><![CDATA[
 ]]></default>
 		</property>
+		<property name="addParams" type="addParams">
+			<description><![CDATA[Lets you add tag-parameters to the content if the content is a tag!]]></description>
+			<default><![CDATA[
+]]></default>
+		</property>
 		<property name="age" type="string">
 			<description><![CDATA[If enabled with a "1" (number, integer) the content is seen as a date (UNIX-time) and the difference from present time and the content-time is returned as one of these four variations:
 "xx min" or "xx hrs" or "xx days" or "xx yrs"
@@ -5295,6 +6361,13 @@ bytes.labels = " | K| M| G"]]></description>
 			<description><![CDATA[Loads content from a content-object]]></description>
 			<default><![CDATA[
 ]]></default>
+		</property>
+		<property name="cache" type="cache">
+			<description><![CDATA[
+			Stores the rendered content into the caching framework and reads it from there.
+			This allows you to reuse this content without prior rendering. The presence of cache.key will trigger this feature.
+]]></description>
+			<default><![CDATA[0]]></default>
 		</property>
 		<property name="case" type="case">
 			<description><![CDATA[Converts case
@@ -5437,6 +6510,22 @@ Note: You can also divide fieldnames by "//". Say, you set "nav_title // title" 
 		</property>
 		<property name="fieldRequired" type="string">
 			<description><![CDATA[value in this field MUST be set]]></description>
+			<default><![CDATA[
+]]></default>
+		</property>
+		<property name="filelink" type="filelink">
+			<description><![CDATA[Used to make lists of links to files.]]></description>
+			<default><![CDATA[
+]]></default>
+		</property>
+		<property name="filelist" type="stdWrap">
+			<description><![CDATA[Reads a directory and returns a list of files.
+The value is exploded by "|" into parameters:
+1: The path
+2: comma-list of allowed extensions (no spaces between); if empty all extensions goes.
+3: sorting: name, size, ext, date, mdate (modification date)
+4: reverse: Set to "r" if you want a reversed sorting
+5: fullpath_flag: If set, the filelist is returned with complete paths, and not just the filename]]></description>
 			<default><![CDATA[
 ]]></default>
 		</property>
@@ -5850,6 +6939,13 @@ Uses utf-8 as character set for the operation.]]></description>
 		</property>
 	</type>
 	<type id="SVG">
+		<property name="cache" type="cache">
+			<description><![CDATA[
+			Stores the rendered content into the caching framework and reads it from there.
+			This allows you to reuse this content without prior rendering. The presence of cache.key will trigger this feature.
+]]></description>
+			<default><![CDATA[0]]></default>
+		</property>
 		<property name="width" type="stdWrap">
 			<description><![CDATA[int/stdWrap
 			width of SVG
@@ -5957,7 +7053,11 @@ status=1,menubar=1,scrollbars=1,resizable=1,location=1,directories=1,toolbar=1]]
 		<property name="addQueryString" type="boolean">
 			<description><![CDATA[Add the QUERY_STRING to the start of the link. Notice that this does not check for any duplicate parameters! This is not a problem (only the last parameter of the same name will be applied).
 
-.method: If set to GET then then the parsed query arguments will be used. This settings are useful if you use URL processing extensions like Real URL, which translate part of the path into query arguments.
+.method: If set to GET or POST then then the parsed query arguments (GET or POST data) will be used. This settings are useful if you use URL processing extensions like Real URL, which translate part of the path into query arguments.
+It's also possible to get both, POST and GET data, on setting this to
+"POST,GET" or "GET,POST". The last method in this sequence takes
+precedence and overwrites the parts that are also present for the first
+method.
 
 .exclude: List of query arguments to exclude from the link (eg L or cHash).]]></description>
 			<default><![CDATA[
@@ -6063,6 +7163,12 @@ This is used create a link, which jumps from one page directly the section on an
 		</property>
 		<property name="title" type="stdWrap">
 			<description><![CDATA[Sets the title parameter of the A-tag.]]></description>
+			<default><![CDATA[
+]]></default>
+		</property>
+		<property name="useCacheHash" type="boolean">
+			<description><![CDATA[If set, the additionalParams list is exploded and calculated into a hashstring appended to the url, like "&cHash=ae83fd7s87". When the caching mechanism sees this value, it calculates the same value on the server based on incoming values in HTTP_GET_VARS, excluding id,type,no_cache,ftu,cHash,MP values. If the incoming cHash value matches the calculated value, the page may be cached based on this.
+The [SYS][encryptionKey] is included in the hash in order to make it unique for the server and non-predictable.]]></description>
 			<default><![CDATA[
 ]]></default>
 		</property>

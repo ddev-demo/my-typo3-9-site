@@ -53,21 +53,6 @@ namespace TYPO3\CMS\Core\Configuration;
 class Features
 {
     /**
-     * A list of features that are always activated (mainly happens if a previous feature switch is now always
-     * "turned on" to enforce a behaviour, but still valid for extension authors to ensure the feature switch
-     * returns "enabled" for future versions.
-     *
-     * Usually, this list is kept for 1-2 major versions.
-     *
-     * @var array
-     */
-    protected $alwaysActiveFeatures = [
-        // Enabled in v10.0 at any time, feature switch will be completely ignored in TYPO3 v11.
-        'simplifiedControllerActionDispatching',
-        'unifiedPageTranslationHandling'
-    ];
-
-    /**
      * Checks if a feature is active
      *
      * @param string $featureName the name of the feature
@@ -75,9 +60,6 @@ class Features
      */
     public function isFeatureEnabled(string $featureName): bool
     {
-        if (in_array($featureName, $this->alwaysActiveFeatures, true)) {
-            return true;
-        }
         return isset($GLOBALS['TYPO3_CONF_VARS']['SYS']['features'][$featureName]) && $GLOBALS['TYPO3_CONF_VARS']['SYS']['features'][$featureName] === true;
     }
 }

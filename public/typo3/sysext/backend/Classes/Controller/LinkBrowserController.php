@@ -66,7 +66,7 @@ class LinkBrowserController extends AbstractLinkBrowserController
         unset($this->parameters['fieldChangeFunc']['alert']);
         $update = [];
         foreach ($this->parameters['fieldChangeFunc'] as $v) {
-            $update[] = 'FormEngineLinkBrowserAdapter.getParent().' . $v;
+            $update[] = 'parent.opener.' . $v;
         }
         $inlineJS = implode(LF, $update);
 
@@ -163,5 +163,15 @@ class LinkBrowserController extends AbstractLinkBrowserController
             }
         }
         return (int)BackendUtility::getTSCpidCached($browserParameters['table'], $browserParameters['uid'], $pageId)[0];
+    }
+
+    /**
+     * Retrieve the configuration
+     * @return array
+     */
+    public function getConfiguration(): array
+    {
+        $tsConfig = BackendUtility::getPagesTSconfig($this->getCurrentPageId());
+        return $tsConfig['TCEMAIN.']['linkHandler.']['page.']['configuration.'] ?? [];
     }
 }

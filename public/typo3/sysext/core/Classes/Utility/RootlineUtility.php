@@ -21,13 +21,13 @@ use TYPO3\CMS\Core\Database\ConnectionPool;
 use TYPO3\CMS\Core\Database\Query\QueryBuilder;
 use TYPO3\CMS\Core\Database\Query\Restriction\DeletedRestriction;
 use TYPO3\CMS\Core\Database\Query\Restriction\HiddenRestriction;
-use TYPO3\CMS\Core\Domain\Repository\PageRepository;
 use TYPO3\CMS\Core\Exception\Page\BrokenRootLineException;
 use TYPO3\CMS\Core\Exception\Page\CircularRootLineException;
 use TYPO3\CMS\Core\Exception\Page\MountPointsDisabledException;
 use TYPO3\CMS\Core\Exception\Page\PageNotFoundException;
 use TYPO3\CMS\Core\Exception\Page\PagePropertyRelationNotFoundException;
 use TYPO3\CMS\Core\Versioning\VersionState;
+use TYPO3\CMS\Frontend\Page\PageRepository;
 
 /**
  * A utility resolving and Caching the Rootline generation
@@ -81,6 +81,7 @@ class RootlineUtility
         't3ver_wsid',
         't3ver_state',
         'title',
+        'alias',
         'nav_title',
         'media',
         'layout',
@@ -100,11 +101,11 @@ class RootlineUtility
     ];
 
     /**
-     * Database Query Object
+     * Rootline Context
      *
      * @var PageRepository
      */
-    protected $pageRepository;
+    protected $pageContext;
 
     /**
      * Query context
@@ -126,17 +127,23 @@ class RootlineUtility
     /**
      * @param int $uid
      * @param string $mountPointParameter
-     * @param Context $context
+     * @param PageRepository|Context $context - @deprecated PageRepository is used until TYPO3 v9.4, but now the third parameter should be a Context object
      * @throws MountPointsDisabledException
      */
     public function __construct($uid, $mountPointParameter = '', $context = null)
     {
         $this->mountPointParameter = trim($mountPointParameter);
-        if (!($context instanceof Context)) {
-            $context = GeneralUtility::makeInstance(Context::class);
+        if ($context instanceof PageRepository) {
+            trigger_error('Calling RootlineUtility with PageRepository as third parameter will be unsupported with TYPO3 v10.0. Use a Context object directly.', E_USER_DEPRECATED);
+            $this->pageContext = $context;
+            $this->context = GeneralUtility::makeInstance(Context::class);
+        } else {
+            if (!($context instanceof Context)) {
+                $context = GeneralUtility::makeInstance(Context::class);
+            }
+            $this->context = $context;
+            $this->pageContext = GeneralUtility::makeInstance(PageRepository::class, $context);
         }
-        $this->context = $context;
-        $this->pageRepository = GeneralUtility::makeInstance(PageRepository::class, $context);
 
         $this->languageUid = $this->context->getPropertyFromAspect('language', 'id', 0);
         $this->workspaceUid = $this->context->getPropertyFromAspect('workspace', 'id', 0);
@@ -153,7 +160,7 @@ class RootlineUtility
         );
 
         if (self::$cache === null) {
-            self::$cache = GeneralUtility::makeInstance(\TYPO3\CMS\Core\Cache\CacheManager::class)->getCache('rootline');
+            self::$cache = GeneralUtility::makeInstance(\TYPO3\CMS\Core\Cache\CacheManager::class)->getCache('cache_rootline');
         }
         self::$rootlineFields = array_merge(self::$rootlineFields, GeneralUtility::trimExplode(',', $GLOBALS['TYPO3_CONF_VARS']['FE']['addRootLineFields'], true));
         self::$rootlineFields = array_unique(self::$rootlineFields);
@@ -164,7 +171,7 @@ class RootlineUtility
     /**
      * Purges all rootline caches.
      *
-     * Note: This function is intended to be used in unit tests only.
+     * @internal only used in EXT:core, no public API
      */
     public static function purgeCaches()
     {
@@ -194,7 +201,7 @@ class RootlineUtility
     }
 
     /**
-     * Returns the actual rootline
+     * Returns the actual rootline without the tree root (uid=0), including the page with $this->pageUid
      *
      * @return array
      */
@@ -254,11 +261,11 @@ class RootlineUtility
             if (empty($row)) {
                 throw new PageNotFoundException('Could not fetch page data for uid ' . $uid . '.', 1343589451);
             }
-            $this->pageRepository->versionOL('pages', $row, false, true);
-            $this->pageRepository->fixVersioningPid('pages', $row);
+            $this->pageContext->versionOL('pages', $row, false, true);
+            $this->pageContext->fixVersioningPid('pages', $row);
             if (is_array($row)) {
                 if ($this->languageUid > 0) {
-                    $row = $this->pageRepository->getPageOverlay($row, $this->languageUid);
+                    $row = $this->pageContext->getPageOverlay($row, $this->languageUid);
                 }
                 $row = $this->enrichWithRelationFields($row['_PAGES_OVERLAY_UID'] ??  $uid, $row);
                 self::$pageRecordCache[$currentCacheIdentifier] = $row;

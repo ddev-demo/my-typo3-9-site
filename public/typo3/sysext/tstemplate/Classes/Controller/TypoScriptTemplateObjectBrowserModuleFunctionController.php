@@ -14,9 +14,10 @@ namespace TYPO3\CMS\Tstemplate\Controller;
  * The TYPO3 project - inspiring people to share!
  */
 
-use Psr\Http\Message\ServerRequestInterface;
 use TYPO3\CMS\Backend\Utility\BackendUtility;
 use TYPO3\CMS\Core\Authentication\BackendUserAuthentication;
+use TYPO3\CMS\Core\Compatibility\PublicMethodDeprecationTrait;
+use TYPO3\CMS\Core\Compatibility\PublicPropertyDeprecationTrait;
 use TYPO3\CMS\Core\DataHandling\DataHandler;
 use TYPO3\CMS\Core\Exception;
 use TYPO3\CMS\Core\Localization\LanguageService;
@@ -34,6 +35,27 @@ use TYPO3\CMS\Fluid\View\StandaloneView;
  */
 class TypoScriptTemplateObjectBrowserModuleFunctionController
 {
+    use PublicPropertyDeprecationTrait;
+    use PublicMethodDeprecationTrait;
+
+    /**
+     * @var array
+     */
+    private $deprecatedPublicProperties = [
+        'pObj' => 'Using TypoScriptTemplateObjectBrowserModuleFunctionController::$pObj is deprecated and will not be possible anymore in TYPO3 v10.0.',
+        'function_key' => 'Using TypoScriptTemplateObjectBrowserModuleFunctionController::$function_key is deprecated, property will be removed in TYPO3 v10.0.',
+        'extClassConf' => 'Using TypoScriptTemplateObjectBrowserModuleFunctionController::$extClassConf is deprecated, property will be removed in TYPO3 v10.0.',
+        'localLangFile' => 'Using TypoScriptTemplateObjectBrowserModuleFunctionController::$localLangFile is deprecated, property will be removed in TYPO3 v10.0.',
+    ];
+
+    /**
+     * @var array
+     */
+    private $deprecatedPublicMethods = [
+        'initialize_editor' => 'Using TypoScriptTemplateObjectBrowserModuleFunctionController::initialize_editor() is deprecated and will not be possible anymore in TYPO3 v10.0.',
+        'modMenu' => 'Using TypoScriptTemplateObjectBrowserModuleFunctionController::modMenu() is deprecated and will not be possible anymore in TYPO3 v10.0.',
+        'handleExternalFunctionValue' => 'Using TypoScriptTemplateObjectBrowserModuleFunctionController::handleExternalFunctionValue() is deprecated, method will be removed in TYPO3 v10.0.',
+    ];
 
     /**
      * @var string
@@ -62,27 +84,53 @@ class TypoScriptTemplateObjectBrowserModuleFunctionController
     protected $id;
 
     /**
-     * @var ServerRequestInterface
+     * Can be hardcoded to the name of a locallang.xlf file (from the same directory as the class file) to use/load
+     * and is included / added to $GLOBALS['LOCAL_LANG']
+     *
+     * @see init()
+     * @var string
+     * @deprecated since TYPO3 v9, will be removed in TYPO3 v10.0.
      */
-    protected $request;
+    protected $localLangFile = '';
+
+    /**
+     * Contains module configuration parts from TBE_MODULES_EXT if found
+     *
+     * @see handleExternalFunctionValue()
+     * @var array
+     * @deprecated since TYPO3 v9, will be removed in TYPO3 v10.0.
+     */
+    protected $extClassConf;
+
+    /**
+     * If this value is set it points to a key in the TBE_MODULES_EXT array (not on the top level..) where another classname/filepath/title can be defined for sub-subfunctions.
+     * This is a little hard to explain, so see it in action; it used in the extension 'func_wizards' in order to provide yet a layer of interfacing with the backend module.
+     * The extension 'func_wizards' has this description: 'Adds the 'Wizards' item to the function menu in Web>Func. This is just a framework for wizard extensions.' - so as you can see it is designed to allow further connectivity - 'level 2'
+     *
+     * @var string
+     * @deprecated since TYPO3 v9, will be removed in TYPO3 v10.0.
+     */
+    protected $function_key = '';
 
     /**
      * Init, called from parent object
      *
      * @param TypoScriptTemplateModuleController $pObj
-     * @param ServerRequestInterface $request
      */
-    public function init($pObj, ServerRequestInterface $request)
+    public function init($pObj)
     {
         $this->pObj = $pObj;
-        $this->request = $request;
-
+        // Local lang:
+        if (!empty($this->localLangFile)) {
+            // @deprecated since TYPO3 v9, will be removed in TYPO3 v10.0.
+            $this->getLanguageService()->includeLLFile($this->localLangFile);
+        }
         // Setting MOD_MENU items as we need them for logging:
         $this->pObj->MOD_MENU = array_merge($this->pObj->MOD_MENU, $this->modMenu());
         $this->pObj->modMenu_dontValidateList .= ',ts_browser_toplevel_setup,ts_browser_toplevel_const,ts_browser_TLKeys_setup,ts_browser_TLKeys_const';
-        $this->pObj->modMenu_setDefaultList .= ',ts_browser_showComments';
+        $this->pObj->modMenu_setDefaultList .= ',ts_browser_fixedLgd,ts_browser_showComments';
         $this->localLanguageFilePath = 'EXT:tstemplate/Resources/Private/Language/locallang_objbrowser.xlf';
-        $this->id = (int)($request->getParsedBody()['id'] ?? $request->getQueryParams()['id'] ?? 0);
+        $this->id = (int)GeneralUtility::_GP('id');
     }
 
     /**
@@ -111,11 +159,12 @@ class TypoScriptTemplateObjectBrowserModuleFunctionController
                 'const' => $lang->getLL('unsubstitutedGreen')
             ],
             'ts_browser_regexsearch' => '1',
+            'ts_browser_fixedLgd' => '1',
             'ts_browser_showComments' => '1',
             'ts_browser_alphaSort' => '1'
         ];
         foreach (['setup', 'const'] as $bType) {
-            $addKey = $this->request->getQueryParams()['addKey'] ?? null;
+            $addKey = GeneralUtility::_GET('addKey');
             // If any plus-signs were clicked, it's registered.
             if (is_array($addKey)) {
                 reset($addKey);
@@ -167,9 +216,10 @@ class TypoScriptTemplateObjectBrowserModuleFunctionController
     public function main()
     {
         $lang = $this->getLanguageService();
-        $POST = $this->request->getParsedBody();
+        $POST = GeneralUtility::_POST();
+
         // Checking for more than one template an if, set a menu...
-        $manyTemplatesMenu = $this->pObj->templateMenu($this->request);
+        $manyTemplatesMenu = $this->pObj->templateMenu();
         $template_uid = 0;
         if ($manyTemplatesMenu) {
             $template_uid = $this->pObj->MOD_SETTINGS['templatesOnPage'];
@@ -240,7 +290,7 @@ class TypoScriptTemplateObjectBrowserModuleFunctionController
                 }
             }
         }
-        $tsbr = $this->request->getQueryParams()['tsbr'] ?? null;
+        $tsbr = GeneralUtility::_GET('tsbr');
         $update = 0;
         if (is_array($tsbr)) {
             // If any plus-signs were clicked, it's registred.
@@ -260,20 +310,20 @@ class TypoScriptTemplateObjectBrowserModuleFunctionController
         // This is just here to make sure that at least one element is in the array so that the tsparser actually uses this array to match.
         $this->templateService->constantMode = $this->pObj->MOD_SETTINGS['ts_browser_const'];
         // "sObj" is set by ExtendedTemplateService to edit single keys
-        $sObj = $this->request->getParsedBody()['sObj'] ?? $this->request->getQueryParams()['sObj'] ?? null;
+        $sObj = GeneralUtility::_GP('sObj');
         if (!empty($sObj) && $this->templateService->constantMode) {
             $this->templateService->constantMode = 'untouched';
         }
         $this->templateService->regexMode = $this->pObj->MOD_SETTINGS['ts_browser_regexsearch'];
+        $this->templateService->fixedLgd = $this->pObj->MOD_SETTINGS['ts_browser_fixedLgd'];
         $this->templateService->linkObjects = true;
         $this->templateService->ext_regLinenumbers = true;
         $this->templateService->ext_regComments = $this->pObj->MOD_SETTINGS['ts_browser_showComments'];
         $this->templateService->bType = $bType;
-        $breakPointLN = $this->request->getParsedBody()['breakPointLN'] ?? $this->request->getQueryParams()['breakPointLN'] ?? 0;
         if ($this->pObj->MOD_SETTINGS['ts_browser_type'] === 'const') {
-            $this->templateService->ext_constants_BRP = (int)$breakPointLN;
+            $this->templateService->ext_constants_BRP = (int)GeneralUtility::_GP('breakPointLN');
         } else {
-            $this->templateService->ext_config_BRP = (int)$breakPointLN;
+            $this->templateService->ext_config_BRP = (int)GeneralUtility::_GP('breakPointLN');
         }
         $this->templateService->generateConfig();
         if ($bType === 'setup') {
@@ -309,9 +359,9 @@ class TypoScriptTemplateObjectBrowserModuleFunctionController
             }
         } else {
             $this->templateService->tsbrowser_depthKeys = $this->pObj->MOD_SETTINGS['tsbrowser_depthKeys_' . $bType];
-            if (($this->request->getParsedBody()['search'] ?? false) && ($this->request->getParsedBody()['search_field'] ?? false)) {
+            if (GeneralUtility::_POST('search') && GeneralUtility::_POST('search_field')) {
                 // If any POST-vars are send, update the condition array
-                $searchString = $this->request->getParsedBody()['search_field'];
+                $searchString = GeneralUtility::_POST('search_field');
                 try {
                     $this->templateService->tsbrowser_depthKeys =
                         $this->templateService->ext_getSearchKeys(
@@ -372,10 +422,11 @@ class TypoScriptTemplateObjectBrowserModuleFunctionController
             $assigns['tsTree'] = $tree;
 
             // second row options
-            $assigns['isSetupAndCropLinesDisabled'] = $bType === 'setup';
+            $assigns['isSetupAndCropLinesDisabled'] = $bType === 'setup' && !$this->pObj->MOD_SETTINGS['ts_browser_fixedLgd'];
             $assigns['checkBoxShowComments'] = BackendUtility::getFuncCheck($this->id, 'SET[ts_browser_showComments]', $this->pObj->MOD_SETTINGS['ts_browser_showComments'], '', '', 'id="checkTs_browser_showComments"');
             $assigns['checkBoxAlphaSort'] = BackendUtility::getFuncCheck($this->id, 'SET[ts_browser_alphaSort]', $this->pObj->MOD_SETTINGS['ts_browser_alphaSort'], '', '', 'id="checkTs_browser_alphaSort"');
-            if ($bType === 'setup') {
+            $assigns['checkBoxCropLines'] = BackendUtility::getFuncCheck($this->id, 'SET[ts_browser_fixedLgd]', $this->pObj->MOD_SETTINGS['ts_browser_fixedLgd'], '', '', 'id="checkTs_browser_fixedLgd"');
+            if ($bType === 'setup' && !$this->pObj->MOD_SETTINGS['ts_browser_fixedLgd']) {
                 $assigns['dropdownDisplayConstants'] = BackendUtility::getDropdownMenu($this->id, 'SET[ts_browser_const]', $this->pObj->MOD_SETTINGS['ts_browser_const'], $this->pObj->MOD_MENU['ts_browser_const']);
             }
 
@@ -417,6 +468,21 @@ class TypoScriptTemplateObjectBrowserModuleFunctionController
         /** @var \TYPO3\CMS\Core\Messaging\FlashMessageQueue $defaultFlashMessageQueue */
         $defaultFlashMessageQueue = $flashMessageService->getMessageQueueByIdentifier();
         $defaultFlashMessageQueue->enqueue($flashMessage);
+    }
+
+    /**
+     * If $this->function_key is set (which means there are two levels of object connectivity) then
+     * $this->extClassConf is loaded with the TBE_MODULES_EXT configuration for that sub-sub-module
+     *
+     * @deprecated since TYPO3 v9, will be removed in TYPO3 v10.0.
+     */
+    protected function handleExternalFunctionValue()
+    {
+        // Must clean first to make sure the correct key is set...
+        $this->pObj->MOD_SETTINGS = BackendUtility::getModuleData($this->pObj->MOD_MENU, GeneralUtility::_GP('SET'), 'web_ts');
+        if ($this->function_key) {
+            $this->extClassConf = $this->pObj->getExternalItemConfig('web_ts', $this->function_key, $this->pObj->MOD_SETTINGS[$this->function_key]);
+        }
     }
 
     /**

@@ -1,6 +1,4 @@
 <?php
-declare(strict_types = 1);
-
 namespace TYPO3\CMS\Extbase\Error;
 
 /*
@@ -31,7 +29,7 @@ class Message
     /**
      * The error code
      *
-     * @var int
+     * @var string
      */
     protected $code;
 
@@ -57,7 +55,7 @@ class Message
      * @param array $arguments Array of arguments to be replaced in message
      * @param string $title optional title for the message
      */
-    public function __construct(string $message, int $code, array $arguments = [], string $title = '')
+    public function __construct($message, $code, array $arguments = [], $title = '')
     {
         $this->message = $message;
         $this->code = $code;
@@ -70,7 +68,7 @@ class Message
      *
      * @return string The error message
      */
-    public function getMessage(): string
+    public function getMessage()
     {
         return $this->message;
     }
@@ -78,9 +76,9 @@ class Message
     /**
      * Returns the error code
      *
-     * @return int The error code
+     * @return string The error code
      */
-    public function getCode(): int
+    public function getCode()
     {
         return $this->code;
     }
@@ -90,7 +88,7 @@ class Message
      *
      * @return array
      */
-    public function getArguments(): array
+    public function getArguments()
     {
         return $this->arguments;
     }
@@ -100,7 +98,7 @@ class Message
      *
      * @return string
      */
-    public function getTitle(): string
+    public function getTitle()
     {
         return $this->title;
     }
@@ -110,9 +108,9 @@ class Message
      *
      * @return string
      */
-    public function render(): string
+    public function render()
     {
-        if (count($this->arguments) > 0) {
+        if (!empty($this->arguments)) {
             return vsprintf($this->message, $this->arguments);
         }
         return $this->message;

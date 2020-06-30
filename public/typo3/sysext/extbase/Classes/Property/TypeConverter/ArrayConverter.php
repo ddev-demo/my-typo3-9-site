@@ -1,6 +1,4 @@
 <?php
-declare(strict_types = 1);
-
 namespace TYPO3\CMS\Extbase\Property\TypeConverter;
 
 /*
@@ -22,7 +20,7 @@ namespace TYPO3\CMS\Extbase\Property\TypeConverter;
 class ArrayConverter extends \TYPO3\CMS\Extbase\Property\TypeConverter\AbstractTypeConverter
 {
     /**
-     * @var string[]
+     * @var array<string>
      */
     protected $sourceTypes = ['array', 'string'];
 
@@ -44,9 +42,9 @@ class ArrayConverter extends \TYPO3\CMS\Extbase\Property\TypeConverter\AbstractT
      * @return bool
      * @internal only to be used within Extbase, not part of TYPO3 Core API.
      */
-    public function canConvertFrom($source, string $targetType): bool
+    public function canConvertFrom($source, $targetType)
     {
-        return (is_string($source) && $source === '') || is_array($source);
+        return is_string($source) && $source === '' || is_array($source);
     }
 
     /**
@@ -59,7 +57,7 @@ class ArrayConverter extends \TYPO3\CMS\Extbase\Property\TypeConverter\AbstractT
      * @param \TYPO3\CMS\Extbase\Property\PropertyMappingConfigurationInterface $configuration
      * @return array
      */
-    public function convertFrom($source, string $targetType, array $convertedChildProperties = [], \TYPO3\CMS\Extbase\Property\PropertyMappingConfigurationInterface $configuration = null)
+    public function convertFrom($source, $targetType, array $convertedChildProperties = [], \TYPO3\CMS\Extbase\Property\PropertyMappingConfigurationInterface $configuration = null)
     {
         if (is_string($source)) {
             if ($source === '') {

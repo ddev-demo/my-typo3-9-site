@@ -106,16 +106,18 @@ CREATE TABLE pages (
 	content_from_pid int(10) unsigned DEFAULT '0' NOT NULL,
 	mount_pid int(10) unsigned DEFAULT '0' NOT NULL,
 	mount_pid_ol tinyint(4) DEFAULT '0' NOT NULL,
+	alias varchar(32) DEFAULT '' NOT NULL,
 	l18n_cfg tinyint(4) DEFAULT '0' NOT NULL,
 	fe_login_mode tinyint(4) DEFAULT '0' NOT NULL,
 	backend_layout varchar(64) DEFAULT '' NOT NULL,
 	backend_layout_next_level varchar(64) DEFAULT '' NOT NULL,
 	tsconfig_includes text,
-	# @deprecated since v9 and will be removed in TYPO3 v11. Legacy connection UID field to pages_language_overlay table
 	legacy_overlay_uid int(11) unsigned DEFAULT '0' NOT NULL,
 
+	KEY alias (alias),
 	KEY determineSiteRoot (is_siteroot),
-	KEY language_identifier (l10n_parent,sys_language_uid)
+	KEY language_identifier (l10n_parent,sys_language_uid),
+	KEY slug (slug(127))
 );
 
 #
@@ -244,7 +246,7 @@ CREATE TABLE sys_file_processedfile (
 	original int(11) DEFAULT '0' NOT NULL,
 	identifier varchar(512) DEFAULT '' NOT NULL,
 	name tinytext,
-	configuration text,
+	configuration blob,
 	configurationsha1 char(40) DEFAULT '' NOT NULL,
 	originalfilesha1 char(40) DEFAULT '' NOT NULL,
 	task_type varchar(200) DEFAULT '' NOT NULL,
@@ -334,8 +336,6 @@ CREATE TABLE sys_collection_entries (
 # Table structure for table 'sys_history'
 #
 CREATE TABLE sys_history (
-	uid int(11) unsigned NOT NULL auto_increment,
-	tstamp int(11) unsigned DEFAULT '0' NOT NULL,
 	actiontype tinyint(3) DEFAULT '0' NOT NULL,
 	usertype varchar(2) DEFAULT 'BE' NOT NULL,
 	userid int(11) unsigned,
@@ -344,9 +344,7 @@ CREATE TABLE sys_history (
 	tablename varchar(255) DEFAULT '' NOT NULL,
 	history_data mediumtext,
 	workspace int(11) DEFAULT '0',
-	correlation_id varchar(255) DEFAULT '' NOT NULL,
 
-	PRIMARY KEY (uid),
 	KEY recordident_1 (tablename(100),recuid),
 	KEY recordident_2 (tablename(100),tstamp)
 ) ENGINE=InnoDB;
@@ -419,8 +417,7 @@ CREATE TABLE sys_log (
 	KEY recuidIdx (recuid),
 	KEY user_auth (type,action,tstamp),
 	KEY request (request_id),
-	KEY combined_1 (tstamp, type, userid),
-	KEY errorcount (tstamp,error)
+	KEY combined_1 (tstamp, type, userid)
 ) ENGINE=InnoDB;
 
 #
@@ -429,7 +426,8 @@ CREATE TABLE sys_log (
 CREATE TABLE sys_language (
 	title varchar(80) DEFAULT '' NOT NULL,
 	flag varchar(20) DEFAULT '' NOT NULL,
-	language_isocode varchar(2) DEFAULT '' NOT NULL
+	language_isocode varchar(2) DEFAULT '' NOT NULL,
+	static_lang_isocode int(11) unsigned DEFAULT '0' NOT NULL
 );
 
 #

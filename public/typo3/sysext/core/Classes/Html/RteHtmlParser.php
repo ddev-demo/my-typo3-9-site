@@ -17,9 +17,14 @@ namespace TYPO3\CMS\Core\Html;
 use Psr\Log\LoggerAwareInterface;
 use Psr\Log\LoggerAwareTrait;
 use TYPO3\CMS\Backend\Utility\BackendUtility;
+use TYPO3\CMS\Core\Compatibility\PublicMethodDeprecationTrait;
+use TYPO3\CMS\Core\Compatibility\PublicPropertyDeprecationTrait;
 use TYPO3\CMS\Core\LinkHandling\Exception\UnknownLinkHandlerException;
 use TYPO3\CMS\Core\LinkHandling\LinkService;
+use TYPO3\CMS\Core\Resource;
+use TYPO3\CMS\Core\Type\File\ImageInfo;
 use TYPO3\CMS\Core\Utility\GeneralUtility;
+use TYPO3\CMS\Frontend\Service\TypoLinkCodecService;
 
 /**
  * Class for parsing HTML for the Rich Text Editor. (also called transformations)
@@ -32,6 +37,33 @@ use TYPO3\CMS\Core\Utility\GeneralUtility;
 class RteHtmlParser extends HtmlParser implements LoggerAwareInterface
 {
     use LoggerAwareTrait;
+    use PublicPropertyDeprecationTrait;
+    use PublicMethodDeprecationTrait;
+
+    protected $deprecatedPublicProperties = [
+        'blockElementList' => 'Using $blockElementList of class RteHtmlParser from the outside is discouraged, as this property is only used for internal storage.',
+        'recPid' => 'Using $recPid of class RteHtmlParser from the outside is discouraged, as this property is only used for internal storage.',
+        'elRef' => 'Using $elRef of class RteHtmlParser from the outside is discouraged, as this property is only used for internal storage.',
+        'tsConfig' => 'Using $tsConfig of class RteHtmlParser from the outside is discouraged, as this property is only used for internal storage.',
+        'procOptions' => 'Using $procOptions of class RteHtmlParser from the outside is discouraged, as this property is only used for internal storage.',
+        'TS_transform_db_safecounter' => 'Using $TS_transform_db_safecounter of class RteHtmlParser from the outside is discouraged, as this property is only used for internal storage.',
+        'getKeepTags_cache' => 'Using $getKeepTags_cache of class RteHtmlParser from the outside is discouraged, as this property is only used for internal storage.',
+        'allowedClasses' => 'Using $allowedClasses of class RteHtmlParser from the outside is discouraged, as this property is only used for internal storage.',
+    ];
+
+    protected $deprecatedPublicMethods = [
+        'TS_images_db' => 'Using TS_images_db() of class RteHtmlParser from the outside is discouraged, as this method is only available for internal purposes.',
+        'TS_links_db' => 'Using TS_links_db() of class RteHtmlParser from the outside is discouraged, as this method is only available for internal purposes.',
+        'TS_transform_db' => 'Using TS_transform_db() of class RteHtmlParser from the outside is discouraged, as this method is only available for internal purposes.',
+        'TS_transform_rte' => 'Using TS_transform_rte() of class RteHtmlParser from the outside is discouraged, as this method is only available for internal purposes.',
+        'HTMLcleaner_db' => 'Using HTMLcleaner_db() of class RteHtmlParser from the outside is discouraged, as this method is only available for internal purposes.',
+        'getKeepTags' => 'Using getKeepTags() of class RteHtmlParser from the outside is discouraged, as this method is only available for internal purposes.',
+        'divideIntoLines' => 'Using divideIntoLines() of class RteHtmlParser from the outside is discouraged, as this method is only available for internal purposes.',
+        'setDivTags' => 'Using setDivTags() of class RteHtmlParser from the outside is discouraged, as this method is only available for internal purposes.',
+        'getWHFromAttribs' => 'Using getWHFromAttribs() of class RteHtmlParser from the outside is discouraged, as this method is only available for internal purposes.',
+        'urlInfoForLinkTags' => 'Using urlInfoForLinkTags() of class RteHtmlParser from the outside is discouraged, as this method is not in use anymore and will be removed.',
+        'TS_AtagToAbs' => 'Using TS_AtagToAbs() of class RteHtmlParser from the outside is discouraged, as this method is only available for internal purposes.',
+    ];
 
     /**
      * List of elements that are not wrapped into a "p" tag while doing the transformation.
@@ -60,7 +92,7 @@ class RteHtmlParser extends HtmlParser implements LoggerAwareInterface
     protected $elRef = '';
 
     /**
-     * Current Page TSconfig
+     * Current Page TSConfig
      *
      * @var array
      */
@@ -178,6 +210,9 @@ class RteHtmlParser extends HtmlParser implements LoggerAwareInterface
         // Define which attributes are allowed on <p> tags
         if (isset($this->procOptions['allowAttributes.'])) {
             $this->allowedAttributesForParagraphTags = $this->procOptions['allowAttributes.'];
+        } elseif (isset($this->procOptions['keepPDIVattribs'])) {
+            trigger_error('HTML parsing option "keepPDIVattribs" will not be evaluated anymore in TYPO3 v10.0. Use "allowedAttributes" instead.', E_USER_DEPRECATED);
+            $this->allowedAttributesForParagraphTags = GeneralUtility::trimExplode(',', strtolower($this->procOptions['keepPDIVattribs']), true);
         }
         // Override tags which are allowed outside of <p> tags
         if (isset($this->procOptions['allowTagsOutside'])) {
@@ -216,6 +251,9 @@ class RteHtmlParser extends HtmlParser implements LoggerAwareInterface
                         case 'detectbrokenlinks':
                             $value = $this->removeBrokenLinkMarkers($value);
                             break;
+                        case 'ts_images':
+                            $value = $this->TS_images_db($value);
+                            break;
                         case 'ts_links':
                             $value = $this->TS_links_db($value);
                             break;
@@ -223,7 +261,7 @@ class RteHtmlParser extends HtmlParser implements LoggerAwareInterface
                             // Transform empty paragraphs into spacing paragraphs
                             $value = str_replace('<p></p>', '<p>&nbsp;</p>', $value);
                             // Double any trailing spacing paragraph so that it does not get removed by divideIntoLines()
-                            $value = preg_replace('/<p>&nbsp;<\/p>$/', '<p>&nbsp;</p><p>&nbsp;</p>', $value);
+                            $value = preg_replace('/<p>&nbsp;<\/p>$/', '<p>&nbsp;</p>' . '<p>&nbsp;</p>', $value);
                             $value = $this->TS_transform_db($value);
                             break;
                         default:
@@ -241,6 +279,12 @@ class RteHtmlParser extends HtmlParser implements LoggerAwareInterface
                     switch ($cmd) {
                         case 'detectbrokenlinks':
                             $value = $this->markBrokenLinks($value);
+                            break;
+                        case 'ts_images':
+                            $value = $this->TS_images_rte($value);
+                            break;
+                        case 'ts_links':
+                            $value = $this->TS_links_rte($value, true);
                             break;
                         case 'css_transform':
                             $value = $this->TS_transform_rte($value);
@@ -273,7 +317,7 @@ class RteHtmlParser extends HtmlParser implements LoggerAwareInterface
         $modeList = implode(',', $modes);
 
         // Replace the shortcut "default" with all custom modes
-        $modeList = str_replace('default', 'detectbrokenlinks,css_transform,ts_links', $modeList);
+        $modeList = str_replace('default', 'detectbrokenlinks,css_transform,ts_images,ts_links', $modeList);
 
         // Make list unique
         $modes = array_unique(GeneralUtility::trimExplode(',', $modeList, true));
@@ -310,6 +354,212 @@ class RteHtmlParser extends HtmlParser implements LoggerAwareInterface
      * Specific RTE TRANSFORMATION functions
      *
      *************************************/
+    /**
+     * Transformation handler: 'ts_images' / direction: "db"
+     * Processing images inserted in the RTE.
+     * This is used when content goes from the RTE to the database.
+     * Images inserted in the RTE has an absolute URL applied to the src attribute. This URL is converted to a relative URL
+     * If it turns out that the URL is from another website than the current the image is read from that external URL and moved to the local server.
+     * Also "magic" images are processed here.
+     *
+     * @param string $value The content from RTE going to Database
+     * @return string Processed content
+     */
+    protected function TS_images_db($value)
+    {
+        // Split content by <img> tags and traverse the resulting array for processing:
+        $imgSplit = $this->splitTags('img', $value);
+        if (count($imgSplit) > 1) {
+            $siteUrl = GeneralUtility::getIndpEnv('TYPO3_SITE_URL');
+            $sitePath = str_replace(GeneralUtility::getIndpEnv('TYPO3_REQUEST_HOST'), '', $siteUrl);
+            /** @var Resource\ResourceFactory $resourceFactory */
+            $resourceFactory = Resource\ResourceFactory::getInstance();
+            /** @var Resource\Service\MagicImageService $magicImageService */
+            $magicImageService = GeneralUtility::makeInstance(Resource\Service\MagicImageService::class);
+            $magicImageService->setMagicImageMaximumDimensions($this->tsConfig);
+            foreach ($imgSplit as $k => $v) {
+                // Image found, do processing:
+                if ($k % 2) {
+                    // Get attributes
+                    list($attribArray) = $this->get_tag_attributes($v, true);
+                    // It's always an absolute URL coming from the RTE into the Database.
+                    $absoluteUrl = trim($attribArray['src']);
+                    // Make path absolute if it is relative and we have a site path which is not '/'
+                    $pI = pathinfo($absoluteUrl);
+                    if ($sitePath && !$pI['scheme'] && GeneralUtility::isFirstPartOfStr($absoluteUrl, $sitePath)) {
+                        // If site is in a subpath (eg. /~user_jim/) this path needs to be removed because it will be added with $siteUrl
+                        $absoluteUrl = substr($absoluteUrl, strlen($sitePath));
+                        $absoluteUrl = $siteUrl . $absoluteUrl;
+                    }
+                    // Image dimensions set in the img tag, if any
+                    $imgTagDimensions = $this->getWHFromAttribs($attribArray);
+                    if ($imgTagDimensions[0]) {
+                        $attribArray['width'] = $imgTagDimensions[0];
+                    }
+                    if ($imgTagDimensions[1]) {
+                        $attribArray['height'] = $imgTagDimensions[1];
+                    }
+                    $originalImageFile = null;
+                    if ($attribArray['data-htmlarea-file-uid']) {
+                        // An original image file uid is available
+                        try {
+                            /** @var Resource\File $originalImageFile */
+                            $originalImageFile = $resourceFactory->getFileObject((int)$attribArray['data-htmlarea-file-uid']);
+                        } catch (Resource\Exception\FileDoesNotExistException $fileDoesNotExistException) {
+                            // Log the fact the file could not be retrieved.
+                            $message = sprintf('Could not find file with uid "%s"', $attribArray['data-htmlarea-file-uid']);
+                            $this->logger->error($message);
+                        }
+                    }
+                    if ($originalImageFile instanceof Resource\File) {
+                        // Public url of local file is relative to the site url, absolute otherwise
+                        if ($absoluteUrl == $originalImageFile->getPublicUrl() || $absoluteUrl == $siteUrl . $originalImageFile->getPublicUrl()) {
+                            // This is a plain image, i.e. reference to the original image
+                            if ($this->procOptions['plainImageMode']) {
+                                // "plain image mode" is configured
+                                // Find the dimensions of the original image
+                                $imageInfo = [
+                                    $originalImageFile->getProperty('width'),
+                                    $originalImageFile->getProperty('height')
+                                ];
+                                if (!$imageInfo[0] || !$imageInfo[1]) {
+                                    $filePath = $originalImageFile->getForLocalProcessing(false);
+                                    $imageInfoObject = GeneralUtility::makeInstance(ImageInfo::class, $filePath);
+                                    $imageInfo = [
+                                        $imageInfoObject->getWidth(),
+                                        $imageInfoObject->getHeight()
+                                    ];
+                                }
+                                $attribArray = $this->applyPlainImageModeSettings($imageInfo, $attribArray);
+                            }
+                        } else {
+                            // Magic image case: get a processed file with the requested configuration
+                            $imageConfiguration = [
+                                'width' => $imgTagDimensions[0],
+                                'height' => $imgTagDimensions[1]
+                            ];
+                            $magicImage = $magicImageService->createMagicImage($originalImageFile, $imageConfiguration);
+                            $attribArray['width'] = $magicImage->getProperty('width');
+                            $attribArray['height'] = $magicImage->getProperty('height');
+                            $attribArray['src'] = $magicImage->getPublicUrl();
+                        }
+                    } elseif (!GeneralUtility::isFirstPartOfStr($absoluteUrl, $siteUrl) && !$this->procOptions['dontFetchExtPictures'] && TYPO3_MODE === 'BE') {
+                        // External image from another URL: in that case, fetch image, unless the feature is disabled or we are not in backend mode
+                        // Fetch the external image
+                        $externalFile = GeneralUtility::getUrl($absoluteUrl);
+                        if ($externalFile) {
+                            $pU = parse_url($absoluteUrl);
+                            $pI = pathinfo($pU['path']);
+                            $extension = strtolower($pI['extension']);
+                            if ($extension === 'jpg' || $extension === 'jpeg' || $extension === 'gif' || $extension === 'png') {
+                                $fileName = GeneralUtility::shortMD5($absoluteUrl) . '.' . $pI['extension'];
+                                // We insert this image into the user default upload folder
+                                list($table, $field) = explode(':', $this->elRef);
+                                /** @var Resource\Folder $folder */
+                                $folder = $GLOBALS['BE_USER']->getDefaultUploadFolder($this->recPid, $table, $field);
+                                /** @var Resource\File $fileObject */
+                                $fileObject = $folder->createFile($fileName)->setContents($externalFile);
+                                $imageConfiguration = [
+                                    'width' => $attribArray['width'],
+                                    'height' => $attribArray['height']
+                                ];
+                                $magicImage = $magicImageService->createMagicImage($fileObject, $imageConfiguration);
+                                $attribArray['width'] = $magicImage->getProperty('width');
+                                $attribArray['height'] = $magicImage->getProperty('height');
+                                $attribArray['data-htmlarea-file-uid'] = $fileObject->getUid();
+                                $attribArray['src'] = $magicImage->getPublicUrl();
+                            }
+                        }
+                    } elseif (GeneralUtility::isFirstPartOfStr($absoluteUrl, $siteUrl)) {
+                        // Finally, check image as local file (siteURL equals the one of the image)
+                        // Image has no data-htmlarea-file-uid attribute
+                        // Relative path, rawurldecoded for special characters.
+                        $path = rawurldecode(substr($absoluteUrl, strlen($siteUrl)));
+                        // Absolute filepath, locked to relative path of this project
+                        $filepath = GeneralUtility::getFileAbsFileName($path);
+                        // Check file existence (in relative directory to this installation!)
+                        if ($filepath && @is_file($filepath)) {
+                            // Treat it as a plain image
+                            if ($this->procOptions['plainImageMode']) {
+                                // If "plain image mode" has been configured
+                                // Find the original dimensions of the image
+                                $imageInfoObject = GeneralUtility::makeInstance(ImageInfo::class, $filepath);
+                                $imageInfo = [
+                                    $imageInfoObject->getWidth(),
+                                    $imageInfoObject->getHeight()
+                                ];
+                                $attribArray = $this->applyPlainImageModeSettings($imageInfo, $attribArray);
+                            }
+                            // Let's try to find a file uid for this image
+                            try {
+                                $fileOrFolderObject = $resourceFactory->retrieveFileOrFolderObject($path);
+                                if ($fileOrFolderObject instanceof Resource\FileInterface) {
+                                    $fileIdentifier = $fileOrFolderObject->getIdentifier();
+                                    /** @var Resource\AbstractFile $fileObject */
+                                    $fileObject = $fileOrFolderObject->getStorage()->getFile($fileIdentifier);
+                                    // @todo if the retrieved file is a processed file, get the original file...
+                                    $attribArray['data-htmlarea-file-uid'] = $fileObject->getUid();
+                                }
+                            } catch (Resource\Exception\ResourceDoesNotExistException $resourceDoesNotExistException) {
+                                // Nothing to be done if file/folder not found
+                            }
+                        }
+                    }
+                    // Remove width and height from style attribute
+                    $attribArray['style'] = preg_replace('/(?:^|[^-])(\\s*(?:width|height)\\s*:[^;]*(?:$|;))/si', '', $attribArray['style']);
+                    // Must have alt attribute
+                    if (!isset($attribArray['alt'])) {
+                        $attribArray['alt'] = '';
+                    }
+                    // Convert absolute to relative url
+                    if (GeneralUtility::isFirstPartOfStr($attribArray['src'], $siteUrl)) {
+                        $attribArray['src'] = substr($attribArray['src'], strlen($siteUrl));
+                    }
+                    $imgSplit[$k] = '<img ' . GeneralUtility::implodeAttributes($attribArray, true, true) . ' />';
+                }
+            }
+        }
+        return implode('', $imgSplit);
+    }
+
+    /**
+     * Transformation handler: 'ts_images' / direction: "rte"
+     * Processing images from database content going into the RTE.
+     * Processing includes converting the src attribute to an absolute URL.
+     *
+     * @param string $value Content input
+     * @return string Content output
+     */
+    public function TS_images_rte($value)
+    {
+        // Split content by <img> tags and traverse the resulting array for processing:
+        $imgSplit = $this->splitTags('img', $value);
+        if (count($imgSplit) > 1) {
+            $siteUrl = GeneralUtility::getIndpEnv('TYPO3_SITE_URL');
+            $sitePath = str_replace(GeneralUtility::getIndpEnv('TYPO3_REQUEST_HOST'), '', $siteUrl);
+            foreach ($imgSplit as $k => $v) {
+                // Image found
+                if ($k % 2) {
+                    // Get the attributes of the img tag
+                    list($attribArray) = $this->get_tag_attributes($v, true);
+                    $absoluteUrl = trim($attribArray['src']);
+                    // Transform the src attribute into an absolute url, if it not already
+                    if (stripos($absoluteUrl, 'http') !== 0) {
+                        // If site is in a subpath (eg. /~user_jim/) this path needs to be removed because it will be added with $siteUrl
+                        $attribArray['src'] = preg_replace('#^' . preg_quote($sitePath, '#') . '#', '', $attribArray['src']);
+                        $attribArray['src'] = $siteUrl . $attribArray['src'];
+                    }
+                    // Must have alt attribute
+                    if (!isset($attribArray['alt'])) {
+                        $attribArray['alt'] = '';
+                    }
+                    $imgSplit[$k] = '<img ' . GeneralUtility::implodeAttributes($attribArray, true, true) . ' />';
+                }
+            }
+        }
+        // Return processed content:
+        return implode('', $imgSplit);
+    }
 
     /**
      * Transformation handler: 'ts_links' / direction: "db"
@@ -320,6 +570,7 @@ class RteHtmlParser extends HtmlParser implements LoggerAwareInterface
      *
      * @param string $value Content input
      * @return string Content output
+     * @see TS_links_rte()
      */
     protected function TS_links_db($value)
     {
@@ -327,19 +578,122 @@ class RteHtmlParser extends HtmlParser implements LoggerAwareInterface
         foreach ($blockSplit as $k => $v) {
             if ($k % 2) {
                 list($tagAttributes) = $this->get_tag_attributes($this->getFirstTag($v), true);
+
+                // Anchors would not have an href attribute
+                if (!isset($tagAttributes['href'])) {
+                    continue;
+                }
                 $linkService = GeneralUtility::makeInstance(LinkService::class);
                 $linkInformation = $linkService->resolve($tagAttributes['href'] ?? '');
 
-                // Store the link as <a> tag as default by TYPO3, with the link service syntax
+                // Modify parameters, this hook should be deprecated
+                if (isset($GLOBALS['TYPO3_CONF_VARS']['SC_OPTIONS']['t3lib/class.t3lib_parsehtml_proc.php']['modifyParams_LinksDb_PostProc'])) {
+                    trigger_error('The hook "t3lib/class.t3lib_parsehtml_proc.php->modifyParams_LinksDb_PostProc" will be removed in TYPO3 v10.0, use LinkService syntax to modify links to be stored in the database.', E_USER_DEPRECATED);
+                    $parameters = [
+                        'currentBlock' => $v,
+                        'linkInformation' => $linkInformation,
+                        'url' => $linkInformation['href'],
+                        'attributes' => $tagAttributes
+                    ];
+                    foreach ($GLOBALS['TYPO3_CONF_VARS']['SC_OPTIONS']['t3lib/class.t3lib_parsehtml_proc.php']['modifyParams_LinksDb_PostProc'] ?? [] as $className) {
+                        $processor = GeneralUtility::makeInstance($className);
+                        $blockSplit[$k] = $processor->modifyParamsLinksDb($parameters, $this);
+                    }
+                } else {
+                    // Otherwise store the link as <a> tag as default by TYPO3, with the new link service syntax
+                    try {
+                        $tagAttributes['href'] = $linkService->asString($linkInformation);
+                    } catch (UnknownLinkHandlerException $e) {
+                        $tagAttributes['href'] = $linkInformation['href'] ?? $tagAttributes['href'];
+                    }
+
+                    $blockSplit[$k] = '<a ' . GeneralUtility::implodeAttributes($tagAttributes, true) . '>'
+                        . $this->TS_links_db($this->removeFirstAndLastTag($blockSplit[$k])) . '</a>';
+                }
+            }
+        }
+        return implode('', $blockSplit);
+    }
+
+    /**
+     * Transformation handler: 'ts_links' / direction: "rte"
+     * Converting TYPO3-specific <link> tags to <a> tags
+     *
+     * This functionality is only used to convert legacy <link> tags to the new linking syntax using <a> tags, and will
+     * not be converted back to <link> tags anymore.
+     *
+     * @param string $value Content input
+     * @param bool $internallyCalledFromCore internal option for calls where the Core is still using this function, to supress method deprecations
+     * @return string Content output
+     * @deprecated will be removed in TYPO3 v10.0, only ->TS_AtagToAbs() should be called directly, <link> syntax is deprecated
+     */
+    public function TS_links_rte($value, $internallyCalledFromCore = null)
+    {
+        if ($internallyCalledFromCore === null) {
+            trigger_error('RteHtmlParser->TS_links_rte() will be removed in TYPO3 v10.0, use TS_AtagToAbs() directly and do not use <link> syntax anymore.', E_USER_DEPRECATED);
+        }
+        $hasLinkTags = false;
+        $value = $this->TS_AtagToAbs($value);
+        // Split content by the TYPO3 pseudo tag "<link>"
+        $blockSplit = $this->splitIntoBlock('link', $value, true);
+        foreach ($blockSplit as $k => $v) {
+            // Block
+            if ($k % 2) {
+                $hasLinkTags = true;
+                // Split away the first "<link " part
+                $typoLinkData = explode(' ', substr($this->getFirstTag($v), 0, -1), 2)[1];
+                $tagCode = GeneralUtility::makeInstance(TypoLinkCodecService::class)->decode($typoLinkData);
+
+                // Parsing the TypoLink data. This parsing is done like in \TYPO3\CMS\Frontend\ContentObject->typoLink()
+                $linkService = GeneralUtility::makeInstance(LinkService::class);
+                $linkInformation = $linkService->resolve($tagCode['url']);
+
                 try {
-                    $tagAttributes['href'] = $linkService->asString($linkInformation);
+                    $href = $linkService->asString($linkInformation);
                 } catch (UnknownLinkHandlerException $e) {
-                    $tagAttributes['href'] = $linkInformation['href'] ?? $tagAttributes['href'];
+                    $href = '';
                 }
 
-                $blockSplit[$k] = '<a ' . GeneralUtility::implodeAttributes($tagAttributes, true) . '>'
-                    . $this->TS_links_db($this->removeFirstAndLastTag($blockSplit[$k])) . '</a>';
+                // Modify parameters by a hook
+                if (is_array($GLOBALS['TYPO3_CONF_VARS']['SC_OPTIONS']['t3lib/class.t3lib_parsehtml_proc.php']['modifyParams_LinksRte_PostProc'] ?? false)) {
+                    trigger_error('The hook "t3lib/class.t3lib_parsehtml_proc.php->modifyParams_LinksRte_PostProc" will be removed in TYPO3 v10.0, use the link service to properly use .', E_USER_DEPRECATED);
+                    // backwards-compatibility: show an error message if the page is not found
+                    $error = '';
+                    if ($linkInformation['type'] === LinkService::TYPE_PAGE) {
+                        $pageRecord = BackendUtility::getRecord('pages', $linkInformation['pageuid']);
+                        // Page does not exist
+                        if (!is_array($pageRecord)) {
+                            $error = 'Page with ID ' . $linkInformation['pageuid'] . ' not found';
+                        }
+                    }
+                    $parameters = [
+                        'currentBlock' => $v,
+                        'url' => $href,
+                        'tagCode' => $tagCode,
+                        'external' => $linkInformation['type'] === LinkService::TYPE_URL,
+                        'error' => $error
+                    ];
+                    foreach ($GLOBALS['TYPO3_CONF_VARS']['SC_OPTIONS']['t3lib/class.t3lib_parsehtml_proc.php']['modifyParams_LinksRte_PostProc'] as $className) {
+                        $processor = GeneralUtility::makeInstance($className);
+                        $blockSplit[$k] = $processor->modifyParamsLinksRte($parameters, $this);
+                    }
+                } else {
+                    $anchorAttributes = [
+                        'href'   => $href,
+                        'target' => $tagCode['target'],
+                        'class'  => $tagCode['class'],
+                        'title'  => $tagCode['title']
+                    ];
+
+                    // Setting the <a> tag
+                    $blockSplit[$k] = '<a ' . GeneralUtility::implodeAttributes($anchorAttributes, true) . '>'
+                        . $this->TS_links_rte($this->removeFirstAndLastTag($blockSplit[$k]), $internallyCalledFromCore)
+                        . '</a>';
+                }
             }
+        }
+        if ($hasLinkTags) {
+            trigger_error('Content with <link> syntax was found, update your content to use the t3:// syntax, and migrate your content via the upgrade wizard in the install tool.', E_USER_DEPRECATED);
         }
         return implode('', $blockSplit);
     }
@@ -412,6 +766,38 @@ class RteHtmlParser extends HtmlParser implements LoggerAwareInterface
         }
         $this->TS_transform_db_safecounter++;
         return implode(LF, $blockSplit);
+    }
+
+    /**
+     * Wraps a-tags that contain a style attribute with a span-tag
+     * This is not in use anymore, but was necessary before because <a> tags are transformed into <link> tags
+     * in the database, but <link> tags cannot handle style attributes. However, this is considered a
+     * bad approach as it leaves an ugly <span> tag in the database, if allowedTags=span with style attributes are
+     * allowed.
+     *
+     * @param string $value Content input
+     * @return string Content output
+     * @deprecated since TYPO3 v9.0, will be removed in TYPO3 v10.0, see comment above, adding attribuet "rteerror" is not necessary anymore.
+     */
+    public function transformStyledATags($value)
+    {
+        trigger_error('RteHtmlParser->transformStyledATags() will be removed in TYPO3 v10.0. TYPO3 can handle style attribute in anchor tags properly since TYPO3 v8 LTS.', E_USER_DEPRECATED);
+        $blockSplit = $this->splitIntoBlock('A', $value);
+        foreach ($blockSplit as $k => $v) {
+            // If an A-tag was found
+            if ($k % 2) {
+                list($attribArray) = $this->get_tag_attributes($this->getFirstTag($v), true);
+                // If "style" attribute is set and rteerror is not set!
+                if ($attribArray['style'] && !$attribArray['rteerror']) {
+                    $attribArray_copy['style'] = $attribArray['style'];
+                    unset($attribArray['style']);
+                    $bTag = '<span ' . GeneralUtility::implodeAttributes($attribArray_copy, true) . '><a ' . GeneralUtility::implodeAttributes($attribArray, true) . '>';
+                    $eTag = '</a></span>';
+                    $blockSplit[$k] = $bTag . $this->removeFirstAndLastTag($blockSplit[$k]) . $eTag;
+                }
+            }
+        }
+        return implode('', $blockSplit);
     }
 
     /**
@@ -491,7 +877,12 @@ class RteHtmlParser extends HtmlParser implements LoggerAwareInterface
     protected function HTMLcleaner_db($content)
     {
         $keepTags = $this->getKeepTags('db');
-        return $this->HTMLcleaner($content, $keepTags, false);
+        // Default: remove unknown tags.
+        if (isset($this->procOptions['dontRemoveUnknownTags_db'])) {
+            trigger_error('HTMLParser option "dontRemoveUnknownTags_db" will not be evaluted anymore in TYPO3 v10.0. Remove its usages.', E_USER_DEPRECATED);
+        }
+        $keepUnknownTags = (bool)($this->procOptions['dontRemoveUnknownTags_db'] ?? false);
+        return $this->HTMLcleaner($content, $keepTags, $keepUnknownTags);
     }
 
     /**
@@ -746,6 +1137,139 @@ class RteHtmlParser extends HtmlParser implements LoggerAwareInterface
             $h = $attribArray['height'];
         }
         return [(int)$w, (int)$h];
+    }
+
+    /**
+     * Parse <A>-tag href and return status of email,external,file or page
+     * This functionality is not in use anymore
+     *
+     * @param string $url URL to analyze.
+     * @return array Information in an array about the URL
+     * @deprecated will be removed in TYPO3 v10.0. Not in use anymore.
+     */
+    protected function urlInfoForLinkTags($url)
+    {
+        $info = [];
+        $url = trim($url);
+        if (strpos(strtolower($url), 'mailto:') === 0) {
+            $info['url'] = trim(substr($url, 7));
+            $info['type'] = 'email';
+        } elseif (strpos($url, '?file:') !== false) {
+            $info['type'] = 'file';
+            $info['url'] = rawurldecode(substr($url, strpos($url, '?file:') + 1));
+        } else {
+            $curURL = GeneralUtility::getIndpEnv('TYPO3_SITE_URL');
+            $urlLength = strlen($url);
+            $a = 0;
+            for (; $a < $urlLength; $a++) {
+                if ($url[$a] != $curURL[$a]) {
+                    break;
+                }
+            }
+            $info['relScriptPath'] = substr($curURL, $a);
+            $info['relUrl'] = substr($url, $a);
+            $info['url'] = $url;
+            $info['type'] = 'ext';
+            $siteUrl_parts = parse_url($url);
+            $curUrl_parts = parse_url($curURL);
+            // Hosts should match
+            if ($siteUrl_parts['host'] == $curUrl_parts['host'] && (!$info['relScriptPath'] || defined('TYPO3_mainDir') && strpos($info['relScriptPath'], TYPO3_mainDir) === 0)) {
+                // If the script path seems to match or is empty (FE-EDIT)
+                // New processing order 100502
+                $uP = parse_url($info['relUrl']);
+                if ($info['relUrl'] === '#' . $siteUrl_parts['fragment']) {
+                    $info['url'] = $info['relUrl'];
+                    $info['type'] = 'anchor';
+                } elseif (!trim($uP['path']) || $uP['path'] === 'index.php') {
+                    // URL is a page (id parameter)
+                    $pp = preg_split('/^id=/', $uP['query']);
+                    $pp[1] = preg_replace('/&id=[^&]*/', '', $pp[1]);
+                    $parameters = explode('&', $pp[1]);
+                    $id = array_shift($parameters);
+                    if ($id) {
+                        $info['pageid'] = $id;
+                        $info['cElement'] = $uP['fragment'];
+                        $info['url'] = $id . ($info['cElement'] ? '#' . $info['cElement'] : '');
+                        $info['type'] = 'page';
+                        $info['query'] = $parameters[0] ? '&' . implode('&', $parameters) : '';
+                    }
+                } else {
+                    $info['url'] = $info['relUrl'];
+                    $info['type'] = 'file';
+                }
+            } else {
+                unset($info['relScriptPath']);
+                unset($info['relUrl']);
+            }
+        }
+        return $info;
+    }
+
+    /**
+     * Converting <A>-tags to absolute URLs (+ setting rtekeep attribute)
+     *
+     * @param string $value Content input
+     * @return string Content output
+     */
+    protected function TS_AtagToAbs($value)
+    {
+        if (func_num_args() > 1) {
+            trigger_error('Second argument of RteHtmlParser->TS_AtagToAbs() is not in use and will be removed in TYPO3 v10.0, however the argument in the callers code can be removed without side-effects.', E_USER_DEPRECATED);
+        }
+        $blockSplit = $this->splitIntoBlock('A', $value);
+        foreach ($blockSplit as $k => $v) {
+            // Block
+            if ($k % 2) {
+                list($attribArray) = $this->get_tag_attributes($this->getFirstTag($v), true);
+                // Checking if there is a scheme, and if not, prepend the current url.
+                // ONLY do this if href has content - the <a> tag COULD be an anchor and if so, it should be preserved...
+                if (($attribArray['href'] ?? '') !== '') {
+                    $uP = parse_url(strtolower($attribArray['href']));
+                    if (!$uP['scheme']) {
+                        $attribArray['href'] = GeneralUtility::getIndpEnv('TYPO3_SITE_URL') . $attribArray['href'];
+                    }
+                }
+                $bTag = '<a ' . GeneralUtility::implodeAttributes($attribArray, true) . '>';
+                $eTag = '</a>';
+                $blockSplit[$k] = $bTag . $this->TS_AtagToAbs($this->removeFirstAndLastTag($blockSplit[$k])) . $eTag;
+            }
+        }
+        return implode('', $blockSplit);
+    }
+
+    /**
+     * Apply plain image settings to the dimensions of the image
+     *
+     * @param array $imageInfo: info array of the image
+     * @param array $attribArray: array of attributes of an image tag
+     *
+     * @return array a modified attributes array
+     */
+    protected function applyPlainImageModeSettings($imageInfo, $attribArray)
+    {
+        if ($this->procOptions['plainImageMode']) {
+            // Perform corrections to aspect ratio based on configuration
+            switch ((string)$this->procOptions['plainImageMode']) {
+                case 'lockDimensions':
+                    $attribArray['width'] = $imageInfo[0];
+                    $attribArray['height'] = $imageInfo[1];
+                    break;
+                case 'lockRatioWhenSmaller':
+                    if ($attribArray['width'] > $imageInfo[0]) {
+                        $attribArray['width'] = $imageInfo[0];
+                    }
+                    if ($imageInfo[0] > 0) {
+                        $attribArray['height'] = round($attribArray['width'] * ($imageInfo[1] / $imageInfo[0]));
+                    }
+                    break;
+                case 'lockRatio':
+                    if ($imageInfo[0] > 0) {
+                        $attribArray['height'] = round($attribArray['width'] * ($imageInfo[1] / $imageInfo[0]));
+                    }
+                    break;
+            }
+        }
+        return $attribArray;
     }
 
     /**

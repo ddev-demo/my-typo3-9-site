@@ -16,6 +16,7 @@ namespace TYPO3\CMS\Install\Service;
 
 use TYPO3\CMS\Core\Category\CategoryRegistry;
 use TYPO3\CMS\Core\Package\PackageManager;
+use TYPO3\CMS\Core\Utility\GeneralUtility;
 
 /**
  * Service for loading the TCA
@@ -23,16 +24,6 @@ use TYPO3\CMS\Core\Package\PackageManager;
  */
 class LoadTcaService
 {
-    /**
-     * @var LateBootService
-     */
-    private $lateBootService;
-
-    public function __construct(LateBootService $lateBootService)
-    {
-        $this->lateBootService = $lateBootService;
-    }
-
     /**
      * Load TCA
      * Mostly a copy of ExtensionManagementUtility to include TCA without migrations.
@@ -44,12 +35,9 @@ class LoadTcaService
      */
     public function loadExtensionTablesWithoutMigration()
     {
-        $container = $this->lateBootService->getContainer();
-        $backup = $this->lateBootService->makeCurrent($container);
-
         $GLOBALS['TCA'] = [];
 
-        $activePackages = $container->get(PackageManager::class)->getActivePackages();
+        $activePackages = GeneralUtility::makeInstance(PackageManager::class)->getActivePackages();
 
         // First load "full table" files from Configuration/TCA
         foreach ($activePackages as $package) {
@@ -92,8 +80,6 @@ class LoadTcaService
                 }
             }
         }
-
-        $this->lateBootService->makeCurrent(null, $backup);
     }
 
     /**
@@ -103,10 +89,12 @@ class LoadTcaService
      */
     public function loadSingleExtTablesFile(string $extensionKey)
     {
-        $container = $this->lateBootService->getContainer();
-        $backup = $this->lateBootService->makeCurrent($container);
+        global $T3_SERVICES, $T3_VAR, $TYPO3_CONF_VARS;
+        global $TBE_MODULES, $TBE_MODULES_EXT, $TCA;
+        global $PAGES_TYPES, $TBE_STYLES;
+        global $_EXTKEY;
 
-        $packageManager = $container->get(PackageManager::class);
+        $packageManager = GeneralUtility::makeInstance(PackageManager::class);
         try {
             $package = $packageManager->getPackage($extensionKey);
         } catch (\TYPO3\CMS\Core\Package\Exception\UnknownPackageException $e) {
@@ -119,9 +107,11 @@ class LoadTcaService
         $extTablesPath = $package->getPackagePath() . 'ext_tables.php';
         // Load ext_tables.php file of the extension
         if (@file_exists($extTablesPath)) {
+            // $_EXTKEY and $_EXTCONF are available in ext_tables.php
+            // and are explicitly set in cached file as well
+            $_EXTKEY = $extensionKey;
+            $_EXTCONF = $GLOBALS['TYPO3_CONF_VARS']['EXT']['extConf'][$_EXTKEY] ?? null;
             require $extTablesPath;
         }
-
-        $this->lateBootService->makeCurrent(null, $backup);
     }
 }

@@ -1,6 +1,4 @@
 <?php
-declare(strict_types = 1);
-
 namespace TYPO3\CMS\Extbase\Persistence\Generic\Storage;
 
 /*
@@ -29,7 +27,7 @@ interface BackendInterface
      * @param bool $isRelation TRUE if we are currently inserting into a relation table, FALSE by default
      * @return int the UID of the inserted row
      */
-    public function addRow(string $tableName, array $fieldValues, bool $isRelation = false): int;
+    public function addRow($tableName, array $fieldValues, $isRelation = false);
 
     /**
      * Updates a row in the storage
@@ -37,16 +35,18 @@ interface BackendInterface
      * @param string $tableName The database table name
      * @param array $fieldValues The fieldValues to update
      * @param bool $isRelation TRUE if we are currently inserting into a relation table, FALSE by default
+     * @return mixed|void
      */
-    public function updateRow(string $tableName, array $fieldValues, bool $isRelation = false): void;
+    public function updateRow($tableName, array $fieldValues, $isRelation = false);
 
     /**
      * Updates a relation row in the storage
      *
      * @param string $tableName The database relation table name
      * @param array $fieldValues The fieldValues to be updated
+     * @return bool
      */
-    public function updateRelationTableRow(string $tableName, array $fieldValues): void;
+    public function updateRelationTableRow($tableName, array $fieldValues);
 
     /**
      * Deletes a row in the storage
@@ -54,8 +54,9 @@ interface BackendInterface
      * @param string $tableName The database table name
      * @param array $where An array of where array('fieldname' => value). This array will be transformed to a WHERE clause
      * @param bool $isRelation TRUE if we are currently inserting into a relation table, FALSE by default
+     * @return mixed|void
      */
-    public function removeRow(string $tableName, array $where, bool $isRelation = false): void;
+    public function removeRow($tableName, array $where, $isRelation = false);
 
     /**
      * Fetches maximal value for given table column
@@ -65,7 +66,7 @@ interface BackendInterface
      * @param string $columnName column name to get the max value from
      * @return mixed the max value
      */
-    public function getMaxValueFromTable(string $tableName, array $where, string $columnName);
+    public function getMaxValueFromTable($tableName, array $where, $columnName);
 
     /**
      * Returns the number of items matching the query.
@@ -73,7 +74,7 @@ interface BackendInterface
      * @param \TYPO3\CMS\Extbase\Persistence\QueryInterface $query
      * @return int
      */
-    public function getObjectCountByQuery(\TYPO3\CMS\Extbase\Persistence\QueryInterface $query): int;
+    public function getObjectCountByQuery(\TYPO3\CMS\Extbase\Persistence\QueryInterface $query);
 
     /**
      * Returns the object data matching the $query.
@@ -81,14 +82,14 @@ interface BackendInterface
      * @param \TYPO3\CMS\Extbase\Persistence\QueryInterface $query
      * @return array
      */
-    public function getObjectDataByQuery(\TYPO3\CMS\Extbase\Persistence\QueryInterface $query): array;
+    public function getObjectDataByQuery(\TYPO3\CMS\Extbase\Persistence\QueryInterface $query);
 
     /**
      * Checks if a Value Object equal to the given Object exists in the data base
      *
      * @param \TYPO3\CMS\Extbase\DomainObject\AbstractValueObject $object The Value Object
-     * @return int|null The matching uid if an object was found, else null
+     * @return mixed The matching uid if an object was found, else FALSE
      * @todo this is the last monster in this persistence series. refactor!
      */
-    public function getUidOfAlreadyPersistedValueObject(\TYPO3\CMS\Extbase\DomainObject\AbstractValueObject $object): ?int;
+    public function getUidOfAlreadyPersistedValueObject(\TYPO3\CMS\Extbase\DomainObject\AbstractValueObject $object);
 }

@@ -139,6 +139,13 @@ abstract class ImportExport
     public $showDiff = false;
 
     /**
+     * If set, and if the user is admin, allow the writing of PHP scripts to fileadmin/ area.
+     *
+     * @var bool
+     */
+    public $allowPHPScripts = false;
+
+    /**
      * Array of values to substitute in editable softreferences.
      *
      * @var array
@@ -764,11 +771,11 @@ abstract class ImportExport
                 $fileProcObj = $this->getFileProcObj();
                 if ($fileProcObj->actionPerms['addFile']) {
                     $testFI = GeneralUtility::split_fileref(Environment::getPublicPath() . '/' . $fI['relFileName']);
-                    if (!$fileProcObj->checkIfAllowed($testFI['fileext'], $testFI['path'], $testFI['file'])) {
+                    if (!$this->allowPHPScripts && !$fileProcObj->checkIfAllowed($testFI['fileext'], $testFI['path'], $testFI['file'])) {
                         $pInfo['msg'] .= 'File extension was not allowed!';
                     }
                 } else {
-                    $pInfo['msg'] = 'Your user profile does not allow you to create files on the server!';
+                    $pInfo['msg'] = 'You user profile does not allow you to create files on the server!';
                 }
             }
             $pInfo['showDiffContent'] = PathUtility::stripPathSitePrefix($this->fileIDMap[$ID]);
@@ -826,7 +833,7 @@ abstract class ImportExport
         $allowedTableList = $GLOBALS['PAGES_TYPES'][$doktype]['allowedTables'] ?? $GLOBALS['PAGES_TYPES']['default']['allowedTables'];
         $allowedArray = GeneralUtility::trimExplode(',', $allowedTableList, true);
         // If all tables or the table is listed as an allowed type, return TRUE
-        if (strpos($allowedTableList, '*') !== false || in_array($checkTable, $allowedArray)) {
+        if (strstr($allowedTableList, '*') || in_array($checkTable, $allowedArray)) {
             return true;
         }
         return false;
@@ -1161,6 +1168,25 @@ abstract class ImportExport
             return '<strong class="text-nowrap">[' . htmlspecialchars($table . ':' . $importRecord['uid'] . ' => ' . $databaseRecord['uid']) . ']:</strong> ' . $output;
         }
         return 'ERROR: One of the inputs were not an array!';
+    }
+
+    /**
+     * Creates the original file name for a copy-RTE image (magic type)
+     *
+     * @param string $string RTE copy filename, eg. "RTEmagicC_user_pm_icon_01.gif.gif
+     * @return string|null RTE original filename, eg. "RTEmagicP_user_pm_icon_01.gif". If the input filename was NOT prefixed RTEmagicC_ as RTE images would be, NULL is returned!
+     */
+    public function getRTEoriginalFilename($string)
+    {
+        // If "magic image":
+        if (GeneralUtility::isFirstPartOfStr($string, 'RTEmagicC_')) {
+            // Find original file:
+            $pI = pathinfo(substr($string, strlen('RTEmagicC_')));
+            $filename = substr($pI['basename'], 0, -strlen('.' . $pI['extension']));
+            $origFilePath = 'RTEmagicP_' . $filename;
+            return $origFilePath;
+        }
+        return null;
     }
 
     /**

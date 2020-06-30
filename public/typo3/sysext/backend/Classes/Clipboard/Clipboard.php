@@ -18,9 +18,9 @@ use TYPO3\CMS\Backend\Routing\UriBuilder;
 use TYPO3\CMS\Backend\Utility\BackendUtility;
 use TYPO3\CMS\Core\Database\ConnectionPool;
 use TYPO3\CMS\Core\Database\Query\Restriction\DeletedRestriction;
-use TYPO3\CMS\Core\Database\Query\Restriction\WorkspaceRestriction;
 use TYPO3\CMS\Core\Imaging\Icon;
 use TYPO3\CMS\Core\Imaging\IconFactory;
+use TYPO3\CMS\Core\Resource\AbstractFile;
 use TYPO3\CMS\Core\Resource\ResourceFactory;
 use TYPO3\CMS\Core\Type\Bitmask\JsConfirmation;
 use TYPO3\CMS\Core\Utility\ExtensionManagementUtility;
@@ -183,7 +183,7 @@ class Clipboard
         }
         // Set copy mode of the tab
         if (isset($cmd['setCopyMode'])) {
-            $this->clipData[$this->current]['mode'] = $this->isElements() ? ($cmd['setCopyMode'] ? 'copy' : '') : '';
+            $this->clipData[$this->current]['mode'] = $cmd['setCopyMode'] ? 'copy' : '';
             $this->changed = 1;
         }
     }
@@ -273,7 +273,7 @@ class Clipboard
             // Import / Export link:
             if (ExtensionManagementUtility::isLoaded('impexp')) {
                 $uriBuilder = GeneralUtility::makeInstance(UriBuilder::class);
-                $url = $uriBuilder->buildUriFromRoute('tx_impexp_export', $this->exportClipElementParameters());
+                $url = $uriBuilder->buildUriFromRoute('xMOD_tximpexp', $this->exportClipElementParameters());
                 $optionArray[] = [
                     'label' => $this->clLabel('export', 'rm'),
                     'uri' => (string)$url
@@ -285,7 +285,7 @@ class Clipboard
                     'label' => $this->clLabel('edit', 'rm'),
                     'uri' => '#',
                     'additionalAttributes' => [
-                        'onclick' => htmlspecialchars('window.location.href=' . GeneralUtility::quoteJSvalue($this->editUrl() . '&returnUrl=') . '+encodeURIComponent(window.location.href);'),
+                        'onclick' => htmlspecialchars('window.location.href=' . GeneralUtility::quoteJSvalue($this->editUrl() . '&returnUrl=') . '+top.rawurlencode(window.location.href);'),
                     ]
                 ];
             }
@@ -337,7 +337,7 @@ class Clipboard
             'id' => 'normal',
             'number' => 0,
             'url' => GeneralUtility::linkThisScript(['CB' => ['setP' => 'normal']]),
-            'description' => 'normal-description',
+            'description' => 'labels.normal-description',
             'label' => 'labels.normal',
             'padding' => $this->padTitle('normal')
         ];
@@ -350,7 +350,7 @@ class Clipboard
                 'id' => 'tab_' . $a,
                 'number' => $a,
                 'url' => GeneralUtility::linkThisScript(['CB' => ['setP' => 'tab_' . $a]]),
-                'description' => 'cliptabs-description',
+                'description' => 'labels.cliptabs-description',
                 'label' => 'labels.cliptabs-name',
                 'padding' => $this->padTitle('tab_' . $a)
             ];
@@ -475,8 +475,6 @@ class Clipboard
     {
         $lines = [];
         $tcaCtrl = $GLOBALS['TCA'][$table]['ctrl'];
-        $workspaceId = (int)$this->getBackendUser()->workspace;
-
         if (BackendUtility::isTableLocalizable($table)) {
             $queryBuilder = GeneralUtility::makeInstance(ConnectionPool::class)->getQueryBuilderForTable($table);
             $queryBuilder->getRestrictions()
@@ -499,13 +497,16 @@ class Clipboard
                         'pid',
                         $queryBuilder->createNamedParameter(-1, \PDO::PARAM_INT)
                     )
-                )
-                ->orderBy($tcaCtrl['languageField']);
-
-            if (BackendUtility::isTableWorkspaceEnabled($table)) {
-                $queryBuilder->getRestrictions()->add(
-                    GeneralUtility::makeInstance(WorkspaceRestriction::class, $workspaceId)
                 );
+
+            if (isset($tcaCtrl['versioningWS']) && $tcaCtrl['versioningWS']) {
+                $queryBuilder
+                    ->andWhere(
+                        $queryBuilder->expr()->eq(
+                            't3ver_wsid',
+                            $queryBuilder->createNamedParameter($parentRec['t3ver_wsid'], \PDO::PARAM_INT)
+                        )
+                    );
             }
             $rows = $queryBuilder->execute()->fetchAll();
             if (is_array($rows)) {
@@ -756,6 +757,7 @@ class Clipboard
         // Init
         $pad = $this->current;
         $params = [];
+        $params['tx_impexp']['action'] = 'export';
         // Traverse items:
         if (is_array($this->clipData[$pad]['el'] ?? false)) {
             foreach ($this->clipData[$pad]['el'] as $k => $v) {
@@ -763,8 +765,8 @@ class Clipboard
                     list($table, $uid) = explode('|', $k);
                     // Rendering files/directories on the clipboard
                     if ($table === '_FILE') {
-                        $file = ResourceFactory::getInstance()->getFileObjectFromCombinedIdentifier($v);
-                        if ($file !== null) {
+                        $file = ResourceFactory::getInstance()->getObjectFromCombinedIdentifier($v);
+                        if ($file instanceof AbstractFile) {
                             $params['tx_impexp']['record'][] = 'sys_file:' . $file->getUid();
                         }
                     } else {

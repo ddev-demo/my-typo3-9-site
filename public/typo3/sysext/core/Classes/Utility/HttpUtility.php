@@ -186,6 +186,7 @@ class HttpUtility
      * Please note: Once PHP 7.4 is the minimum requirement, this method will vanish without further notice
      * as it is recommended to use the native method instead, when working against a clean environment.
      *
+     * @internal
      * @param string $domain the domain name to convert Punicode to ASCII.
      * @return string|bool
      */

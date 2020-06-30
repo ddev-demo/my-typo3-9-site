@@ -14,7 +14,6 @@ namespace TYPO3\CMS\Install\Report;
  * The TYPO3 project - inspiring people to share!
  */
 
-use TYPO3\CMS\Core\Localization\LanguageService;
 use TYPO3\CMS\Core\Messaging\FlashMessage;
 use TYPO3\CMS\Core\Messaging\FlashMessageQueue;
 use TYPO3\CMS\Core\Utility\GeneralUtility;
@@ -111,13 +110,13 @@ class EnvironmentStatusReport implements StatusProviderInterface, ExtendedStatus
                     $type = 'info';
                 }
                 if (!$verbose) {
-                    $message = $this->getLanguageService()->sL($pathToXliff . ':environment.status.message.' . $type);
+                    $message = $GLOBALS['LANG']->sL($pathToXliff . ':environment.status.message.' . $type);
                 }
                 $severity = constant('\TYPO3\CMS\Reports\Status::' . strtoupper($type));
                 $statusArray[] = GeneralUtility::makeInstance(
                     Status::class,
-                    $this->getLanguageService()->sL($pathToXliff . ':environment.status.title'),
-                    sprintf($this->getLanguageService()->sL($pathToXliff . ':environment.status.value'), $value),
+                    $GLOBALS['LANG']->sL($pathToXliff . ':environment.status.title'),
+                    sprintf($GLOBALS['LANG']->sL($pathToXliff . ':environment.status.value'), $value),
                     $message,
                     $severity
                 );
@@ -125,13 +124,5 @@ class EnvironmentStatusReport implements StatusProviderInterface, ExtendedStatus
         }
 
         return $statusArray;
-    }
-
-    /**
-     * @return LanguageService|null
-     */
-    protected function getLanguageService(): ?LanguageService
-    {
-        return $GLOBALS['LANG'] ?? null;
     }
 }

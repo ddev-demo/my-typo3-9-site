@@ -15,7 +15,6 @@ namespace TYPO3\CMS\Fluid\ViewHelpers\Be;
  */
 
 use TYPO3\CMS\Backend\Utility\BackendUtility;
-use TYPO3\CMS\Core\Localization\LanguageService;
 use TYPO3\CMS\Core\Type\Bitmask\Permission;
 use TYPO3\CMS\Core\Utility\GeneralUtility;
 use TYPO3Fluid\Fluid\Core\Rendering\RenderingContextInterface;
@@ -78,7 +77,7 @@ class PagePathViewHelper extends AbstractBackendViewHelper
             $title = $GLOBALS['TYPO3_CONF_VARS']['SYS']['sitename'];
         }
         // Setting the path of the page
-        $pagePath = htmlspecialchars(static::getLanguageService()->sL('LLL:EXT:core/Resources/Private/Language/locallang_core.xlf:labels.path')) . ': <span class="typo3-docheader-pagePath">';
+        $pagePath = htmlspecialchars($GLOBALS['LANG']->sL('LLL:EXT:core/Resources/Private/Language/locallang_core.xlf:labels.path')) . ': <span class="typo3-docheader-pagePath">';
         // crop the title to title limit (or 50, if not defined)
         $cropLength = empty($GLOBALS['BE_USER']->uc['titleLen']) ? 50 : $GLOBALS['BE_USER']->uc['titleLen'];
         $croppedTitle = GeneralUtility::fixed_lgd_cs($title, -$cropLength);
@@ -89,13 +88,5 @@ class PagePathViewHelper extends AbstractBackendViewHelper
         }
         $pagePath .= '</span>';
         return $pagePath;
-    }
-
-    /**
-     * @return LanguageService|null
-     */
-    protected static function getLanguageService(): ?LanguageService
-    {
-        return $GLOBALS['LANG'] ?? null;
     }
 }

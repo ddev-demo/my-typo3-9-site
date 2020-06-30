@@ -1,6 +1,4 @@
 <?php
-declare(strict_types = 1);
-
 namespace TYPO3\CMS\Extbase\Object\Container\Exception;
 
 /*
@@ -16,11 +14,9 @@ namespace TYPO3\CMS\Extbase\Object\Container\Exception;
  * The TYPO3 project - inspiring people to share!
  */
 
-use TYPO3\CMS\Extbase\Object\Exception;
-
 /**
  * "Unknown Object" Exception
  */
-class UnknownObjectException extends Exception
+class UnknownObjectException extends \TYPO3\CMS\Extbase\Object\Exception
 {
 }

@@ -115,13 +115,11 @@ return [
     'TYPO3\CMS\Frontend\Http\EidRequestHandler' => [
         'restFiles' => [
             'Deprecation-83803-DeprecateEidRequestHandler.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
         ],
     ],
     'TYPO3\CMS\Backend\Http\AjaxRequestHandler' => [
         'restFiles' => [
             'Deprecation-83853-BackendAjaxRequestHandler.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
         ],
     ],
     'TYPO3\CMS\Frontend\Page\FramesetRenderer' => [
@@ -164,213 +162,178 @@ return [
     'TYPO3\CMS\Sv\Report\ServicesListReport' => [
         'restFiles' => [
             'Breaking-81536-MoveOfServicesListReportFromSvToReports.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
         ],
     ],
     'TYPO3\CMS\Sv\AbstractAuthenticationService' => [
         'restFiles' => [
             'Breaking-81735-GetRidOfSysextsv.rst',
             'Breaking-81536-MoveOfServicesListReportFromSvToReports.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
         ],
     ],
     'TYPO3\CMS\Sv\AuthenticationService' => [
         'restFiles' => [
             'Breaking-81735-GetRidOfSysextsv.rst',
             'Breaking-81536-MoveOfServicesListReportFromSvToReports.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
         ],
     ],
     'TYPO3\CMS\Extbase\Configuration\Exception\ContainerIsLockedException' => [
         'restFiles' => [
             'Deprecation-81600-UnusedExtbaseExceptions.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
         ],
     ],
     'TYPO3\CMS\Extbase\Configuration\Exception\NoSuchFileException' => [
         'restFiles' => [
             'Deprecation-81600-UnusedExtbaseExceptions.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
         ],
     ],
     'TYPO3\CMS\Extbase\Configuration\Exception\NoSuchOptionException' => [
         'restFiles' => [
             'Deprecation-81600-UnusedExtbaseExceptions.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
         ],
     ],
     'TYPO3\CMS\Extbase\Mvc\Exception\InvalidMarkerException' => [
         'restFiles' => [
             'Deprecation-81600-UnusedExtbaseExceptions.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
         ],
     ],
     'TYPO3\CMS\Extbase\Mvc\Exception\InvalidViewHelperException' => [
         'restFiles' => [
             'Deprecation-81600-UnusedExtbaseExceptions.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
         ],
     ],
     'TYPO3\CMS\Extbase\Mvc\Exception\InvalidRequestTypeException' => [
         'restFiles' => [
             'Deprecation-81600-UnusedExtbaseExceptions.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
         ],
     ],
     'TYPO3\CMS\Extbase\Mvc\Exception\RequiredArgumentMissingException' => [
         'restFiles' => [
             'Deprecation-81600-UnusedExtbaseExceptions.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
         ],
     ],
     'TYPO3\CMS\Extbase\Mvc\Exception\InvalidCommandIdentifierException' => [
         'restFiles' => [
             'Deprecation-81600-UnusedExtbaseExceptions.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
         ],
     ],
     'TYPO3\CMS\Extbase\Object\Container\Exception\CannotInitializeCacheException' => [
         'restFiles' => [
             'Deprecation-81600-UnusedExtbaseExceptions.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
         ],
     ],
     'TYPO3\CMS\Extbase\Object\Container\Exception\TooManyRecursionLevelsException' => [
         'restFiles' => [
             'Deprecation-81600-UnusedExtbaseExceptions.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
         ],
     ],
     'TYPO3\CMS\Extbase\Object\Exception\WrongScopeException' => [
         'restFiles' => [
             'Deprecation-81600-UnusedExtbaseExceptions.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
         ],
     ],
     'TYPO3\CMS\Extbase\Object\InvalidClassException' => [
         'restFiles' => [
             'Deprecation-81600-UnusedExtbaseExceptions.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
         ],
     ],
     'TYPO3\CMS\Extbase\Object\InvalidObjectConfigurationException' => [
         'restFiles' => [
             'Deprecation-81600-UnusedExtbaseExceptions.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
         ],
     ],
     'TYPO3\CMS\Extbase\Object\InvalidObjectException' => [
         'restFiles' => [
             'Deprecation-81600-UnusedExtbaseExceptions.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
         ],
     ],
     'TYPO3\CMS\Extbase\Object\ObjectAlreadyRegisteredException' => [
         'restFiles' => [
             'Deprecation-81600-UnusedExtbaseExceptions.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
         ],
     ],
     'TYPO3\CMS\Extbase\Object\UnknownClassException' => [
         'restFiles' => [
             'Deprecation-81600-UnusedExtbaseExceptions.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
         ],
     ],
     'TYPO3\CMS\Extbase\Object\UnknownInterfaceException' => [
         'restFiles' => [
             'Deprecation-81600-UnusedExtbaseExceptions.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
         ],
     ],
     'TYPO3\CMS\Extbase\Object\UnresolvedDependenciesException' => [
         'restFiles' => [
             'Deprecation-81600-UnusedExtbaseExceptions.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
         ],
     ],
     'TYPO3\CMS\Extbase\Persistence\Generic\Exception\CleanStateNotMemorizedException' => [
         'restFiles' => [
             'Deprecation-81600-UnusedExtbaseExceptions.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
         ],
     ],
     'TYPO3\CMS\Extbase\Persistence\Generic\Exception\InvalidPropertyTypeException' => [
         'restFiles' => [
             'Deprecation-81600-UnusedExtbaseExceptions.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
         ],
     ],
     'TYPO3\CMS\Extbase\Persistence\Generic\Exception\MissingBackendException' => [
         'restFiles' => [
             'Deprecation-81600-UnusedExtbaseExceptions.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
         ],
     ],
     'TYPO3\CMS\Extbase\Property\Exception\FormatNotSupportedException' => [
         'restFiles' => [
             'Deprecation-81600-UnusedExtbaseExceptions.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
         ],
     ],
     'TYPO3\CMS\Extbase\Property\Exception\InvalidFormatException' => [
         'restFiles' => [
             'Deprecation-81600-UnusedExtbaseExceptions.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
         ],
     ],
     'TYPO3\CMS\Extbase\Property\Exception\InvalidPropertyException' => [
         'restFiles' => [
             'Deprecation-81600-UnusedExtbaseExceptions.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
         ],
     ],
     'TYPO3\CMS\Extbase\Reflection\Exception\InvalidPropertyTypeException' => [
         'restFiles' => [
             'Deprecation-81600-UnusedExtbaseExceptions.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
         ],
     ],
     'TYPO3\CMS\Extbase\Security\Exception\InvalidArgumentForRequestHashGenerationException' => [
         'restFiles' => [
             'Deprecation-81600-UnusedExtbaseExceptions.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
         ],
     ],
     'TYPO3\CMS\Extbase\Security\Exception\SyntacticallyWrongRequestHashException' => [
         'restFiles' => [
             'Deprecation-81600-UnusedExtbaseExceptions.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
         ],
     ],
     'TYPO3\CMS\Extbase\Mvc\Exception\InvalidUriPatternException' => [
         'restFiles' => [
             'Deprecation-81600-UnusedExtbaseExceptions.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
         ],
     ],
     'TYPO3\CMS\Extbase\Mvc\Exception\InvalidOrNoRequestHashException' => [
         'restFiles' => [
             'Deprecation-81600-UnusedExtbaseExceptions.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
         ],
     ],
     'TYPO3\CMS\Extbase\Validation\Exception\InvalidSubjectException' => [
         'restFiles' => [
             'Deprecation-81600-UnusedExtbaseExceptions.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
         ],
     ],
     'TYPO3\CMS\Extbase\Validation\Exception\NoValidatorFoundException' => [
         'restFiles' => [
             'Deprecation-81600-UnusedExtbaseExceptions.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
         ],
     ],
     'TYPO3\CMS\Extbase\Mvc\Exception\InvalidTemplateResourceException' => [
         'restFiles' => [
             'Deprecation-81600-UnusedExtbaseExceptions.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
         ],
     ],
     'TYPO3\CMS\Extensionmanager\Utility\DatabaseUtility' => [
@@ -397,7 +360,6 @@ return [
         'restFiles' => [
             'Deprecation-87277-FluidClassAliases.rst',
             'Important-82229-FluidImplementationOfCmsVariableProviderRemoved.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
         ],
     ],
     'TYPO3\CMS\Core\FrontendEditing\FrontendEditingController' => [
@@ -413,13 +375,11 @@ return [
     'TYPO3\CMS\Recordlist\RecordList\AbstractDatabaseRecordList' => [
         'restFiles' => [
             'Breaking-82334-AbstractRecordList.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
         ],
     ],
     'TYPO3\CMS\Backend\RecordList\AbstractRecordList' => [
         'restFiles' => [
             'Breaking-82334-AbstractRecordList.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
         ],
     ],
     'TYPO3\CMS\Belog\Domain\Model\HistoryEntry' => [
@@ -445,25 +405,21 @@ return [
     'TYPO3\CMS\Backend\Module\AbstractModule' => [
         'restFiles' => [
             'Breaking-82689-BackendAbstractWizardControllerNotExtendsAbstractModule.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
         ],
     ],
     'TYPO3\CMS\Core\TypoScript\ConfigurationForm' => [
         'restFiles' => [
             'Deprecation-82725-DeprecateConfigurationForm.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst'
         ],
     ],
     'TYPO3\CMS\Lowlevel\View\ConfigurationView' => [
         'restFiles' => [
             'Deprecation-82744-RenameExtlowlevelViewToLowlevelController.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
         ],
     ],
     'TYPO3\CMS\Lowlevel\View\DatabaseIntegrityView' => [
         'restFiles' => [
             'Deprecation-82744-RenameExtlowlevelViewToLowlevelController.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
         ],
     ],
     'TYPO3\CMS\Extbase\Object\Container\ClassInfo' => [
@@ -502,13 +458,11 @@ return [
     'TYPO3\CMS\Backend\AjaxLoginHandler' => [
         'restFiles' => [
             'Deprecation-82805-RenamedAjaxLoginHandlerPHPClass.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
         ],
     ],
     'TYPO3\CMS\Core\Utility\ClientUtility' => [
         'restFiles' => [
             'Deprecation-82903-DeprecateClientUtility.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
         ],
     ],
     'TYPO3\CMS\Backend\Tree\Pagetree\ExtdirectTreeCommands' => [
@@ -695,369 +649,302 @@ return [
     ],
     'TYPO3\CMS\Extbase\Validation\Validator\RawValidator' => [
         'restFiles' => [
-            'Breaking-80700-DeprecatedFunctionalityRemoved.rst',
             'Deprecation-83503-DeprecateUnneededRawValidator.rst',
         ],
     ],
     'TYPO3\CMS\Extbase\Tests\Unit\Validation\Validator\AbstractValidatorTestcase' => [
         'restFiles' => [
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
             'Deprecation-83511-DeprecateAbstractValidatorTestcase.rst',
         ],
     ],
     'TYPO3\CMS\Core\Package\DependencyResolver' => [
         'restFiles' => [
             'Deprecation-84109-DeprecateDependencyResolver.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
         ],
     ],
     'TYPO3\CMS\Recordlist\RecordList' => [
         'restFiles' => [
             'Deprecation-84399-ClassRecordListRenamedToRecordListController.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
         ],
     ],
     'TYPO3\CMS\T3editor\CodeCompletion' => [
         'restFiles' => [
             'Deprecation-84410-CodeCompletionRenamedToCodeCompletionController.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
         ],
     ],
     'TYPO3\CMS\Backend\Form\Wizard\ImageManipulationWizard' => [
         'restFiles' => [
             'Deprecation-84409-ImageManipulationWizardRenamedToImageManipulationController.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
         ],
     ],
     'TYPO3\CMS\T3editor\TypoScriptReferenceLoader' => [
         'restFiles' => [
             'Deprecation-84411-TypoScriptReferenceLoaderRenamedToTypoScriptReferenceController.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
         ],
     ],
     'TYPO3\CMS\Core\Utility\PhpOptionsUtility' => [
         'restFiles' => [
             'Deprecation-85102-PhpOptionsUtility.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
         ],
     ],
     'TYPO3\CMS\Core\Encoding\JavaScriptEncoder' => [
         'restFiles' => [
             'Deprecation-85120-JavaScriptEncoder.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
         ],
     ],
     'TYPO3\CMS\Frontend\Page\ExternalPageUrlHandler' => [
         'restFiles' => [
             'Deprecation-85124-RedirectingUrlHandlerHookConcept.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
         ],
     ],
     'TYPO3\CMS\Frontend\Http\UrlHandlerInterface' => [
         'restFiles' => [
             'Deprecation-85124-RedirectingUrlHandlerHookConcept.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
         ],
     ],
     'TYPO3\CMS\Core\Log\Writer\RuntimeCacheWriter' => [
         'restFiles' => [
             'Deprecation-85687-DeprecateRuntimeCacheWriter.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
         ],
     ],
     'TYPO3\CMS\Backend\Controller\LoginFramesetController' => [
         'restFiles' => [
             'Deprecation-85707-LoginFramesetController.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
         ],
     ],
     'TYPO3\CMS\Core\Integrity\DatabaseIntegrityCheck' => [
         'restFiles' => [
             'Deprecation-85727-DatabaseIntegrityCheckMovedToEXTlowlevel.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
         ],
     ],
     'TYPO3\CMS\Saltedpasswords\SaltedPasswordService' => [
         'restFiles' => [
-            'Deprecation-85833-ExtensionSaltedpasswordsMergedIntoCoreExtension.rst',
             'Deprecation-85761-SaltedPasswordService.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
         ],
     ],
     'TYPO3\CMS\Extbase\Service\FlexFormService' => [
         'restFiles' => [
             'Deprecation-85802-MoveFlexFormServiceFromEXTextbaseToEXTcore.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
         ],
     ],
     'TYPO3\CMS\Core\Crypto\PasswordHashing\Salt\ComposedPasswordHashInterface' => [
         'restFiles' => [
-            'Deprecation-85804-SaltedPasswordHashClassDeprecations.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
+            'Deprecation-85804-SaltedPasswordHashClassDeprecations.rst'
         ],
     ],
     'TYPO3\CMS\Core\Crypto\PasswordHashing\Salt\AbstractComposedSalt' => [
         'restFiles' => [
-            'Deprecation-85804-SaltedPasswordHashClassDeprecations.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
+            'Deprecation-85804-SaltedPasswordHashClassDeprecations.rst'
         ],
     ],
     'TYPO3\CMS\Core\Crypto\PasswordHashing\Utility\ExtensionManagerConfigurationUtility' => [
         'restFiles' => [
-            'Deprecation-85804-SaltedPasswordHashClassDeprecations.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
+            'Deprecation-85804-SaltedPasswordHashClassDeprecations.rst'
         ],
     ],
     'TYPO3\CMS\Core\Crypto\PasswordHashing\Utility\SaltedPasswordsUtility' => [
         'restFiles' => [
-            'Deprecation-85804-SaltedPasswordHashClassDeprecations.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
+            'Deprecation-85804-SaltedPasswordHashClassDeprecations.rst'
         ],
     ],
     'TYPO3\CMS\Saltedpasswords\Salt\Argon2ISalt' => [
         'restFiles' => [
             'Deprecation-85833-ExtensionSaltedpasswordsMergedIntoCoreExtension.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
         ],
     ],
     'TYPO3\CMS\Saltedpasswords\Salt\BcryptSalt' => [
         'restFiles' => [
             'Deprecation-85833-ExtensionSaltedpasswordsMergedIntoCoreExtension.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
         ],
     ],
     'TYPO3\CMS\Saltedpasswords\Salt\BlowfishSalt' => [
         'restFiles' => [
             'Deprecation-85833-ExtensionSaltedpasswordsMergedIntoCoreExtension.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
         ],
     ],
     'TYPO3\CMS\Saltedpasswords\Exception\InvalidSaltException' => [
         'restFiles' => [
             'Deprecation-85833-ExtensionSaltedpasswordsMergedIntoCoreExtension.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
         ],
     ],
     'TYPO3\CMS\Saltedpasswords\Salt\Md5Salt' => [
         'restFiles' => [
             'Deprecation-85833-ExtensionSaltedpasswordsMergedIntoCoreExtension.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
         ],
     ],
     'TYPO3\CMS\Saltedpasswords\Salt\SaltFactory' => [
         'restFiles' => [
             'Deprecation-85833-ExtensionSaltedpasswordsMergedIntoCoreExtension.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
         ],
     ],
     'TYPO3\CMS\Saltedpasswords\Salt\SaltInterface' => [
         'restFiles' => [
             'Deprecation-85833-ExtensionSaltedpasswordsMergedIntoCoreExtension.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
         ],
     ],
     'TYPO3\CMS\Saltedpasswords\Salt\Pbkdf2Salt' => [
         'restFiles' => [
             'Deprecation-85833-ExtensionSaltedpasswordsMergedIntoCoreExtension.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
         ],
     ],
     'TYPO3\CMS\Saltedpasswords\Salt\PhpassSalt' => [
         'restFiles' => [
             'Deprecation-85833-ExtensionSaltedpasswordsMergedIntoCoreExtension.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
         ],
     ],
     'TYPO3\CMS\Saltedpasswords\Salt\AbstractComposedSalt' => [
         'restFiles' => [
             'Deprecation-85833-ExtensionSaltedpasswordsMergedIntoCoreExtension.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
         ],
     ],
     'TYPO3\CMS\Saltedpasswords\Salt\ComposedSaltInterface' => [
         'restFiles' => [
             'Deprecation-85833-ExtensionSaltedpasswordsMergedIntoCoreExtension.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
         ],
     ],
     'TYPO3\CMS\Saltedpasswords\Utility\ExensionManagerConfigurationUtility' => [
         'restFiles' => [
             'Deprecation-85833-ExtensionSaltedpasswordsMergedIntoCoreExtension.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
+        ],
+    ],
+    'TYPO3\CMS\Saltedpasswords\SaltedPasswordService' => [
+        'restFiles' => [
+            'Deprecation-85833-ExtensionSaltedpasswordsMergedIntoCoreExtension.rst',
         ],
     ],
     'TYPO3\CMS\Saltedpasswords\Utility\SaltedPasswordsUtility' => [
         'restFiles' => [
             'Deprecation-85833-ExtensionSaltedpasswordsMergedIntoCoreExtension.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
         ],
     ],
     'TYPO3\CMS\Workspaces\Service\AutoPublishService' => [
         'restFiles' => [
             'Deprecation-86001-WorkspacesTasksMigratedToSymfonyCommands.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
         ],
     ],
     'TYPO3\CMS\Workspaces\Task\AutoPublishTask' => [
         'restFiles' => [
             'Deprecation-86001-WorkspacesTasksMigratedToSymfonyCommands.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
         ],
     ],
     'TYPO3\CMS\Workspaces\Task\CleanupPreviewLinkTask' => [
         'restFiles' => [
             'Deprecation-86001-WorkspacesTasksMigratedToSymfonyCommands.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
         ],
     ],
     'TYPO3\CMS\Extensionmanager\Command\ExtensionCommandController' => [
         'restFiles' => [
-            'Deprecation-85996-ExtensionManagerCommandController.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
+            'Deprecation-85996-ExtensionManagerCommandController.rst'
         ],
     ],
     'TYPO3\CMS\Frontend\ContentObject\Menu\GraphicalMenuContentObject' => [
         'restFiles' => [
             'Deprecation-85902-IMGMENUGMENU.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
         ],
     ],
     'TYPO3\CMS\Frontend\ContentObject\Menu\ImageMenuContentObject' => [
         'restFiles' => [
             'Deprecation-85902-IMGMENUGMENU.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
         ],
     ],
     'TYPO3\CMS\Extbase\Command\CoreCommand' => [
         'restFiles' => [
             'Deprecation-85977-ExtbaseCommandControllersAndCliAnnotation.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
         ],
     ],
     'TYPO3\CMS\Extbase\Command\ExtbaseCommand' => [
         'restFiles' => [
             'Deprecation-85977-ExtbaseCommandControllersAndCliAnnotation.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
         ],
     ],
     'TYPO3\CMS\Extbase\Command\HelpCommand' => [
         'restFiles' => [
             'Deprecation-85977-ExtbaseCommandControllersAndCliAnnotation.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
         ],
     ],
     'TYPO3\CMS\Extbase\Command\HelpCommandController' => [
         'restFiles' => [
             'Deprecation-85977-ExtbaseCommandControllersAndCliAnnotation.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
         ],
     ],
     'TYPO3\CMS\Extbase\Mvc\Cli\Command' => [
         'restFiles' => [
             'Deprecation-85977-ExtbaseCommandControllersAndCliAnnotation.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
         ],
     ],
     'TYPO3\CMS\Extbase\Mvc\Cli\CommandArgumentDefinition' => [
         'restFiles' => [
             'Deprecation-85977-ExtbaseCommandControllersAndCliAnnotation.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
         ],
     ],
     'TYPO3\CMS\Extbase\Mvc\Cli\CommandManager' => [
         'restFiles' => [
             'Deprecation-85977-ExtbaseCommandControllersAndCliAnnotation.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
         ],
     ],
     'TYPO3\CMS\Extbase\Mvc\Cli\ConsoleOutput' => [
         'restFiles' => [
             'Deprecation-85977-ExtbaseCommandControllersAndCliAnnotation.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
         ],
     ],
     'TYPO3\CMS\Extbase\Mvc\Cli\Request' => [
         'restFiles' => [
             'Deprecation-85977-ExtbaseCommandControllersAndCliAnnotation.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
         ],
     ],
     'TYPO3\CMS\Extbase\Mvc\Cli\RequestBuilder' => [
         'restFiles' => [
             'Deprecation-85977-ExtbaseCommandControllersAndCliAnnotation.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
         ],
     ],
     'TYPO3\CMS\Extbase\Mvc\Cli\RequestHandler' => [
         'restFiles' => [
             'Deprecation-85977-ExtbaseCommandControllersAndCliAnnotation.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
         ],
     ],
     'TYPO3\CMS\Extbase\Mvc\Controller\CommandController' => [
         'restFiles' => [
             'Deprecation-85977-ExtbaseCommandControllersAndCliAnnotation.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
         ],
     ],
     'TYPO3\CMS\Extbase\Mvc\Exception\AmbiguousCommandIdentifierException' => [
         'restFiles' => [
             'Deprecation-85977-ExtbaseCommandControllersAndCliAnnotation.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
         ],
     ],
     'TYPO3\CMS\Extbase\Mvc\Exception\CommandException' => [
         'restFiles' => [
             'Deprecation-85977-ExtbaseCommandControllersAndCliAnnotation.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
-        ],
-    ],
-    'TYPO3\CMS\Extbase\Mvc\Exception\NoSuchCommandException' => [
-        'restFiles' => [
-            'Deprecation-85977-ExtbaseCommandControllersAndCliAnnotation.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
         ],
     ],
     'TYPO3\CMS\Extbase\Scheduler\FieldProvider' => [
         'restFiles' => [
             'Deprecation-85977-ExtbaseCommandControllersAndCliAnnotation.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
         ],
     ],
     'TYPO3\CMS\Extbase\Scheduler\Task' => [
         'restFiles' => [
             'Deprecation-85977-ExtbaseCommandControllersAndCliAnnotation.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
         ],
     ],
     'TYPO3\CMS\Extbase\Scheduler\TaskExecutor' => [
         'restFiles' => [
             'Deprecation-85977-ExtbaseCommandControllersAndCliAnnotation.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
         ],
     ],
     'TYPO3\CMS\Core\Resource\Service\UserStorageCapabilityService' => [
         'restFiles' => [
             'Deprecation-86109-ClassUserStorageCapabilityService.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
-        ],
-    ],
-    'TYPO3\CMS\Core\Cache\Frontend\StringFrontend' => [
-        'restFiles' => [
-            'Deprecation-81434-StringCacheFrontendDeprecated.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
         ],
     ],
     'TYPO3\CMS\Backend\Module\BaseScriptClass' => [
         'restFiles' => [
             'Deprecation-86225-ClassesBaseScriptClassAndAbstractFunctionModule.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
         ],
     ],
     'TYPO3\CMS\Backend\Module\AbstractFunctionModule' => [
         'restFiles' => [
             'Deprecation-86225-ClassesBaseScriptClassAndAbstractFunctionModule.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
         ],
     ],
     'TYPO3\CMS\Install\Updates\AbstractUpdate' => [
@@ -1065,271 +952,135 @@ return [
             'Deprecation-86366-MethodsInAbstractUpdate.rst'
         ],
     ],
-    'TYPO3\CMS\Core\Resource\Utility\BackendUtility' => [
+    'TYPO3\CMS\Core\Cache\Frontend\StringFrontend' => [
         'restFiles' => [
-            'Deprecation-73585-DeprecateTYPO3CMSCoreResourceUtilityBackendUtilitygetFlashMessageForMissingFile.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
-        ],
-    ],
-    'TYPO3\CMS\Core\PageTitle\AltPageTitleProvider' => [
-        'restFiles' => [
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
-        ],
-    ],
-    'TYPO3\CMS\Frontend\Page\PageGenerator' => [
-        'restFiles' => [
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
-        ],
-    ],
-    'TYPO3\CMS\Frontend\Utility\EidUtility' => [
-        'restFiles' => [
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
+            'Deprecation-81434-StringCacheFrontendDeprecated.rst',
         ],
     ],
     'TYPO3\CMS\Fluid\Core\Compiler\TemplateCompiler' => [
         'restFiles' => [
             'Deprecation-87277-FluidClassAliases.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
             'Breaking-73046-AliasAbstractNode-ViewHelperNodeForBackwardsCompatibility.rst',
         ],
     ],
     'TYPO3\CMS\Fluid\Core\Exception' => [
         'restFiles' => [
             'Deprecation-87277-FluidClassAliases.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
         ],
     ],
     'TYPO3\CMS\Fluid\Core\Parser\SyntaxTree\AbstractNode'=> [
         'restFiles' => [
             'Deprecation-87277-FluidClassAliases.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
             'Breaking-73046-AliasAbstractNode-ViewHelperNodeForBackwardsCompatibility.rst',
         ],
     ],
     'TYPO3\CMS\Fluid\Core\Parser\InterceptorInterface' => [
         'restFiles' => [
             'Deprecation-87277-FluidClassAliases.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
         ],
     ],
     'TYPO3\CMS\Fluid\Core\Parser\SyntaxTree\NodeInterface' => [
         'restFiles' => [
             'Deprecation-87277-FluidClassAliases.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
         ],
     ],
     'TYPO3\CMS\Fluid\Core\Parser\SyntaxTree\RootNode' => [
         'restFiles' => [
             'Deprecation-87277-FluidClassAliases.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
         ],
     ],
     'TYPO3\CMS\Fluid\Core\Parser\SyntaxTree\ViewHelperNode' => [
         'restFiles' => [
             'Deprecation-87277-FluidClassAliases.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
         ],
     ],
     'TYPO3\CMS\Fluid\Core\Rendering\RenderingContextInterface' => [
         'restFiles' => [
             'Deprecation-87277-FluidClassAliases.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
         ],
     ],
     'TYPO3\CMS\Fluid\Core\ViewHelper\AbstractConditionViewHelper' => [
         'restFiles' => [
             'Deprecation-87277-FluidClassAliases.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
             'Breaking-82414-RemoveCMSBaseViewHelperClasses.rst',
         ],
     ],
     'TYPO3\CMS\Fluid\Core\ViewHelper\AbstractTagBasedViewHelper' => [
         'restFiles' => [
             'Deprecation-87277-FluidClassAliases.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
             'Breaking-82414-RemoveCMSBaseViewHelperClasses.rst',
         ],
     ],
     'TYPO3\CMS\Fluid\Core\ViewHelper\AbstractViewHelper' => [
         'restFiles' => [
             'Deprecation-87277-FluidClassAliases.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
             'Breaking-82414-RemoveCMSBaseViewHelperClasses.rst',
         ],
     ],
     'TYPO3\CMS\Fluid\Core\ViewHelper\ArgumentDefinition' => [
         'restFiles' => [
             'Deprecation-87277-FluidClassAliases.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
             'Breaking-82414-RemoveCMSBaseViewHelperClasses.rst',
         ],
     ],
     'TYPO3\CMS\Fluid\Core\ViewHelper\Exception' => [
         'restFiles' => [
             'Deprecation-87277-FluidClassAliases.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
         ],
     ],
     'TYPO3\CMS\Fluid\Core\ViewHelper\Exception\InvalidVariableException' => [
         'restFiles' => [
             'Deprecation-87277-FluidClassAliases.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
         ],
     ],
     'TYPO3\CMS\Fluid\Core\ViewHelper\Facets\ChildNodeAccessInterface' => [
         'restFiles' => [
             'Deprecation-87277-FluidClassAliases.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
         ],
     ],
     'TYPO3\CMS\Fluid\Core\ViewHelper\Facets\CompilableInterface' => [
         'restFiles' => [
             'Deprecation-87277-FluidClassAliases.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
         ],
     ],
     'TYPO3\CMS\Fluid\Core\ViewHelper\Facets\PostParseInterface' => [
         'restFiles' => [
             'Deprecation-87277-FluidClassAliases.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
         ],
     ],
     'TYPO3\CMS\Fluid\Core\ViewHelper\TagBuilder' => [
         'restFiles' => [
             'Deprecation-87277-FluidClassAliases.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
         ],
     ],
     'TYPO3\CMS\Fluid\Core\ViewHelper\TemplateVariableContainer' => [
         'restFiles' => [
             'Deprecation-87277-FluidClassAliases.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
         ],
     ],
     'TYPO3\CMS\Fluid\Core\ViewHelper\ViewHelperInterface' => [
         'restFiles' => [
             'Deprecation-87277-FluidClassAliases.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
         ],
     ],
     'TYPO3\CMS\Fluid\Core\ViewHelper\ViewHelperVariableContainer' => [
         'restFiles' => [
             'Deprecation-87277-FluidClassAliases.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
         ],
     ],
     'TYPO3\CMS\Fluid\View\Exception' => [
         'restFiles' => [
             'Deprecation-87277-FluidClassAliases.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
         ],
     ],
     'TYPO3\CMS\Fluid\View\Exception\InvalidSectionException' => [
         'restFiles' => [
             'Deprecation-87277-FluidClassAliases.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
         ],
     ],
     'TYPO3\CMS\Fluid\View\Exception\InvalidTemplateResourceException' => [
         'restFiles' => [
             'Deprecation-87277-FluidClassAliases.rst',
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
-        ],
-    ],
-    'TYPO3\CMS\Core\Http\RequestHandlerInterface' => [
-        'restFiles' => [
-            'Important-87516-RemoveCoreHTTPRequestHandlerInterface.rst',
-        ],
-    ],
-    'TYPO3\CMS\Backend\Controller\File\CreateFolderController' => [
-        'restFiles' => [
-            'Deprecation-87882-FileRelatedControllersMovedToEXTfilelist.rst',
-        ],
-    ],
-    'TYPO3\CMS\Backend\Controller\File\EditFileController' => [
-        'restFiles' => [
-            'Deprecation-87882-FileRelatedControllersMovedToEXTfilelist.rst',
-        ],
-    ],
-    'TYPO3\CMS\Backend\Controller\File\FileUploadController' => [
-        'restFiles' => [
-            'Deprecation-87882-FileRelatedControllersMovedToEXTfilelist.rst'
-        ],
-    ],
-    'TYPO3\CMS\Backend\Controller\File\RenameFileController' => [
-        'restFiles' => [
-            'Deprecation-87882-FileRelatedControllersMovedToEXTfilelist.rst'
-        ],
-    ],
-    'TYPO3\CMS\Backend\Controller\File\ReplaceFileController' => [
-        'restFiles' => [
-            'Deprecation-87882-FileRelatedControllersMovedToEXTfilelist.rst'
-        ],
-    ],
-    'TYPO3\CMS\Core\Site\Entity\PseudoSite' => [
-        'restFiles' => [
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
-        ],
-    ],
-    'TYPO3\CMS\Core\Site\PseudoSiteFinder' => [
-        'restFiles' => [
-            'Breaking-87193-DeprecatedFunctionalityRemoved.rst',
-        ],
-    ],
-    'TYPO3\CMS\Lowlevel\Command\RteImagesCommand' => [
-        'restFiles' => [
-            'Breaking-88500-RTEImageHandlingFunctionalityDropped.rst'
-        ],
-    ],
-    'TYPO3\CMS\Frontend\Page\PageRepository' => [
-        'restFiles' => [
-            'Deprecation-88746-PageRepositoryPHPClassMovedFromFrontendToCoreExtension.rst'
-        ],
-    ],
-    'TYPO3\CMS\Frontend\Page\PageRepositoryGetPageHookInterface' => [
-        'restFiles' => [
-            'Deprecation-88746-PageRepositoryPHPClassMovedFromFrontendToCoreExtension.rst'
-        ],
-    ],
-    'TYPO3\CMS\Frontend\Page\PageRepositoryGetPageOverlayHookInterface' => [
-        'restFiles' => [
-            'Deprecation-88746-PageRepositoryPHPClassMovedFromFrontendToCoreExtension.rst'
-        ],
-    ],
-    'TYPO3\CMS\Frontend\Page\PageRepositoryGetRecordOverlayHookInterface' => [
-        'restFiles' => [
-            'Deprecation-88746-PageRepositoryPHPClassMovedFromFrontendToCoreExtension.rst'
-        ],
-    ],
-    'TYPO3\CMS\Frontend\Page\PageRepositoryInitHookInterface' => [
-        'restFiles' => [
-            'Deprecation-88746-PageRepositoryPHPClassMovedFromFrontendToCoreExtension.rst'
-        ],
-    ],
-    'TYPO3\CMS\Extbase\Configuration\AbstractConfigurationManager' => [
-        'restFiles' => [
-            'Breaking-88496-MethodGetSwitchableControllerActionsHasBeenRemoved.rst'
-        ],
-    ],
-    'TYPO3\CMS\Adminpanel\ModuleApi\InitializableInterface' => [
-        'restFiles' => [
-            'Deprecation-88807-AdminPanelInitializableInterfaceHasBeenDeprecated.rst',
-            'Feature-88807-AdminPanelRequestEnricherInterfaceHasBeenIntroduced.rst',
-        ],
-    ],
-    'TYPO3\CMS\Core\Console\CommandRequestHandler' => [
-        'restFiles' => [
-            'Deprecation-88839-CLILowlevelRequestHandlers.rst',
-        ],
-    ],
-    'TYPO3\CMS\Core\Console\RequestHandlerInterface' => [
-        'restFiles' => [
-            'Deprecation-88839-CLILowlevelRequestHandlers.rst',
-        ],
-    ],
-    'TYPO3\CMS\Core\Localization\Parser\LocallangXmlParser' => [
-        'restFiles' => [
-            'Deprecation-89037-DeprecatedLocallangXmlParser.rst',
         ],
     ],
 ];

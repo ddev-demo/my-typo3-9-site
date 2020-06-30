@@ -1,6 +1,4 @@
 <?php
-declare(strict_types = 1);
-
 namespace TYPO3\CMS\Extbase\Property\Exception;
 
 /*
@@ -16,11 +14,9 @@ namespace TYPO3\CMS\Extbase\Property\Exception;
  * The TYPO3 project - inspiring people to share!
  */
 
-use TYPO3\CMS\Extbase\Property\Exception;
-
 /**
  * An "Invalid Target" Exception
  */
-class InvalidTargetException extends Exception
+class InvalidTargetException extends \TYPO3\CMS\Extbase\Property\Exception
 {
 }

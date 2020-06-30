@@ -1,6 +1,4 @@
 <?php
-declare(strict_types = 1);
-
 namespace TYPO3\CMS\Extbase\Configuration;
 
 /*
@@ -29,14 +27,14 @@ interface ConfigurationManagerInterface extends \TYPO3\CMS\Core\SingletonInterfa
     /**
      * @param \TYPO3\CMS\Frontend\ContentObject\ContentObjectRenderer $contentObject
      */
-    public function setContentObject(\TYPO3\CMS\Frontend\ContentObject\ContentObjectRenderer $contentObject): void;
+    public function setContentObject(\TYPO3\CMS\Frontend\ContentObject\ContentObjectRenderer $contentObject = null);
 
     /**
      * Get the content object
      *
-     * @return \TYPO3\CMS\Frontend\ContentObject\ContentObjectRenderer|null
+     * @return \TYPO3\CMS\Frontend\ContentObject\ContentObjectRenderer
      */
-    public function getContentObject(): ?\TYPO3\CMS\Frontend\ContentObject\ContentObjectRenderer;
+    public function getContentObject();
 
     /**
      * Returns the specified configuration.
@@ -49,7 +47,7 @@ interface ConfigurationManagerInterface extends \TYPO3\CMS\Core\SingletonInterfa
      * @param string $pluginName if specified, the configuration for the given plugin will be returned.
      * @return array The configuration
      */
-    public function getConfiguration(string $configurationType, ?string $extensionName = null, ?string $pluginName = null): array;
+    public function getConfiguration($configurationType, $extensionName = null, $pluginName = null);
 
     /**
      * Sets the specified raw configuration coming from the outside.
@@ -57,7 +55,7 @@ interface ConfigurationManagerInterface extends \TYPO3\CMS\Core\SingletonInterfa
      *
      * @param array $configuration The new configuration
      */
-    public function setConfiguration(array $configuration = []): void;
+    public function setConfiguration(array $configuration = []);
 
     /**
      * Returns TRUE if a certain feature, identified by $featureName
@@ -69,5 +67,5 @@ interface ConfigurationManagerInterface extends \TYPO3\CMS\Core\SingletonInterfa
      * @param string $featureName
      * @return bool
      */
-    public function isFeatureEnabled(string $featureName): bool;
+    public function isFeatureEnabled($featureName);
 }

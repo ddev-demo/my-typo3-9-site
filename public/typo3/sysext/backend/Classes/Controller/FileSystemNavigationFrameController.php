@@ -22,6 +22,7 @@ use TYPO3\CMS\Backend\Template\Components\ButtonBar;
 use TYPO3\CMS\Backend\Template\ModuleTemplate;
 use TYPO3\CMS\Backend\Tree\View\ElementBrowserFolderTreeView;
 use TYPO3\CMS\Core\Authentication\BackendUserAuthentication;
+use TYPO3\CMS\Core\Compatibility\PublicPropertyDeprecationTrait;
 use TYPO3\CMS\Core\Http\HtmlResponse;
 use TYPO3\CMS\Core\Http\JsonResponse;
 use TYPO3\CMS\Core\Imaging\Icon;
@@ -37,6 +38,20 @@ use TYPO3\CMS\Recordlist\Tree\View\DummyLinkParameterProvider;
  */
 class FileSystemNavigationFrameController
 {
+    use PublicPropertyDeprecationTrait;
+
+    /**
+     * Properties which have been moved to protected status from public
+     *
+     * @var array
+     */
+    protected $deprecatedPublicProperties = [
+        'content' => 'Using $content of class FileSystemNavigationFrameController from the outside is discouraged, as this variable is only used for internal storage.',
+        'foldertree' => 'Using $foldertree of class FileSystemNavigationFrameController from the outside is discouraged, as this variable is only used for internal storage.',
+        'currentSubScript' => 'Using $currentSubScript of class FileSystemNavigationFrameController from the outside is discouraged, as this variable is only used for internal storage.',
+        'cMR' => 'Using $cMR of class FileSystemNavigationFrameController from the outside is discouraged, as this variable is only used for internal storage.',
+    ];
+
     /**
      * Content accumulates in this variable.
      *
@@ -72,12 +87,23 @@ class FileSystemNavigationFrameController
     protected $moduleTemplate;
 
     /**
+     * Constructor
+     */
+    public function __construct()
+    {
+        // @deprecated since TYPO3 v9, will be obsolete in TYPO3 v10.0 with removal of init()
+        $request = $GLOBALS['TYPO3_REQUEST'];
+        $GLOBALS['SOBE'] = $this;
+        // @deprecated since TYPO3 v9, will be moved out of __construct() in TYPO3 v10.0
+        $this->init($request);
+    }
+
+    /**
      * @param ServerRequestInterface $request the current request
      * @return ResponseInterface the response with the content
      */
     public function mainAction(ServerRequestInterface $request): ResponseInterface
     {
-        $this->init($request);
         $this->initializePageTemplate();
         $this->renderFolderTree($request);
         return new HtmlResponse($this->content);
@@ -92,7 +118,6 @@ class FileSystemNavigationFrameController
      */
     public function ajaxExpandCollapse(ServerRequestInterface $request): ResponseInterface
     {
-        $this->init($request);
         $tree = $this->foldertree->getBrowsableTree();
         if ($this->foldertree->getAjaxStatus() === false) {
             return new JsonResponse(null, 500);
@@ -105,8 +130,14 @@ class FileSystemNavigationFrameController
      *
      * @param ServerRequestInterface $request the current request
      */
-    protected function init(ServerRequestInterface $request)
+    protected function init(ServerRequestInterface $request = null)
     {
+        if ($request === null) {
+            // Method signature in TYPO3 v10.0: protected function init(ServerRequestInterface $request)
+            trigger_error('FileSystemNavigationFrameController->init() will be set to protected in TYPO3 v10.0. Do not call from other extension.', E_USER_DEPRECATED);
+            $request = $GLOBALS['TYPO3_REQUEST'];
+        }
+
         $this->moduleTemplate = GeneralUtility::makeInstance(ModuleTemplate::class);
 
         $parsedBody = $request->getParsedBody();
@@ -118,7 +149,7 @@ class FileSystemNavigationFrameController
         $scopeHash = $parsedBody['scopeHash'] ?? $queryParams['scopeHash'] ?? '';
 
         if (!empty($scopeData) && hash_equals(GeneralUtility::hmac($scopeData), $scopeHash)) {
-            $this->scopeData = unserialize($scopeData);
+            $this->scopeData = json_decode($scopeData, true);
         }
 
         // Create folder tree object:
@@ -139,6 +170,18 @@ class FileSystemNavigationFrameController
             $this->foldertree = GeneralUtility::makeInstance(FileListFolderTree::class);
             $this->foldertree->thisScript = (string)$uriBuilder->buildUriFromRoute('file_navframe');
         }
+    }
+
+    /**
+     * initialization for the visual parts of the class
+     * Use template rendering only if this is a non-AJAX call
+     *
+     * @deprecated since TYPO3 v9, will be removed in TYPO3 v10.0
+     */
+    public function initPage()
+    {
+        trigger_error('FileSystemNavigationFrameController->initPage() will be replaced by protected method initializePageTemplate() in TYPO3 v10.0. Do not call from other extension.', E_USER_DEPRECATED);
+        $this->initializePageTemplate();
     }
 
     /**
@@ -188,6 +231,17 @@ class FileSystemNavigationFrameController
             'FileSystemNavigationFrame',
             $inlineJs
         );
+    }
+
+    /**
+     * Main function, rendering the folder tree
+     *
+     * @deprecated since TYPO3 v9, will be removed in TYPO3 v10.0
+     */
+    public function main()
+    {
+        trigger_error('FileSystemNavigationFrameController->main() will be replaced by protected method renderFolderTree() in TYPO3 v10.0. Do not call from other extension.', E_USER_DEPRECATED);
+        $this->renderFolderTree($GLOBALS['TYPO3_REQUEST']);
     }
 
     /**

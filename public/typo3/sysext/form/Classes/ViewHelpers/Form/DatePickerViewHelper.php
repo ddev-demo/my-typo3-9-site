@@ -127,6 +127,8 @@ class DatePickerViewHelper extends AbstractFormFieldViewHelper
             ->getViewHelperVariableContainer()
             ->get(RenderRenderableViewHelper::class, 'formRuntime');
 
+        $formState = $formRuntime->getFormState();
+
         $date = $formRuntime[$this->arguments['property']];
         if ($date instanceof \DateTime) {
             return $date;

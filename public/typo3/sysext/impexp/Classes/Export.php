@@ -61,6 +61,24 @@ use TYPO3\CMS\Core\Utility\PathUtility;
 class Export extends ImportExport
 {
     /**
+     * @deprecated since TYPO3 v9, will be removed in TYPO3 v10.0. In v10, just remove property, it is not used any longer.
+     * @var int
+     */
+    public $maxFileSize = 1000000;
+
+    /**
+     * @deprecated since TYPO3 v9, will be removed in TYPO3 v10.0. In v10, just remove property, it is not used any longer.
+     * @var int
+     */
+    public $maxRecordSize = 1000000;
+
+    /**
+     * @deprecated since TYPO3 v9, will be removed in TYPO3 v10.0. In v10, just remove property, it is not used any longer.
+     * @var int
+     */
+    public $maxExportSize = 10000000;
+
+    /**
      * Set  by user: If set, compression in t3d files is disabled
      *
      * @var bool
@@ -728,6 +746,32 @@ class Export extends ImportExport
         $this->dat['files'][$fI['ID']] = $fileRec;
         // For soft references, do further processing:
         if ($recordRef === '_SOFTREF_') {
+            // RTE files?
+            if ($RTEoriginal = $this->getRTEoriginalFilename(PathUtility::basename($fI['ID_absFile']))) {
+                $RTEoriginal_absPath = PathUtility::dirname($fI['ID_absFile']) . '/' . $RTEoriginal;
+                if (@is_file($RTEoriginal_absPath)) {
+                    $RTEoriginal_ID = md5($RTEoriginal_absPath);
+                    $fileInfo = stat($RTEoriginal_absPath);
+                    $fileRec = [];
+                    $fileRec['filename'] = PathUtility::basename($RTEoriginal_absPath);
+                    $fileRec['filemtime'] = $fileInfo['mtime'];
+                    $fileRec['record_ref'] = '_RTE_COPY_ID:' . $fI['ID'];
+                    $this->dat['header']['files'][$fI['ID']]['RTE_ORIG_ID'] = $RTEoriginal_ID;
+                    // Setting this data in the header
+                    $this->dat['header']['files'][$RTEoriginal_ID] = $fileRec;
+                    $fileMd5 = md5_file($RTEoriginal_absPath);
+                    if (!$this->saveFilesOutsideExportFile) {
+                        // ... and finally add the heavy stuff:
+                        $fileRec['content'] = file_get_contents($RTEoriginal_absPath);
+                    } else {
+                        GeneralUtility::upload_copy_move($RTEoriginal_absPath, $this->getTemporaryFilesPathForExport() . $fileMd5);
+                    }
+                    $fileRec['content_md5'] = $fileMd5;
+                    $this->dat['files'][$RTEoriginal_ID] = $fileRec;
+                } else {
+                    $this->error('RTE original file "' . PathUtility::stripPathSitePrefix($RTEoriginal_absPath) . '" was not found!');
+                }
+            }
             // Files with external media?
             // This is only done with files grabbed by a softreference parser since it is deemed improbable that hard-referenced files should undergo this treatment.
             $html_fI = pathinfo(PathUtility::basename($fI['ID_absFile']));
@@ -986,9 +1030,11 @@ class Export extends ImportExport
                         'relations' => 'element',
                         'filerefs' => 'file',
                         'flexform:db' => 'db_relations',
+                        'flexform:file' => 'file_relations',
                         'flexform:softrefs' => 'softref_relations',
                         'softref_relations' => 'structurePath',
                         'db_relations' => 'path',
+                        'file_relations' => 'path',
                         'path' => 'element',
                         'keys' => 'softref_key',
                         'softref_key' => 'softref_element'

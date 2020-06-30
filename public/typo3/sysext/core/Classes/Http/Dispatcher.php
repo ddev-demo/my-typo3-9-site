@@ -14,9 +14,9 @@ namespace TYPO3\CMS\Core\Http;
  * The TYPO3 project - inspiring people to share!
  */
 
-use Psr\Container\ContainerInterface;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
+use TYPO3\CMS\Core\Configuration\Features;
 use TYPO3\CMS\Core\Utility\GeneralUtility;
 
 /**
@@ -28,27 +28,45 @@ use TYPO3\CMS\Core\Utility\GeneralUtility;
 class Dispatcher implements DispatcherInterface
 {
     /**
-     * @var ContainerInterface
-     */
-    protected $container;
-
-    public function __construct(ContainerInterface $container)
-    {
-        $this->container = $container;
-    }
-
-    /**
      * Main method that fetches the target from the request and calls the target directly
      *
      * @param ServerRequestInterface $request the current server request
+     * @param ResponseInterface $response the prepared response @deprecated since TYPO3 v9, will be removed in TYPO3 v10.0
      * @return ResponseInterface the filled response by the callable/controller/action
      * @throws \InvalidArgumentException if the defined target is invalid
      */
-    public function dispatch(ServerRequestInterface $request): ResponseInterface
+    public function dispatch(ServerRequestInterface $request, ResponseInterface $response = null): ResponseInterface
     {
         $targetIdentifier = $request->getAttribute('target');
         $target = $this->getCallableFromTarget($targetIdentifier);
         $arguments = [$request];
+
+        // @deprecated Test if target accepts one (ok) or two (deprecated) arguments
+        $scanForResponse = !GeneralUtility::makeInstance(Features::class)
+            ->isFeatureEnabled('simplifiedControllerActionDispatching');
+        if ($scanForResponse) {
+            if (is_array($targetIdentifier)) {
+                $controllerActionName = implode('::', $targetIdentifier);
+                $targetReflection = new \ReflectionMethod($controllerActionName);
+            } elseif (is_string($targetIdentifier) && strpos($targetIdentifier, '::') !== false) {
+                $controllerActionName = $targetIdentifier;
+                $targetReflection = new \ReflectionMethod($controllerActionName);
+            } elseif (is_callable($targetIdentifier)) {
+                $controllerActionName = 'closure function';
+                $targetReflection = new \ReflectionFunction($targetIdentifier);
+            } else {
+                $controllerActionName = $targetIdentifier . '::__invoke';
+                $targetReflection = new \ReflectionMethod($controllerActionName);
+            }
+            if ($targetReflection->getNumberOfParameters() >= 2) {
+                trigger_error(
+                    'Handing over second argument $response to controller action ' . $controllerActionName . '() is deprecated and will be removed in TYPO3 v10.0.',
+                    E_USER_DEPRECATED
+                );
+                $arguments[] = $response;
+            }
+        }
+
         return call_user_func_array($target, $arguments);
     }
 
@@ -72,7 +90,7 @@ class Dispatcher implements DispatcherInterface
 
         // Only a class name is given
         if (is_string($target) && strpos($target, ':') === false) {
-            $targetObject = $this->container->has($target) ? $this->container->get($target) : GeneralUtility::makeInstance($target);
+            $targetObject = GeneralUtility::makeInstance($target);
             if (!method_exists($targetObject, '__invoke')) {
                 throw new \InvalidArgumentException('Object "' . $target . '" doesn\'t implement an __invoke() method and cannot be used as target.', 1442431631);
             }
@@ -82,7 +100,7 @@ class Dispatcher implements DispatcherInterface
         // Check if the target is a concatenated string of "className::actionMethod"
         if (is_string($target) && strpos($target, '::') !== false) {
             list($className, $methodName) = explode('::', $target, 2);
-            $targetObject = $this->container->has($className) ? $this->container->get($className) : GeneralUtility::makeInstance($className);
+            $targetObject = GeneralUtility::makeInstance($className);
             return [$targetObject, $methodName];
         }
 

@@ -4,19 +4,21 @@ $EM_CONF[$_EXTKEY] = [
     'description' => 'Form Library, Plugin and Editor',
     'category' => 'misc',
     'state' => 'stable',
+    'uploadfolder' => 0,
+    'createDirs' => '',
     'clearCacheOnLoad' => 1,
     'author' => 'TYPO3 Core Team',
     'author_email' => 'typo3cms@typo3.org',
     'author_company' => '',
-    'version' => '10.1.0',
+    'version' => '9.5.19',
     'constraints' => [
         'depends' => [
-            'typo3' => '10.1.0',
+            'typo3' => '9.5.19',
         ],
         'conflicts' => [],
         'suggests' => [
-            'filelist' => '10.1.0',
-            'impexp' => '10.1.0',
+            'filelist' => '9.5.19',
+            'impexp' => '9.5.19',
         ],
     ],
 ];

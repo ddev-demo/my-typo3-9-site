@@ -16,14 +16,7 @@
  * Contains all JS functions related to TYPO3 TCEforms/FormEngineValidation
  * @internal
  */
-define([
-  'jquery',
-  'moment',
-  'TYPO3/CMS/Backend/Hashing/Md5',
-  'TYPO3/CMS/Backend/DocumentSaveActions',
-  'TYPO3/CMS/Backend/Modal',
-  'TYPO3/CMS/Backend/Severity'
-], function($, moment, Md5, DocumentSaveActions, Modal, Severity) {
+define(['jquery', 'moment'], function($, moment) {
 
   /**
    * The main FormEngineValidation object
@@ -58,8 +51,6 @@ define([
         FormEngineValidation.validate();
         FormEngineValidation.markFieldAsChanged($(this));
       });
-
-      FormEngineValidation.registerSubmitCallback();
     });
 
     var today = new Date();
@@ -440,7 +431,7 @@ define([
         break;
       case 'md5':
         if (value !== '') {
-          returnValue = Md5.hash(value);
+          returnValue = MD5(value);
         }
         break;
       case 'upper':
@@ -545,12 +536,7 @@ define([
    */
   FormEngineValidation.markFieldAsChanged = function($field) {
     var $paletteField = $field.closest('.t3js-formengine-palette-field');
-
-    if ($field.data('original-value') && $field.data('original-value') == $field.val()) {
-      $paletteField.removeClass('has-change');
-    } else {
-      $paletteField.addClass('has-change');
-    }
+    $paletteField.addClass('has-change');
   };
 
   /**
@@ -1033,30 +1019,6 @@ define([
     }
     return result;
   };
-
-  FormEngineValidation.registerSubmitCallback = function () {
-    DocumentSaveActions.getInstance().addPreSubmitCallback(function (e) {
-      if ($('.' + FormEngineValidation.errorClass).length > 0) {
-        Modal.confirm(
-          TYPO3.lang.alert || 'Alert',
-          TYPO3.lang['FormEngine.fieldsMissing'],
-          Severity.error,
-          [
-            {
-              text: TYPO3.lang['button.ok'] || 'OK',
-              active: true,
-              btnClass: 'btn-default',
-              name: 'ok',
-            },
-          ]
-        ).on('button.clicked', function () {
-          Modal.dismiss();
-        });
-
-        e.stopImmediatePropagation();
-      }
-    });
-  }
 
   return FormEngineValidation;
 });

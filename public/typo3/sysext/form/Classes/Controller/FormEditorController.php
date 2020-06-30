@@ -25,17 +25,13 @@ use TYPO3\CMS\Core\Page\PageRenderer;
 use TYPO3\CMS\Core\Site\Entity\Site;
 use TYPO3\CMS\Core\Site\Entity\SiteLanguage;
 use TYPO3\CMS\Core\Utility\ArrayUtility;
-use TYPO3\CMS\Core\Utility\Exception\MissingArrayPathException;
 use TYPO3\CMS\Core\Utility\GeneralUtility;
 use TYPO3\CMS\Extbase\Mvc\View\JsonView;
 use TYPO3\CMS\Fluid\View\TemplateView;
-use TYPO3\CMS\Form\Domain\Configuration\ArrayProcessing\ArrayProcessing;
-use TYPO3\CMS\Form\Domain\Configuration\ArrayProcessing\ArrayProcessor;
 use TYPO3\CMS\Form\Domain\Configuration\ConfigurationService;
 use TYPO3\CMS\Form\Domain\Configuration\FormDefinitionConversionService;
 use TYPO3\CMS\Form\Domain\Exception\RenderingException;
 use TYPO3\CMS\Form\Domain\Factory\ArrayFormFactory;
-use TYPO3\CMS\Form\Domain\Finishers\EmailFinisher;
 use TYPO3\CMS\Form\Exception;
 use TYPO3\CMS\Form\Mvc\Persistence\Exception\PersistenceManagerException;
 use TYPO3\CMS\Form\Service\TranslationService;
@@ -123,11 +119,23 @@ class FormEditorController extends AbstractBackendController
 
         $this->getPageRenderer()->addInlineLanguageLabelFile('EXT:form/Resources/Private/Language/locallang_formEditor_failSafeErrorHandling_javascript.xlf');
 
+        $popupWindowWidth  = 700;
+        $popupWindowHeight = 750;
+        $popupWindowSize = \trim($this->getBackendUser()->getTSConfig()['options.']['popupWindowSize'] ?? '');
+        if (!empty($popupWindowSize)) {
+            list($popupWindowWidth, $popupWindowHeight) = GeneralUtility::intExplode('x', $popupWindowSize);
+        }
         $uriBuilder = GeneralUtility::makeInstance(UriBuilder::class);
         $addInlineSettings = [
             'FormEditor' => [
                 'typo3WinBrowserUrl' => (string)$uriBuilder->buildUriFromRoute('wizard_element_browser'),
             ],
+            'Popup' => [
+                'PopupWindow' => [
+                    'width' => $popupWindowWidth,
+                    'height' => $popupWindowHeight
+                ],
+            ]
         ];
 
         $addInlineSettings = array_replace_recursive(
@@ -273,7 +281,7 @@ class FormEditorController extends AbstractBackendController
 
             $formElementConfiguration = TranslationService::getInstance()->translateValuesRecursive(
                 $formElementConfiguration,
-                $this->prototypeConfiguration['formEditor']['translationFiles'] ?? []
+                $this->prototypeConfiguration['formEditor']['translationFile'] ?? null
             );
 
             $formElementsByGroup[$formElementConfiguration['group']][] = [
@@ -298,7 +306,7 @@ class FormEditorController extends AbstractBackendController
 
             $groupConfiguration = TranslationService::getInstance()->translateValuesRecursive(
                 $groupConfiguration,
-                $this->prototypeConfiguration['formEditor']['translationFiles'] ?? []
+                $this->prototypeConfiguration['formEditor']['translationFile'] ?? null
             );
 
             $formGroups[] = [
@@ -338,7 +346,7 @@ class FormEditorController extends AbstractBackendController
         $formEditorDefinitions = ArrayUtility::reIndexNumericArrayKeysRecursive($formEditorDefinitions);
         $formEditorDefinitions = TranslationService::getInstance()->translateValuesRecursive(
             $formEditorDefinitions,
-            $this->prototypeConfiguration['formEditor']['translationFiles'] ?? []
+            $this->prototypeConfiguration['formEditor']['translationFile'] ?? null
         );
         return $formEditorDefinitions;
     }
@@ -472,49 +480,23 @@ class FormEditorController extends AbstractBackendController
      */
     protected function transformFormDefinitionForFormEditor(array $formDefinition): array
     {
-        $multiValueFormElementProperties = [];
-        $multiValueFinisherProperties = [];
-
+        $multiValueProperties = [];
         foreach ($this->prototypeConfiguration['formElementsDefinition'] as $type => $configuration) {
             if (!isset($configuration['formEditor']['editors'])) {
                 continue;
             }
             foreach ($configuration['formEditor']['editors'] as $editorConfiguration) {
                 if ($editorConfiguration['templateName'] === 'Inspector-PropertyGridEditor') {
-                    $multiValueFormElementProperties[$type][] = $editorConfiguration['propertyPath'];
-                }
-            }
-        }
-
-        foreach ($this->prototypeConfiguration['formElementsDefinition']['Form']['formEditor']['propertyCollections']['finishers'] ?? [] as $configuration) {
-            if (!isset($configuration['editors'])) {
-                continue;
-            }
-
-            foreach ($configuration['editors'] as $editorConfiguration) {
-                if ($editorConfiguration['templateName'] === 'Inspector-PropertyGridEditor') {
-                    $multiValueFinisherProperties[$configuration['identifier']][] = $editorConfiguration['propertyPath'];
+                    $multiValueProperties[$type][] = $editorConfiguration['propertyPath'];
                 }
             }
         }
 
         $formDefinition = $this->filterEmptyArrays($formDefinition);
-        $formDefinition = $this->migrateTranslationFileOptions($formDefinition);
-        $formDefinition = $this->migrateEmailFinisherRecipients($formDefinition);
-        $formDefinition = $this->migrateEmailFormatOption($formDefinition);
 
         // @todo: replace with rte parsing
         $formDefinition = ArrayUtility::stripTagsFromValuesRecursive($formDefinition);
-        $formDefinition = $this->transformMultiValuePropertiesForFormEditor(
-            $formDefinition,
-            'type',
-            $multiValueFormElementProperties
-        );
-        $formDefinition = $this->transformMultiValuePropertiesForFormEditor(
-            $formDefinition,
-            'identifier',
-            $multiValueFinisherProperties
-        );
+        $formDefinition = $this->transformMultiValueElementsForFormEditor($formDefinition, $multiValueProperties);
 
         $formDefinitionConversionService = $this->getFormDefinitionConversionService();
         $formDefinition = $formDefinitionConversionService->addHmacData($formDefinition);
@@ -553,54 +535,39 @@ class FormEditorController extends AbstractBackendController
      * ]
      *
      * @param array $formDefinition
-     * @param string $identifierProperty
      * @param array $multiValueProperties
      * @return array
      */
-    protected function transformMultiValuePropertiesForFormEditor(
+    protected function transformMultiValueElementsForFormEditor(
         array $formDefinition,
-        string $identifierProperty,
         array $multiValueProperties
     ): array {
         $output = $formDefinition;
         foreach ($formDefinition as $key => $value) {
-            $identifier = $value[$identifierProperty] ?? null;
-
-            if (array_key_exists($identifier, $multiValueProperties)) {
-                $multiValuePropertiesForIdentifier = $multiValueProperties[$identifier];
-
-                foreach ($multiValuePropertiesForIdentifier as $multiValueProperty) {
+            if (isset($value['type']) && array_key_exists($value['type'], $multiValueProperties)) {
+                $multiValuePropertiesForType = $multiValueProperties[$value['type']];
+                foreach ($multiValuePropertiesForType as $multiValueProperty) {
                     if (!ArrayUtility::isValidPath($value, $multiValueProperty, '.')) {
                         continue;
                     }
-
                     $multiValuePropertyData = ArrayUtility::getValueByPath($value, $multiValueProperty, '.');
-
                     if (!is_array($multiValuePropertyData)) {
                         continue;
                     }
-
                     $newMultiValuePropertyData = [];
-
                     foreach ($multiValuePropertyData as $k => $v) {
                         $newMultiValuePropertyData[] = [
                             '_label' => $v,
-                            '_value' => $k,
+                            '_value' => $k
                         ];
                     }
-
                     $value = ArrayUtility::setValueByPath($value, $multiValueProperty, $newMultiValuePropertyData, '.');
                 }
             }
 
             $output[$key] = $value;
-
             if (is_array($value)) {
-                $output[$key] = $this->transformMultiValuePropertiesForFormEditor(
-                    $value,
-                    $identifierProperty,
-                    $multiValueProperties
-                );
+                $output[$key] = $this->transformMultiValueElementsForFormEditor($value, $multiValueProperties);
             }
         }
 
@@ -630,120 +597,6 @@ class FormEditorController extends AbstractBackendController
         }
 
         return $array;
-    }
-
-    /**
-     * Migrate singular "translationFile" options to plural "translationFiles"
-     *
-     * @param array $formDefinition
-     * @return array
-     * @deprecated since v10 and will be removed in TYPO3 v11
-     */
-    protected function migrateTranslationFileOptions(array $formDefinition): array
-    {
-        GeneralUtility::makeInstance(ArrayProcessor::class, $formDefinition)->forEach(
-            GeneralUtility::makeInstance(
-                ArrayProcessing::class,
-                'translationFile',
-                '((.+)\.translationFile)(?:\.|$)',
-                function ($key, $value, $matches) use (&$formDefinition) {
-                    [, $singleOptionPath, $parentOptionPath] = $matches;
-
-                    try {
-                        $translationFiles = ArrayUtility::getValueByPath($formDefinition, $singleOptionPath, '.');
-                    } catch (MissingArrayPathException $e) {
-                        // Already migrated by a previous "translationFile.N" entry
-                        return;
-                    }
-
-                    if (is_string($translationFiles)) {
-                        // 10 is usually used by EXT:form
-                        $translationFiles = [20 => $translationFiles];
-                    }
-
-                    $formDefinition = ArrayUtility::setValueByPath(
-                        $formDefinition,
-                        sprintf('%s.translationFiles', $parentOptionPath),
-                        $translationFiles,
-                        '.'
-                    );
-                    $formDefinition = ArrayUtility::removeByPath($formDefinition, $singleOptionPath, '.');
-
-                    return $value;
-                }
-            )
-        );
-
-        return $formDefinition;
-    }
-
-    /**
-     * Migrate single recipient options to their list successors
-     *
-     * @param array $formDefinition
-     * @return array
-     */
-    protected function migrateEmailFinisherRecipients(array $formDefinition): array
-    {
-        foreach ($formDefinition['finishers'] ?? [] as $i => $finisherConfiguration) {
-            if (!in_array($finisherConfiguration['identifier'], ['EmailToSender', 'EmailToReceiver'], true)) {
-                continue;
-            }
-
-            $recipientAddress = $finisherConfiguration['options']['recipientAddress'] ?? '';
-            $recipientName = $finisherConfiguration['options']['recipientName'] ?? '';
-            $carbonCopyAddress = $finisherConfiguration['options']['carbonCopyAddress'] ?? '';
-            $blindCarbonCopyAddress = $finisherConfiguration['options']['blindCarbonCopyAddress'] ?? '';
-
-            if (!empty($recipientAddress)) {
-                $finisherConfiguration['options']['recipients'][$recipientAddress] = $recipientName;
-            }
-
-            if (!empty($carbonCopyAddress)) {
-                $finisherConfiguration['options']['carbonCopyRecipients'][$carbonCopyAddress] = '';
-            }
-
-            if (!empty($blindCarbonCopyAddress)) {
-                $finisherConfiguration['options']['blindCarbonCopyRecipients'][$blindCarbonCopyAddress] = '';
-            }
-
-            unset(
-                $finisherConfiguration['options']['recipientAddress'],
-                $finisherConfiguration['options']['recipientName'],
-                $finisherConfiguration['options']['carbonCopyAddress'],
-                $finisherConfiguration['options']['blindCarbonCopyAddress']
-            );
-            $formDefinition['finishers'][$i] = $finisherConfiguration;
-        }
-
-        return $formDefinition;
-    }
-
-    /**
-     * Migrate email "format" option to "addHtmlPart"
-     *
-     * @param array $formDefinition
-     * @return array
-     * @deprecated since v10 and will be removed in TYPO3 v11
-     */
-    protected function migrateEmailFormatOption(array $formDefinition): array
-    {
-        foreach ($formDefinition['finishers'] ?? [] as $i => $finisherConfiguration) {
-            if (!in_array($finisherConfiguration['identifier'], ['EmailToSender', 'EmailToReceiver'], true)) {
-                continue;
-            }
-
-            $format = $finisherConfiguration['options']['format'] ?? null;
-
-            if (!empty($format)) {
-                $finisherConfiguration['options']['addHtmlPart'] = empty($format) || $format !== EmailFinisher::FORMAT_PLAINTEXT;
-            }
-
-            unset($finisherConfiguration['options']['format']);
-            $formDefinition['finishers'][$i] = $finisherConfiguration;
-        }
-
-        return $formDefinition;
     }
 
     /**

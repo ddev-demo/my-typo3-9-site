@@ -12,7 +12,7 @@ Form
    form
 
 :Version:
-   latest (10-dev)
+   9
 
 :Language:
    en
@@ -25,7 +25,7 @@ Form
    form
 
 :Copyright:
-   2000-2019
+   2000-2020
 
 :Author:
    TRITUM GmbH
@@ -48,6 +48,8 @@ a GNU/GPL CMS/Framework available from https://typo3.org/
    Introduction/Index
    QuickStartForEditors/Index
    QuickStartForIntegrators/Index
-   I/Index
-   E/Index
+   Concepts/Index
+   Config/Index
+   ApiReference/Index
+   FAQ/Index
    Targets

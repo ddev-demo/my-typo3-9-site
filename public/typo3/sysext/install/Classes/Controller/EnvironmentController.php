@@ -17,7 +17,6 @@ namespace TYPO3\CMS\Install\Controller;
 
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
-use Symfony\Component\Mime\NamedAddress;
 use TYPO3\CMS\Core\Core\Environment;
 use TYPO3\CMS\Core\Database\ConnectionPool;
 use TYPO3\CMS\Core\FormProtection\FormProtectionFactory;
@@ -36,6 +35,7 @@ use TYPO3\CMS\Install\FolderStructure\DefaultFactory;
 use TYPO3\CMS\Install\FolderStructure\DefaultPermissionsCheck;
 use TYPO3\CMS\Install\SystemEnvironment\Check;
 use TYPO3\CMS\Install\SystemEnvironment\DatabaseCheck;
+use TYPO3\CMS\Install\SystemEnvironment\ServerResponse\ServerResponseCheck;
 use TYPO3\CMS\Install\SystemEnvironment\SetupCheck;
 
 /**
@@ -69,7 +69,7 @@ class EnvironmentController extends AbstractController
     {
         $view = $this->initializeStandaloneView($request, 'Environment/SystemInformation.html');
         $view->assignMultiple([
-            'systemInformationCgiDetected', GeneralUtility::isRunningOnCgiServerApi(),
+            'systemInformationCgiDetected' => GeneralUtility::isRunningOnCgiServerApi(),
             'systemInformationDatabaseConnections' => $this->getDatabaseConnectionInformation(),
             'systemInformationOperatingSystem' => Environment::isWindows() ? 'Windows' : 'Unix',
         ]);
@@ -116,6 +116,10 @@ class EnvironmentController extends AbstractController
         foreach ($databaseMessages as $message) {
             $messageQueue->enqueue($message);
         }
+        $serverResponseMessages = (new ServerResponseCheck(false))->getStatus();
+        foreach ($serverResponseMessages as $message) {
+            $messageQueue->enqueue($message);
+        }
         return new JsonResponse([
             'success' => true,
             'status' => [
@@ -126,12 +130,6 @@ class EnvironmentController extends AbstractController
                 'notice' => $messageQueue->getAllMessages(FlashMessage::NOTICE),
             ],
             'html' => $view->render(),
-            'buttons' => [
-                [
-                    'btnClass' => 'btn-default t3js-environmentCheck-execute',
-                    'text' => 'Run tests again',
-                ],
-            ],
         ]);
     }
 
@@ -164,14 +162,6 @@ class EnvironmentController extends AbstractController
 
         $view->assign('publicPath', Environment::getPublicPath());
 
-        $buttons = [];
-        if ($errorQueue->count() > 0) {
-            $buttons[] = [
-                'btnClass' => 'btn-default t3js-folderStructure-errors-fix',
-                'text' => 'Try to fix file and folder permissions',
-            ];
-        }
-
         return new JsonResponse([
             'success' => true,
             'errorStatus' => $errorQueue,
@@ -179,7 +169,6 @@ class EnvironmentController extends AbstractController
             'folderStructureFilePermissionStatus' => $permissionCheck->getMaskStatus('fileCreateMask'),
             'folderStructureDirectoryPermissionStatus' => $permissionCheck->getMaskStatus('folderCreateMask'),
             'html' => $view->render(),
-            'buttons' => $buttons,
         ]);
     }
 
@@ -216,12 +205,6 @@ class EnvironmentController extends AbstractController
         return new JsonResponse([
             'success' => true,
             'html' => $view->render(),
-            'buttons' => [
-                [
-                    'btnClass' => 'btn-default t3js-mailTest-execute',
-                    'text' => 'Send test mail',
-                ],
-            ],
         ]);
     }
 
@@ -246,35 +229,35 @@ class EnvironmentController extends AbstractController
             try {
                 $mailMessage = GeneralUtility::makeInstance(MailMessage::class);
                 $mailMessage
-                    ->to($recipient)
-                    ->from(new NamedAddress($this->getSenderEmailAddress(), $this->getSenderEmailName()))
-                    ->subject($this->getEmailSubject())
-                    ->html('<html><body>html test content</body></html>')
-                    ->text('plain test content')
+                    ->addTo($recipient)
+                    ->addFrom($this->getSenderEmailAddress(), $this->getSenderEmailName())
+                    ->setSubject($this->getEmailSubject())
+                    ->setBody('<html><body>html test content</body></html>', 'text/html')
+                    ->addPart('plain test content', 'text/plain')
                     ->send();
                 $messages->enqueue(new FlashMessage(
                     'Recipient: ' . $recipient,
                     'Test mail sent'
                 ));
                 $delivered = true;
-            } catch (\Symfony\Component\Mime\Exception\RfcComplianceException $exception) {
+            } catch (\Swift_RfcComplianceException $exception) {
                 $messages->enqueue(new FlashMessage(
                     'Please verify $GLOBALS[\'TYPO3_CONF_VARS\'][\'MAIL\'][\'defaultMailFromAddress\'] is a valid mail address.'
-                    . ' Error message: ' . $exception->getMessage(),
+                        . ' Error message: ' . $exception->getMessage(),
                     'RFC compliance problem',
                     FlashMessage::ERROR
                 ));
             } catch (\Throwable $throwable) {
                 $messages->enqueue(new FlashMessage(
                     'Please verify $GLOBALS[\'TYPO3_CONF_VARS\'][\'MAIL\'][*] settings are valid.'
-                    . ' Error message: ' . $throwable->getMessage(),
+                        . ' Error message: ' . $throwable->getMessage(),
                     'Could not deliver mail',
                     FlashMessage::ERROR
                 ));
             }
         }
         return new JsonResponse([
-            'success' => true,
+            'success' => $delivered,
             'status' => $messages,
         ]);
     }
@@ -301,12 +284,6 @@ class EnvironmentController extends AbstractController
         return new JsonResponse([
             'success' => true,
             'html' => $view->render(),
-            'buttons' => [
-                [
-                    'btnClass' => 'btn-default disabled t3js-imageProcessing-execute',
-                    'text' => 'Run image tests again',
-                ],
-            ],
         ]);
     }
 
@@ -931,6 +908,7 @@ class EnvironmentController extends AbstractController
         $inputFile = $imageBasePath . 'TestInput/Test.' . $inputFormat;
         $imageProcessor->imageMagickConvert_forceFileNameBody = StringUtility::getUniqueId('read') . '-' . $inputFormat;
         $imResult = $imageProcessor->imageMagickConvert($inputFile, 'jpg', '300', '', '', '', [], true);
+        $result = [];
         if ($imResult !== null) {
             $result = [
                 'fileExists' => file_exists($imResult[3]),
@@ -963,9 +941,9 @@ class EnvironmentController extends AbstractController
                 'connectionName' => $connectionName,
                 'version' => $connection->getServerVersion(),
                 'databaseName' => $connection->getDatabase(),
-                'username' => $connection->getUsername(),
-                'host' => $connection->getHost(),
-                'port' => $connection->getPort(),
+                'username' => $connectionParameters['user'],
+                'host' => $connectionParameters['host'],
+                'port' => $connectionParameters['port'],
                 'socket' => $connectionParameters['unix_socket'] ?? '',
                 'numberOfTables' => count($connection->getSchemaManager()->listTableNames()),
                 'numberOfMappedTables' => 0,

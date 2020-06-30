@@ -14,31 +14,21 @@ namespace TYPO3\CMS\Core\Mail;
  * The TYPO3 project - inspiring people to share!
  */
 
-use Psr\EventDispatcher\EventDispatcherInterface;
-use Symfony\Component\Mailer\MailerInterface;
-use Symfony\Component\Mailer\SentMessage;
-use Symfony\Component\Mailer\SmtpEnvelope;
-use Symfony\Component\Mailer\Transport\TransportInterface;
-use Symfony\Component\Mime\Address;
-use Symfony\Component\Mime\Email;
-use Symfony\Component\Mime\NamedAddress;
-use Symfony\Component\Mime\RawMessage;
-use TYPO3\CMS\Core\EventDispatcher\EventDispatcher;
-use TYPO3\CMS\Core\Exception as CoreException;
-use TYPO3\CMS\Core\Mail\Event\AfterMailerInitializationEvent;
+use Swift_Transport;
 use TYPO3\CMS\Core\Utility\GeneralUtility;
-use TYPO3\CMS\Core\Utility\MailUtility;
+use TYPO3\CMS\Extbase\Object\ObjectManager;
+use TYPO3\CMS\Extbase\SignalSlot\Dispatcher;
 
 /**
- * Adapter for Symfony/Mailer to be used by TYPO3 extensions.
+ * Adapter for Swift_Mailer to be used by TYPO3 extensions.
  *
  * This will use the setting in TYPO3_CONF_VARS to choose the correct transport
  * for it to work out-of-the-box.
  */
-class Mailer implements MailerInterface
+class Mailer extends \Swift_Mailer
 {
     /**
-     * @var TransportInterface
+     * @var \Swift_Transport
      */
     protected $transport;
 
@@ -48,22 +38,12 @@ class Mailer implements MailerInterface
     protected $mailSettings = [];
 
     /**
-     * @var SentMessage|null
-     */
-    protected $sentMessage;
-
-    /**
-     * @var string This will be added as X-Mailer to all outgoing mails
-     */
-    protected $mailerHeader = 'TYPO3';
-
-    /**
-     * When constructing, also initializes the Symfony Transport like configured
+     * When constructing, also initializes the \Swift_Transport like configured
      *
-     * @param TransportInterface|null $transport optionally pass a transport to the constructor.
-     * @throws CoreException
+     * @param \Swift_Transport|null $transport optionally pass a transport to the constructor.
+     * @throws \TYPO3\CMS\Core\Exception
      */
-    public function __construct(TransportInterface $transport = null)
+    public function __construct(\Swift_Transport $transport = null)
     {
         if ($transport !== null) {
             $this->transport = $transport;
@@ -74,64 +54,19 @@ class Mailer implements MailerInterface
             try {
                 $this->initializeTransport();
             } catch (\Exception $e) {
-                throw new CoreException($e->getMessage(), 1291068569);
+                throw new \TYPO3\CMS\Core\Exception($e->getMessage(), 1291068569);
             }
         }
-        $this->getEventDispatcher()->dispatch(new AfterMailerInitializationEvent($this));
-    }
+        parent::__construct($this->transport);
 
-    /**
-     * @inheritdoc
-     */
-    public function send(RawMessage $message, SmtpEnvelope $envelope = null): void
-    {
-        if ($message instanceof Email) {
-            // Ensure to always have a From: header set
-            if (empty($message->getFrom())) {
-                $address = MailUtility::getSystemFromAddress();
-                if ($address) {
-                    $name = MailUtility::getSystemFromName();
-                    if ($name) {
-                        $from = new NamedAddress($address, $name);
-                    } else {
-                        $from = new Address($address);
-                    }
-                    $message->from($from);
-                }
-            }
-            if (empty($message->getReplyTo())) {
-                $replyTo = MailUtility::getSystemReplyTo();
-                if (!empty($replyTo)) {
-                    $address = key($replyTo);
-                    if ($address === 0) {
-                        $replyTo = new Address($replyTo[$address]);
-                    } else {
-                        $replyTo = new NamedAddress(reset($replyTo), $address);
-                    }
-                    $message->replyTo($replyTo);
-                }
-            }
-            $message->getHeaders()->addTextHeader('X-Mailer', $this->mailerHeader);
-        }
-
-        $this->sentMessage = $this->transport->send($message, $envelope);
-    }
-
-    public function getSentMessage(): ?SentMessage
-    {
-        return $this->sentMessage;
-    }
-
-    public function getTransport(): TransportInterface
-    {
-        return $this->transport;
+        $this->emitPostInitializeMailerSignal();
     }
 
     /**
      * Prepares a transport using the TYPO3_CONF_VARS configuration
      *
      * Used options:
-     * $TYPO3_CONF_VARS['MAIL']['transport'] = 'smtp' | 'sendmail' | 'null' | 'mbox'
+     * $TYPO3_CONF_VARS['MAIL']['transport'] = 'smtp' | 'sendmail' | 'mail' | 'mbox'
      *
      * $TYPO3_CONF_VARS['MAIL']['transport_smtp_server'] = 'smtp.example.org';
      * $TYPO3_CONF_VARS['MAIL']['transport_smtp_port'] = '25';
@@ -141,7 +76,7 @@ class Mailer implements MailerInterface
      *
      * $TYPO3_CONF_VARS['MAIL']['transport_sendmail_command'] = '/usr/sbin/sendmail -bs'
      *
-     * @throws CoreException
+     * @throws \TYPO3\CMS\Core\Exception
      * @throws \RuntimeException
      */
     private function initializeTransport()
@@ -167,9 +102,9 @@ class Mailer implements MailerInterface
     /**
      * Returns the real transport (not a spool).
      *
-     * @return TransportInterface
+     * @return \Swift_Transport
      */
-    public function getRealTransport(): TransportInterface
+    public function getRealTransport(): Swift_Transport
     {
         $mailSettings = !empty($this->mailSettings) ? $this->mailSettings : (array)$GLOBALS['TYPO3_CONF_VARS']['MAIL'];
         unset($mailSettings['transport_spool_type']);
@@ -185,10 +120,30 @@ class Mailer implements MailerInterface
     }
 
     /**
+     * Get the object manager
+     *
+     * @return \TYPO3\CMS\Extbase\Object\ObjectManager
+     */
+    protected function getObjectManager()
+    {
+        return GeneralUtility::makeInstance(ObjectManager::class);
+    }
+
+    /**
+     * Get the SignalSlot dispatcher
+     *
+     * @return \TYPO3\CMS\Extbase\SignalSlot\Dispatcher
+     */
+    protected function getSignalSlotDispatcher()
+    {
+        return $this->getObjectManager()->get(Dispatcher::class);
+    }
+
+    /**
      * Emits a signal after mailer initialization
      */
-    protected function getEventDispatcher(): EventDispatcherInterface
+    protected function emitPostInitializeMailerSignal()
     {
-        return GeneralUtility::makeInstance(EventDispatcher::class);
+        $this->getSignalSlotDispatcher()->dispatch('TYPO3\\CMS\\Core\\Mail\\Mailer', 'postInitializeMailer', [$this]);
     }
 }

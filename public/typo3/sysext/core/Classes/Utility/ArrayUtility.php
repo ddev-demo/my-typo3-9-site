@@ -192,7 +192,7 @@ class ArrayUtility
         // Loop through each part and extract its value
         $value = $array;
         foreach ($path as $segment) {
-            if (array_key_exists($segment, $value)) {
+            if (is_array($value) && array_key_exists($segment, $value)) {
                 // Replace current value with child
                 $value = $value[$segment];
             } else {
@@ -396,7 +396,7 @@ class ArrayUtility
      */
     public static function arrayExport(array $array = [], $level = 0)
     {
-        $lines = '[' . LF;
+        $lines = "[\n";
         $level++;
         $writeKeyIndex = false;
         $expectedKeyIndex = 0;
@@ -420,25 +420,25 @@ class ArrayUtility
                 if (!empty($value)) {
                     $lines .= self::arrayExport($value, $level);
                 } else {
-                    $lines .= '[],' . LF;
+                    $lines .= "[],\n";
                 }
             } elseif (is_int($value) || is_float($value)) {
-                $lines .= $value . ',' . LF;
+                $lines .= $value . ",\n";
             } elseif ($value === null) {
-                $lines .= 'null,' . LF;
+                $lines .= "null,\n";
             } elseif (is_bool($value)) {
                 $lines .= $value ? 'true' : 'false';
-                $lines .= ',' . LF;
+                $lines .= ",\n";
             } elseif (is_string($value)) {
                 // Quote \ to \\
                 // Quote ' to \'
                 $stringContent = str_replace(['\\', '\''], ['\\\\', '\\\''], $value);
-                $lines .= '\'' . $stringContent . '\',' . LF;
+                $lines .= '\'' . $stringContent . "',\n";
             } else {
                 throw new \RuntimeException('Objects are not supported', 1342294987);
             }
         }
-        $lines .= str_repeat('    ', $level - 1) . ']' . ($level - 1 == 0 ? '' : ',' . LF);
+        $lines .= str_repeat('    ', $level - 1) . ']' . ($level - 1 == 0 ? '' : ",\n");
         return $lines;
     }
 
@@ -473,24 +473,19 @@ class ArrayUtility
      *
      * @param array $array The (relative) array to be converted
      * @param string $prefix The (relative) prefix to be used (e.g. 'section.')
+     * @param bool $keepDots
      * @return array
      */
-    public static function flatten(array $array, $prefix = '', bool $keepDots = false)
+    public static function flatten(array $array, $prefix = '')
     {
         $flatArray = [];
         foreach ($array as $key => $value) {
-            if ($keepDots === false) {
-                // Ensure there is no trailing dot:
-                $key = rtrim($key, '.');
-            }
+            // Ensure there is no trailing dot:
+            $key = rtrim($key, '.');
             if (!is_array($value)) {
                 $flatArray[$prefix . $key] = $value;
             } else {
-                $newPrefix = $prefix . $key;
-                if ($keepDots === false) {
-                    $newPrefix = $prefix . $key . '.';
-                }
-                $flatArray = array_merge($flatArray, self::flatten($value, $newPrefix, $keepDots));
+                $flatArray = array_merge($flatArray, self::flatten($value, $prefix . $key . '.'));
             }
         }
         return $flatArray;
@@ -772,8 +767,7 @@ class ArrayUtility
      * @param array $setupArr TypoScript array with numerical array in
      * @param bool $acceptAnyKeys If set, then a value is not required - the properties alone will be enough.
      * @return array An array with all integer properties listed in numeric order.
-     * @see \TYPO3\CMS\Frontend\ContentObject\ContentObjectRenderer::cObjGet()
-     * @see \TYPO3\CMS\Frontend\Imaging\GifBuilder
+     * @see \TYPO3\CMS\Frontend\ContentObject\ContentObjectRenderer::cObjGet(), \TYPO3\CMS\Frontend\Imaging\GifBuilder, \TYPO3\CMS\Frontend\ContentObject\Menu\ImageMenuContentObject::makeImageMap()
      */
     public static function filterAndSortByNumericKeys($setupArr, $acceptAnyKeys = false)
     {
@@ -866,56 +860,5 @@ class ArrayUtility
         }
 
         return $array;
-    }
-
-    /**
-     * Check whether the array has non-integer keys. If there is at least one string key, $array will be
-     * regarded as an associative array.
-     *
-     * @param array $array
-     * @return bool True in case a string key was found.
-     * @internal
-     */
-    public static function isAssociative(array $array): bool
-    {
-        return count(array_filter(array_keys($array), 'is_string')) > 0;
-    }
-
-    /**
-     * Same as array_replace_recursive except that when in simple arrays (= YAML lists), the entries are
-     * appended (array_merge). The second array takes precedence in case of equal sub arrays.
-     *
-     * @param array $array1
-     * @param array $array2
-     * @return array
-     * @internal
-     */
-    public static function replaceAndAppendScalarValuesRecursive(array $array1, array $array2): array
-    {
-        // Simple lists get merged / added up
-        if (!self::isAssociative($array1)) {
-            return array_merge($array1, $array2);
-        }
-        foreach ($array1 as $k => $v) {
-            // The key also exists in second array, if it is a simple value
-            // then $array2 will override the value, where an array is calling
-            // replaceAndAppendScalarValuesRecursive() recursively.
-            if (isset($array2[$k])) {
-                if (is_array($v) && is_array($array2[$k])) {
-                    $array1[$k] = self::replaceAndAppendScalarValuesRecursive($v, $array2[$k]);
-                } else {
-                    $array1[$k] = $array2[$k];
-                }
-                unset($array2[$k]);
-            }
-        }
-        // If there are properties in the second array left, they are added up
-        if (!empty($array2)) {
-            foreach ($array2 as $k => $v) {
-                $array1[$k] = $v;
-            }
-        }
-
-        return $array1;
     }
 }

@@ -9,7 +9,6 @@ return [
         'cruser_id' => 'cruser_id',
         'delete' => 'deleted',
         'sortby' => 'sorting',
-        'default_sortby' => 'title',
         'versioningWS' => true,
         'rootLevel' => -1,
         'origUid' => 't3_origuid',
@@ -54,23 +53,29 @@ return [
         'language' => ['showitem' => 'sys_language_uid, l10n_parent'],
     ],
     'columns' => [
+        't3ver_label' => [
+            'label' => 'LLL:EXT:core/Resources/Private/Language/locallang_general.xlf:LGL.versionLabel',
+            'config' => [
+                'type' => 'input',
+                'size' => 30,
+                'max' => 30
+            ]
+        ],
         'sys_language_uid' => [
             'exclude' => true,
             'label' => 'LLL:EXT:core/Resources/Private/Language/locallang_general.xlf:LGL.language',
             'config' => [
                 'type' => 'select',
                 'renderType' => 'selectSingle',
-                'foreign_table' => 'sys_language',
+                'special' => 'languages',
                 'items' => [
-                    ['LLL:EXT:core/Resources/Private/Language/locallang_general.xlf:LGL.allLanguages', -1],
-                    ['LLL:EXT:core/Resources/Private/Language/locallang_general.xlf:LGL.default_value', 0]
-                ],
-                'default' => 0,
-                'fieldWizard' => [
-                    'selectIcons' => [
-                        'disabled' => false,
+                    [
+                        'LLL:EXT:core/Resources/Private/Language/locallang_general.xlf:LGL.allLanguages',
+                        -1,
+                        'flags-multiple'
                     ],
                 ],
+                'default' => 0,
             ]
         ],
         'l10n_parent' => [
@@ -161,7 +166,7 @@ return [
                 'type' => 'select',
                 'renderType' => 'selectTree',
                 'foreign_table' => 'sys_category',
-                'foreign_table_where' => ' AND sys_category.sys_language_uid IN (-1,0)',
+                'foreign_table_where' => ' AND sys_category.sys_language_uid IN (-1,0) ORDER BY sys_category.sorting ASC',
                 'treeConfig' => [
                     'parentField' => 'parent',
                     'appearance' => [

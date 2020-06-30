@@ -20,7 +20,7 @@ use Psr\Http\Message\ServerRequestInterface;
 use Psr\Http\Server\MiddlewareInterface;
 use Psr\Http\Server\RequestHandlerInterface;
 use TYPO3\CMS\Core\TimeTracker\TimeTracker;
-use TYPO3\CMS\Frontend\Controller\TypoScriptFrontendController;
+use TYPO3\CMS\Core\Utility\GeneralUtility;
 
 /**
  * Initializes the time tracker (singleton) for the whole TYPO3 Frontend
@@ -30,16 +30,6 @@ use TYPO3\CMS\Frontend\Controller\TypoScriptFrontendController;
 class TimeTrackerInitialization implements MiddlewareInterface
 {
     /**
-     * @var TimeTracker
-     */
-    protected $timeTracker;
-
-    public function __construct(TimeTracker $timeTracker)
-    {
-        $this->timeTracker = $timeTracker;
-    }
-
-    /**
      * Starting time tracking (by setting up a singleton object)
      *
      * @param ServerRequestInterface $request
@@ -48,35 +38,14 @@ class TimeTrackerInitialization implements MiddlewareInterface
      */
     public function process(ServerRequestInterface $request, RequestHandlerInterface $handler): ResponseInterface
     {
-        $timeTrackingEnabled = $this->isBackendUserCookieSet($request);
-        $this->timeTracker->setEnabled($timeTrackingEnabled);
-        $this->timeTracker->start(microtime(true));
-        $this->timeTracker->push('');
-
-        $response = $handler->handle($request);
-
-        // Finish time tracking
-        $this->timeTracker->pull();
-        $this->timeTracker->finish();
-
-        if ($this->isDebugModeEnabled()) {
-            return $response->withHeader('X-TYPO3-Parsetime', $this->timeTracker->getParseTime() . 'ms');
-        }
-        return $response;
-    }
-
-    protected function isBackendUserCookieSet(ServerRequestInterface $request): bool
-    {
         $configuredCookieName = trim($GLOBALS['TYPO3_CONF_VARS']['BE']['cookieName']) ?: 'be_typo_user';
-        return !empty($request->getCookieParams()[$configuredCookieName]);
-    }
+        $timeTracker = GeneralUtility::makeInstance(
+            TimeTracker::class,
+            !empty($request->getCookieParams()[$configuredCookieName])
+        );
+        $timeTracker->start();
+        $timeTracker->push('');
 
-    protected function isDebugModeEnabled(): bool
-    {
-        $controller = $GLOBALS['TSFE'];
-        if ($controller instanceof TypoScriptFrontendController && !empty($controller->config['config']['debug'] ?? false)) {
-            return true;
-        }
-        return !empty($GLOBALS['TYPO3_CONF_VARS']['FE']['debug']);
+        return $handler->handle($request);
     }
 }

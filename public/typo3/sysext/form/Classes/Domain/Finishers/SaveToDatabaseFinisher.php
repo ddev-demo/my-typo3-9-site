@@ -38,7 +38,7 @@ use TYPO3\CMS\Form\Domain\Model\FormElements\FormElementInterface;
  *
  *   insert: will create a new database row with the values from the
  *           submitted form and/or some predefined values.
- *           See options.elements and options.databaseFieldMappings
+ *           @see options.elements and options.databaseFieldMappings
  *   update: will update a given database row with the values from the
  *           submitted form and/or some predefined values.
  *           'options.whereClause' is then required.

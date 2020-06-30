@@ -14,8 +14,6 @@ namespace TYPO3\CMS\Fluid\ViewHelpers\Link;
  * The TYPO3 project - inspiring people to share!
  */
 
-use TYPO3\CMS\Core\Utility\MathUtility;
-use TYPO3\CMS\Extbase\Mvc\Web\Routing\UriBuilder;
 use TYPO3Fluid\Fluid\Core\ViewHelper\AbstractTagBasedViewHelper;
 
 /**
@@ -82,8 +80,7 @@ class PageViewHelper extends AbstractTagBasedViewHelper
         $this->registerArgument('pageUid', 'int', 'Target page. See TypoLink destination');
         $this->registerArgument('pageType', 'int', 'Type of the target page. See typolink.parameter');
         $this->registerArgument('noCache', 'bool', 'Set this to disable caching for the target page. You should not need this.');
-        // @deprecated
-        $this->registerArgument('noCacheHash', 'bool', 'Deprecated: Set this to suppress the cHash query parameter created by TypoLink. You should not need this.', false);
+        $this->registerArgument('noCacheHash', 'bool', 'Set this to suppress the cHash query parameter created by TypoLink. You should not need this.');
         $this->registerArgument('section', 'string', 'The anchor to be added to the URI');
         $this->registerArgument('linkAccessRestrictedPages', 'bool', 'If set, links pointing to access restricted pages will still link to the page even though the page cannot be accessed.');
         $this->registerArgument('additionalParams', 'array', 'Additional query parameters that won\'t be prefixed like $arguments (overrule $arguments)');
@@ -98,12 +95,10 @@ class PageViewHelper extends AbstractTagBasedViewHelper
      */
     public function render()
     {
-        if (isset($this->arguments['noCacheHash'])) {
-            trigger_error('Using the argument "noCacheHash" in <f:link.page> ViewHelper has no effect anymore. Remove the argument in your fluid template, as it will result in a fatal error.', E_USER_DEPRECATED);
-        }
         $pageUid = isset($this->arguments['pageUid']) ? (int)$this->arguments['pageUid'] : null;
         $pageType = isset($this->arguments['pageType']) ? (int)$this->arguments['pageType'] : 0;
         $noCache = isset($this->arguments['noCache']) ? (bool)$this->arguments['noCache'] : false;
+        $noCacheHash = isset($this->arguments['noCacheHash']) ? (bool)$this->arguments['noCacheHash'] : false;
         $section = isset($this->arguments['section']) ? (string)$this->arguments['section'] : '';
         $linkAccessRestrictedPages = isset($this->arguments['linkAccessRestrictedPages']) ? (bool)$this->arguments['linkAccessRestrictedPages'] : false;
         $additionalParams = isset($this->arguments['additionalParams']) ? (array)$this->arguments['additionalParams'] : [];
@@ -111,29 +106,21 @@ class PageViewHelper extends AbstractTagBasedViewHelper
         $addQueryString = isset($this->arguments['addQueryString']) ? (bool)$this->arguments['addQueryString'] : false;
         $argumentsToBeExcludedFromQueryString = isset($this->arguments['argumentsToBeExcludedFromQueryString']) ? (array)$this->arguments['argumentsToBeExcludedFromQueryString'] : [];
         $addQueryStringMethod = $this->arguments['addQueryStringMethod'] ?? null;
-        /** @var UriBuilder $uriBuilder */
         $uriBuilder = $this->renderingContext->getControllerContext()->getUriBuilder();
-        $uriBuilder->reset()
+        $uri = $uriBuilder->reset()
+            ->setTargetPageUid($pageUid)
             ->setTargetPageType($pageType)
             ->setNoCache($noCache)
+            ->setUseCacheHash(!$noCacheHash)
             ->setSection($section)
             ->setLinkAccessRestrictedPages($linkAccessRestrictedPages)
             ->setArguments($additionalParams)
             ->setCreateAbsoluteUri($absolute)
             ->setAddQueryString($addQueryString)
             ->setArgumentsToBeExcludedFromQueryString($argumentsToBeExcludedFromQueryString)
-        ;
-
-        if (MathUtility::canBeInterpretedAsInteger($pageUid)) {
-            $uriBuilder->setTargetPageUid((int)$pageUid);
-        }
-
-        if (is_string($addQueryStringMethod)) {
-            $uriBuilder->setAddQueryStringMethod($addQueryStringMethod);
-        }
-
-        $uri = $uriBuilder->build();
-        if ($uri !== '') {
+            ->setAddQueryStringMethod($addQueryStringMethod)
+            ->build();
+        if ((string)$uri !== '') {
             $this->tag->addAttribute('href', $uri);
             $this->tag->setContent($this->renderChildren());
             $this->tag->forceClosingTag(true);

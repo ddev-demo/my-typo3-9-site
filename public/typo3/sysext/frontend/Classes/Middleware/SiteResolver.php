@@ -19,10 +19,10 @@ use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
 use Psr\Http\Server\MiddlewareInterface;
 use Psr\Http\Server\RequestHandlerInterface;
-use TYPO3\CMS\Core\Localization\Locales;
 use TYPO3\CMS\Core\Routing\SiteMatcher;
 use TYPO3\CMS\Core\Routing\SiteRouteResult;
-use TYPO3\CMS\Core\Site\Entity\SiteLanguage;
+use TYPO3\CMS\Core\Site\SiteFinder;
+use TYPO3\CMS\Core\Utility\GeneralUtility;
 
 /**
  * Identifies if a site is configured for the request, based on "id" and "L" GET/POST parameters, or the requested
@@ -38,9 +38,12 @@ class SiteResolver implements MiddlewareInterface
      */
     protected $matcher;
 
-    public function __construct(SiteMatcher $matcher)
+    public function __construct(SiteMatcher $matcher = null)
     {
-        $this->matcher = $matcher;
+        $this->matcher = $matcher ?? GeneralUtility::makeInstance(
+            SiteMatcher::class,
+            GeneralUtility::makeInstance(SiteFinder::class)
+        );
     }
 
     /**
@@ -57,9 +60,11 @@ class SiteResolver implements MiddlewareInterface
         $request = $request->withAttribute('site', $routeResult->getSite());
         $request = $request->withAttribute('language', $routeResult->getLanguage());
         $request = $request->withAttribute('routing', $routeResult);
-        if ($routeResult->getLanguage() instanceof SiteLanguage) {
-            Locales::setSystemLocaleFromSiteLanguage($routeResult->getLanguage());
-        }
+
+        // At this point, we later get further route modifiers
+        // for bw-compat we update $GLOBALS[TYPO3_REQUEST] to be used later in TSFE.
+        $GLOBALS['TYPO3_REQUEST'] = $request;
+
         return $handler->handle($request);
     }
 }

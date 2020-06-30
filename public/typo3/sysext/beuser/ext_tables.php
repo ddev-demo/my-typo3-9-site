@@ -3,13 +3,13 @@ defined('TYPO3_MODE') or die();
 
 // Module System > Backend Users
 \TYPO3\CMS\Extbase\Utility\ExtensionUtility::registerModule(
-    'Beuser',
+    'TYPO3.CMS.Beuser',
     'system',
     'tx_Beuser',
     'top',
     [
-        \TYPO3\CMS\Beuser\Controller\BackendUserController::class => 'index, addToCompareList, removeFromCompareList, compare, online, terminateBackendUserSession',
-        \TYPO3\CMS\Beuser\Controller\BackendUserGroupController::class => 'index'
+        'BackendUser' => 'index, addToCompareList, removeFromCompareList, compare, online, terminateBackendUserSession',
+        'BackendUserGroup' => 'index'
     ],
     [
         'access' => 'admin',
@@ -20,12 +20,12 @@ defined('TYPO3_MODE') or die();
 
 // Module System > Access
 \TYPO3\CMS\Extbase\Utility\ExtensionUtility::registerModule(
-    'Beuser',
+    'TYPO3.CMS.Beuser',
     'system',
     'tx_Permission',
     'top',
     [
-        \TYPO3\CMS\Beuser\Controller\PermissionController::class => 'index, edit, update'
+        'Permission' => 'index, edit, update'
     ],
     [
         'access' => 'admin',

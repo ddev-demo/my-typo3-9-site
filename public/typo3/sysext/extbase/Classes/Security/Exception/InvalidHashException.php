@@ -1,6 +1,4 @@
 <?php
-declare(strict_types = 1);
-
 namespace TYPO3\CMS\Extbase\Security\Exception;
 
 /*
@@ -16,11 +14,9 @@ namespace TYPO3\CMS\Extbase\Security\Exception;
  * The TYPO3 project - inspiring people to share!
  */
 
-use TYPO3\CMS\Extbase\Security\Exception;
-
 /**
  * A "InvalidHash" Exception, thrown when a HMAC validation failed.
  */
-class InvalidHashException extends Exception
+class InvalidHashException extends \TYPO3\CMS\Extbase\Security\Exception
 {
 }

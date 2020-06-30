@@ -41,15 +41,6 @@ class Package implements PackageInterface
     protected $partOfMinimalUsableSystem = false;
 
     /**
-     * ServiceProvider class name. This property and the corresponding
-     * composer.json setting is internal and therefore no api (yet).
-     *
-     * @var string
-     * @internal
-     */
-    protected $serviceProvider;
-
-    /**
      * Unique key of this package.
      * @var string
      */
@@ -103,7 +94,7 @@ class Package implements PackageInterface
         $this->packagePath = $packagePath;
         $this->composerManifest = $packageManager->getComposerManifest($this->packagePath);
         $this->loadFlagsFromComposerManifest();
-        $this->createPackageMetaData($packageManager);
+        $this->createPackageMetadata($packageManager);
     }
 
     /**
@@ -154,17 +145,6 @@ class Package implements PackageInterface
                 $this->packageMetaData->addConstraint($constraint);
             }
         }
-    }
-
-    /**
-     * Get the Service Provider class name
-     *
-     * @return string
-     * @internal
-     */
-    public function getServiceProvider(): string
-    {
-        return $this->serviceProvider ?? PseudoServiceProvider::class;
     }
 
     /**

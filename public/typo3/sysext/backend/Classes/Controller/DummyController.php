@@ -17,7 +17,6 @@ namespace TYPO3\CMS\Backend\Controller;
 use Psr\Http\Message\ResponseInterface;
 use TYPO3\CMS\Backend\Template\DocumentTemplate;
 use TYPO3\CMS\Core\Http\HtmlResponse;
-use TYPO3\CMS\Core\Utility\GeneralUtility;
 
 /**
  * '/empty' routing target returns dummy content.
@@ -32,8 +31,18 @@ class DummyController
      */
     public function mainAction(): ResponseInterface
     {
-        $documentTemplate = GeneralUtility::makeInstance(DocumentTemplate::class);
+        $documentTemplate = $this->getDocumentTemplate();
         $content = $documentTemplate->startPage('Dummy document') . $documentTemplate->endPage();
         return new HtmlResponse($content);
+    }
+
+    /**
+     * Returns an instance of DocumentTemplate
+     *
+     * @return DocumentTemplate
+     */
+    protected function getDocumentTemplate()
+    {
+        return $GLOBALS['TBE_TEMPLATE'];
     }
 }

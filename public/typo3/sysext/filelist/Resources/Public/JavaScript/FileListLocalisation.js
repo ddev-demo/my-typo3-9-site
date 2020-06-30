@@ -10,4 +10,19 @@
  *
  * The TYPO3 project - inspiring people to share!
  */
-define(["require","exports","jquery"],function(t,e,r){"use strict";return new class{constructor(){r(()=>{r("a.filelist-translationToggler").click(t=>{const e=r(t.currentTarget).attr("data-fileid");r('div[data-fileid="'+e+'"]').toggle()})})}}});
+
+/**
+ * Module: TYPO3/CMS/Filelist/FileListLocalisation
+ * @exports TYPO3/CMS/Filelist/FileListLocalisation
+ */
+define(['jquery'], function($) {
+
+  $(function() {
+    $('a.filelist-translationToggler').click(function(event) {
+      var id = $(this).attr('data-fileid');
+      $('div[data-fileid="' + id + '"]').toggle();
+    });
+  });
+
+  return null;
+});

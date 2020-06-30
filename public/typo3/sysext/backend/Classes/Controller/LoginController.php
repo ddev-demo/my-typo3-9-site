@@ -19,6 +19,7 @@ use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
 use Psr\Log\LoggerAwareInterface;
 use Psr\Log\LoggerAwareTrait;
+use Symfony\Component\HttpFoundation\Cookie;
 use TYPO3\CMS\Backend\Exception;
 use TYPO3\CMS\Backend\LoginProvider\LoginProviderInterface;
 use TYPO3\CMS\Backend\Routing\UriBuilder;
@@ -26,10 +27,12 @@ use TYPO3\CMS\Backend\Template\DocumentTemplate;
 use TYPO3\CMS\Backend\Utility\BackendUtility;
 use TYPO3\CMS\Core\Authentication\BackendUserAuthentication;
 use TYPO3\CMS\Core\Configuration\ExtensionConfiguration;
+use TYPO3\CMS\Core\Configuration\Features;
 use TYPO3\CMS\Core\Database\ConnectionPool;
 use TYPO3\CMS\Core\FormProtection\BackendFormProtection;
 use TYPO3\CMS\Core\FormProtection\FormProtectionFactory;
 use TYPO3\CMS\Core\Http\HtmlResponse;
+use TYPO3\CMS\Core\Http\NormalizedParams;
 use TYPO3\CMS\Core\Localization\LanguageService;
 use TYPO3\CMS\Core\Localization\Locales;
 use TYPO3\CMS\Core\Page\PageRenderer;
@@ -96,60 +99,16 @@ class LoginController implements LoggerAwareInterface
     protected $view;
 
     /**
-     * @var DocumentTemplate
-     */
-    protected $documentTemplate;
-
-    /**
-     * Injects the request and response objects for the current request or subrequest
-     * As this controller goes only through the main() method, it is rather simple for now
-     *
-     * @param ServerRequestInterface $request the current request
-     * @return ResponseInterface the finished response with the content
-     */
-    public function formAction(ServerRequestInterface $request): ResponseInterface
-    {
-        $this->init($request);
-        return new HtmlResponse($this->createLoginLogoutForm($request));
-    }
-
-    /**
-     * Calls the main function but with loginRefresh enabled at any time
-     *
-     * @param ServerRequestInterface $request the current request
-     * @return ResponseInterface the finished response with the content
-     */
-    public function refreshAction(ServerRequestInterface $request): ResponseInterface
-    {
-        $this->init($request);
-        $this->loginRefresh = true;
-        return new HtmlResponse($this->createLoginLogoutForm($request));
-    }
-
-    /**
-     * This can be called by single login providers, they receive an instance of $this
-     *
-     * @return string
-     */
-    public function getLoginProviderIdentifier()
-    {
-        return $this->loginProviderIdentifier;
-    }
-
-    /**
      * Initialize the login box. Will also react on a &L=OUT flag and exit.
-     *
-     * @param ServerRequestInterface $request the current request
      */
-    protected function init(ServerRequestInterface $request): void
+    public function __construct()
     {
-        $this->documentTemplate = GeneralUtility::makeInstance(DocumentTemplate::class);
+        // @deprecated since TYPO3 v9, will be obsolete in TYPO3 v10.0
+        $request = $GLOBALS['TYPO3_REQUEST'];
         $parsedBody = $request->getParsedBody();
         $queryParams = $request->getQueryParams();
         $this->validateAndSortLoginProviders();
 
-        // We need a PHP session session for most login levels
-        session_start();
         $this->redirectUrl = GeneralUtility::sanitizeLocalUrl($parsedBody['redirect_url'] ?? $queryParams['redirect_url'] ?? null);
         $this->loginProviderIdentifier = $this->detectLoginProvider($request);
 
@@ -176,6 +135,7 @@ class LoginController implements LoggerAwareInterface
         if ($this->redirectUrl) {
             $this->redirectToURL = $this->redirectUrl;
         } else {
+            // (consolidate RouteDispatcher::evaluateReferrer() when changing 'main' to something different)
             $uriBuilder = GeneralUtility::makeInstance(UriBuilder::class);
             $this->redirectToURL = (string)$uriBuilder->buildUriFromRoute('main');
         }
@@ -190,6 +150,43 @@ class LoginController implements LoggerAwareInterface
     }
 
     /**
+     * Injects the request and response objects for the current request or subrequest
+     * As this controller goes only through the main() method, it is rather simple for now
+     *
+     * @param ServerRequestInterface $request the current request
+     * @return ResponseInterface the finished response with the content
+     */
+    public function formAction(ServerRequestInterface $request): ResponseInterface
+    {
+        return new HtmlResponse($this->createLoginLogoutForm($request));
+    }
+
+    /**
+     * Calls the main function but with loginRefresh enabled at any time
+     *
+     * @param ServerRequestInterface $request the current request
+     * @return ResponseInterface the finished response with the content
+     */
+    public function refreshAction(ServerRequestInterface $request): ResponseInterface
+    {
+        $this->loginRefresh = true;
+        return new HtmlResponse($this->createLoginLogoutForm($request));
+    }
+
+    /**
+     * Main function - creating the login/logout form
+     *
+     * @throws Exception
+     * @return string The content to output
+     * @deprecated since TYPO3 v9, will be removed in TYPO3 v10.0
+     */
+    public function main(): string
+    {
+        trigger_error('LoginController->main() will be replaced by protected method createLoginLogoutForm() in TYPO3 v10.0. Do not call from other extension.', E_USER_DEPRECATED);
+        return $this->createLoginLogoutForm($GLOBALS['TYPO3_REQUEST']);
+    }
+
+    /**
      * Main function - creating the login/logout form
      *
      * @param ServerRequestInterface $request
@@ -198,12 +195,13 @@ class LoginController implements LoggerAwareInterface
      */
     protected function createLoginLogoutForm(ServerRequestInterface $request): string
     {
+        /** @var PageRenderer $pageRenderer */
         $pageRenderer = GeneralUtility::makeInstance(PageRenderer::class);
         $pageRenderer->loadRequireJsModule('TYPO3/CMS/Backend/Login');
 
         // Checking, if we should make a redirect.
         // Might set JavaScript in the header to close window.
-        $this->checkRedirect($request, $pageRenderer);
+        $this->checkRedirect($request);
 
         // Extension Configuration
         $extConf = GeneralUtility::makeInstance(ExtensionConfiguration::class)->get('backend');
@@ -217,13 +215,13 @@ class LoginController implements LoggerAwareInterface
                     '" can\'t be resolved. Please check if the file exists and the extension is activated.'
                 );
             }
-            $pageRenderer->addCssInlineBlock('loginBackgroundImage', '
+            $this->getDocumentTemplate()->inDocStylesArray[] = '
 				.typo3-login-carousel-control.right,
 				.typo3-login-carousel-control.left,
 				.panel-login { border: 0; }
 				.typo3-login { background-image: url("' . $backgroundImage . '"); }
 				.typo3-login-footnote { background-color: #000000; color: #ffffff; opacity: 0.5; }
-			');
+			';
         }
 
         // Login Footnote
@@ -233,7 +231,7 @@ class LoginController implements LoggerAwareInterface
 
         // Add additional css to use the highlight color in the login screen
         if (!empty($extConf['loginHighlightColor'])) {
-            $pageRenderer->addCssInlineBlock('loginHighlightColor', '
+            $this->getDocumentTemplate()->inDocStylesArray[] = '
 				.btn-login.disabled, .btn-login[disabled], fieldset[disabled] .btn-login,
 				.btn-login.disabled:hover, .btn-login[disabled]:hover, fieldset[disabled] .btn-login:hover,
 				.btn-login.disabled:focus, .btn-login[disabled]:focus, fieldset[disabled] .btn-login:focus,
@@ -244,7 +242,7 @@ class LoginController implements LoggerAwareInterface
 				.btn-login:active:hover, .btn-login:active:focus,
 				.btn-login { background-color: ' . $extConf['loginHighlightColor'] . '; }
 				.panel-login .panel-body { border-color: ' . $extConf['loginHighlightColor'] . '; }
-			');
+			';
         }
 
         // Logo
@@ -263,9 +261,9 @@ class LoginController implements LoggerAwareInterface
             } else {
                 $logo = 'EXT:backend/Resources/Public/Images/typo3_orange.svg';
             }
-            $pageRenderer->addCssInlineBlock('loginLogo', '
+            $this->getDocumentTemplate()->inDocStylesArray[] = '
 				.typo3-login-logo .typo3-login-image { max-width: 150px; height:100%;}
-			');
+			';
         }
         $logo = $this->getUriForFileName($logo);
 
@@ -284,6 +282,8 @@ class LoginController implements LoggerAwareInterface
             'redirectUrl' => $this->redirectUrl,
             'loginRefresh' => $this->loginRefresh,
             'loginNewsItems' => $this->getSystemNews(),
+            'referrerCheckEnabled' => GeneralUtility::makeInstance(Features::class)->isFeatureEnabled('security.backend.enforceReferrer'),
+            'loginUrl' => (string)GeneralUtility::makeInstance(UriBuilder::class)->buildUriFromRoute('login'),
             'loginProviderIdentifier' => $this->loginProviderIdentifier,
             'loginProviders' => $this->loginProviders
         ]);
@@ -295,9 +295,9 @@ class LoginController implements LoggerAwareInterface
         $loginProvider = GeneralUtility::makeInstance($this->loginProviders[$this->loginProviderIdentifier]['provider']);
         $loginProvider->render($this->view, $pageRenderer, $this);
 
-        $content = $this->documentTemplate->startPage('TYPO3 CMS Login: ' . $GLOBALS['TYPO3_CONF_VARS']['SYS']['sitename']);
+        $content = $this->getDocumentTemplate()->startPage('TYPO3 CMS Login: ' . $GLOBALS['TYPO3_CONF_VARS']['SYS']['sitename']);
         $content .= $this->view->render();
-        $content .= $this->documentTemplate->endPage();
+        $content .= $this->getDocumentTemplate()->endPage();
 
         return $content;
     }
@@ -308,12 +308,11 @@ class LoginController implements LoggerAwareInterface
      * Do a redirect if a user is logged in
      *
      * @param ServerRequestInterface $request
-     * @param PageRenderer $pageRenderer
      * @throws \RuntimeException
      * @throws \UnexpectedValueException
      * @throws \TYPO3\CMS\Backend\Routing\Exception\RouteNotFoundException
      */
-    protected function checkRedirect(ServerRequestInterface $request, PageRenderer $pageRenderer): void
+    protected function checkRedirect(ServerRequestInterface $request): void
     {
         $backendUser = $this->getBackendUserAuthentication();
         if (empty($backendUser->user['uid'])) {
@@ -349,6 +348,7 @@ class LoginController implements LoggerAwareInterface
                     $this->redirectToURL = '../';
                     break;
                 case 'backend':
+                    // (consolidate RouteDispatcher::evaluateReferrer() when changing 'main' to something different)
                     $uriBuilder = GeneralUtility::makeInstance(UriBuilder::class);
                     $this->redirectToURL = (string)$uriBuilder->buildUriFromRoute('main');
                     break;
@@ -368,7 +368,7 @@ class LoginController implements LoggerAwareInterface
         if ($this->loginRefresh) {
             $formProtection->setSessionTokenFromRegistry();
             $formProtection->persistSessionToken();
-            $pageRenderer->addJsInlineCode('loginRefresh', '
+            $this->getDocumentTemplate()->JScode .= GeneralUtility::wrapJS('
 				if (window.opener && window.opener.TYPO3 && window.opener.TYPO3.LoginRefresh) {
 					window.opener.TYPO3.LoginRefresh.startTask();
 					window.close();
@@ -378,6 +378,17 @@ class LoginController implements LoggerAwareInterface
             $formProtection->storeSessionTokenInRegistry();
             $this->redirectToUrl();
         }
+    }
+
+    /**
+     * Making interface selector
+     *
+     * @deprecated since TYPO3 v9, will be removed in TYPO3 v10.0
+     */
+    public function makeInterfaceSelectorBox(): void
+    {
+        trigger_error('LoginController->makeInterfaceSelectorBox() will be replaced by protected method makeInterfaceSelector() in TYPO3 v10.0. Do not call from other extension.', E_USER_DEPRECATED);
+        $this->makeInterfaceSelector($GLOBALS['TYPO3_REQUEST']);
     }
 
     /**
@@ -559,12 +570,33 @@ class LoginController implements LoggerAwareInterface
             reset($this->loginProviders);
             $loginProvider = key($this->loginProviders);
         }
-        // Use the secure option when the current request is served by a secure connection:
+        // Use the secure option when the current request is served by a secure connection
+        /** @var NormalizedParams $normalizedParams */
         $normalizedParams = $request->getAttribute('normalizedParams');
         $isHttps = $normalizedParams->isHttps();
         $cookieSecure = (bool)$GLOBALS['TYPO3_CONF_VARS']['SYS']['cookieSecure'] && $isHttps;
-        setcookie('be_lastLoginProvider', (string)$loginProvider, $GLOBALS['EXEC_TIME'] + 7776000, '', '', $cookieSecure, true); // 90 days
+        $cookie = new Cookie(
+            'be_lastLoginProvider',
+            (string)$loginProvider,
+            $GLOBALS['EXEC_TIME'] + 7776000, // 90 days
+            $normalizedParams->getSitePath() . TYPO3_mainDir,
+            '',
+            $cookieSecure,
+            true,
+            false,
+            Cookie::SAMESITE_STRICT
+        );
+        header('Set-Cookie: ' . $cookie->__toString(), false);
+
         return (string)$loginProvider;
+    }
+
+    /**
+     * @return string
+     */
+    public function getLoginProviderIdentifier()
+    {
+        return $this->loginProviderIdentifier;
     }
 
     /**
@@ -583,5 +615,15 @@ class LoginController implements LoggerAwareInterface
     protected function getBackendUserAuthentication(): BackendUserAuthentication
     {
         return $GLOBALS['BE_USER'];
+    }
+
+    /**
+     * Returns an instance of DocumentTemplate
+     *
+     * @return DocumentTemplate
+     */
+    protected function getDocumentTemplate(): DocumentTemplate
+    {
+        return $GLOBALS['TBE_TEMPLATE'];
     }
 }

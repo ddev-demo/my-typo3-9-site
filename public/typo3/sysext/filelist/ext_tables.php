@@ -2,12 +2,12 @@
 defined('TYPO3_MODE') or die();
 
 \TYPO3\CMS\Extbase\Utility\ExtensionUtility::registerModule(
-    'Filelist',
+    'TYPO3.CMS.Filelist',
     'file',
     'list',
     '',
     [
-        \TYPO3\CMS\Filelist\Controller\FileListController::class => 'index, search',
+        'FileList' => 'index, search',
     ],
     [
         'access' => 'user,group',

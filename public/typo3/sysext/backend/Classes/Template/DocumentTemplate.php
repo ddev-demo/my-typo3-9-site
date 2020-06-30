@@ -20,10 +20,10 @@ use TYPO3\CMS\Backend\Backend\Shortcut\ShortcutRepository;
 use TYPO3\CMS\Backend\Routing\UriBuilder;
 use TYPO3\CMS\Backend\Utility\BackendUtility;
 use TYPO3\CMS\Core\Authentication\BackendUserAuthentication;
+use TYPO3\CMS\Core\Compatibility\PublicPropertyDeprecationTrait;
 use TYPO3\CMS\Core\Configuration\ExtensionConfiguration;
 use TYPO3\CMS\Core\Imaging\Icon;
 use TYPO3\CMS\Core\Imaging\IconFactory;
-use TYPO3\CMS\Core\Localization\LanguageService;
 use TYPO3\CMS\Core\Page\PageRenderer;
 use TYPO3\CMS\Core\Service\MarkerBasedTemplateService;
 use TYPO3\CMS\Core\Utility\ExtensionManagementUtility;
@@ -47,6 +47,14 @@ use TYPO3\CMS\Core\Utility\PathUtility;
 class DocumentTemplate implements LoggerAwareInterface
 {
     use LoggerAwareTrait;
+    use PublicPropertyDeprecationTrait;
+
+    /**
+     * @var array
+     */
+    protected $deprecatedPublicProperties = [
+        'hasDocheader' => 'Using $hasDocheader of class DocumentTemplate is discouraged. The property is not evaluated in the TYPO3 core anymore and will be removed in TYPO3 v10.0.'
+    ];
 
     // Vars you typically might want to/should set from outside after making instance of this class:
     /**
@@ -71,7 +79,6 @@ class DocumentTemplate implements LoggerAwareInterface
      */
     public $JScodeArray = ['jumpToUrl' => '
 function jumpToUrl(URL) {
-	console.warn(\'jumpToUrl() has been marked as deprecated.\');
 	window.location.href = URL;
 	return false;
 }
@@ -174,6 +181,28 @@ function jumpToUrl(URL) {
     ];
 
     /**
+     * JavaScript files loaded for every page in the Backend
+     *
+     * @var array
+     */
+    protected $jsFiles = [];
+
+    /**
+     * JavaScript files loaded for every page in the Backend, but explicitly excluded from concatenation (useful for libraries etc.)
+     *
+     * @var array
+     */
+    protected $jsFilesNoConcatenation = [];
+
+    /**
+     * Indicates if a <div>-output section is open
+     *
+     * @var int
+     * @internal will be removed in TYPO3 v9
+     */
+    public $sectionFlag = 0;
+
+    /**
      * (Default) Class for wrapping <DIV>-tag of page. Is set in class extensions.
      *
      * @var string
@@ -189,6 +218,12 @@ function jumpToUrl(URL) {
      * @var string
      */
     public $endOfPageJsBlock = '';
+
+    /**
+     * @var bool
+     * @deprecated since TYPO3 v9.4, will be removed in TYPO3 v10.0
+     */
+    protected $hasDocheader = true;
 
     /**
      * @var PageRenderer
@@ -224,6 +259,7 @@ function jumpToUrl(URL) {
      */
     public function __construct()
     {
+        // Initializes the page rendering object:
         $this->initPageRenderer();
 
         $this->iconFactory = GeneralUtility::makeInstance(IconFactory::class);
@@ -267,13 +303,31 @@ function jumpToUrl(URL) {
      */
     protected function initPageRenderer()
     {
+        if ($this->pageRenderer !== null) {
+            return;
+        }
         $this->pageRenderer = GeneralUtility::makeInstance(PageRenderer::class);
-        $this->pageRenderer->setLanguage($this->getLanguageService()->lang);
+        $this->pageRenderer->setLanguage($GLOBALS['LANG']->lang);
         $this->pageRenderer->enableConcatenateCss();
         $this->pageRenderer->enableConcatenateJavascript();
         $this->pageRenderer->enableCompressCss();
         $this->pageRenderer->enableCompressJavascript();
-        if ($GLOBALS['TYPO3_CONF_VARS']['BE']['debug']) {
+        // Add all JavaScript files defined in $this->jsFiles to the PageRenderer
+        foreach ($this->jsFilesNoConcatenation as $file) {
+            $this->pageRenderer->addJsFile(
+                $file,
+                'text/javascript',
+                true,
+                false,
+                '',
+                true
+            );
+        }
+        // Add all JavaScript files defined in $this->jsFiles to the PageRenderer
+        foreach ($this->jsFiles as $file) {
+            $this->pageRenderer->addJsFile($file);
+        }
+        if ((int)$GLOBALS['TYPO3_CONF_VARS']['BE']['debug'] === 1) {
             $this->pageRenderer->enableDebugMode();
         }
     }
@@ -300,6 +354,13 @@ function jumpToUrl(URL) {
         $gvList = 'route,' . $gvList;
         $storeUrl = $this->makeShortcutUrl($gvList, $setList);
         $pathInfo = parse_url(GeneralUtility::getIndpEnv('REQUEST_URI'));
+        // Fallback for alt_mod. We still pass in the old xMOD... stuff, but TBE_MODULES only knows about "record_edit".
+        // We still need to pass the xMOD name to createShortcut below, since this is used for icons.
+        $moduleName = $modName === 'xMOD_alt_doc.php' ? 'record_edit' : $modName;
+        // Add the module identifier automatically if typo3/index.php is used:
+        if (GeneralUtility::_GET('M') !== null) {
+            $storeUrl = '&M=' . $moduleName . $storeUrl;
+        }
         if ((int)$motherModName === 1) {
             $motherModule = 'top.currentModuleLoaded';
         } elseif ($motherModName) {
@@ -307,7 +368,7 @@ function jumpToUrl(URL) {
         } else {
             $motherModule = '\'\'';
         }
-        $confirmationText = GeneralUtility::quoteJSvalue($this->getLanguageService()->sL('LLL:EXT:core/Resources/Private/Language/locallang_core.xlf:labels.makeBookmark'));
+        $confirmationText = GeneralUtility::quoteJSvalue($GLOBALS['LANG']->sL('LLL:EXT:core/Resources/Private/Language/locallang_core.xlf:labels.makeBookmark'));
 
         $shortcutUrl = $pathInfo['path'] . '?' . $storeUrl;
         $shortcutRepository = GeneralUtility::makeInstance(ShortcutRepository::class);
@@ -322,7 +383,7 @@ function jumpToUrl(URL) {
             ', ' . $url . ', ' . $confirmationText . ', ' . $motherModule . ', this);return false;';
 
         return '<a href="#" class="' . htmlspecialchars($classes) . '" onclick="' . htmlspecialchars($onClick) . '" title="' .
-        htmlspecialchars($this->getLanguageService()->sL('LLL:EXT:core/Resources/Private/Language/locallang_core.xlf:labels.makeBookmark')) . '">' .
+        htmlspecialchars($GLOBALS['LANG']->sL('LLL:EXT:core/Resources/Private/Language/locallang_core.xlf:labels.makeBookmark')) . '">' .
         $this->iconFactory->getIcon('actions-system-shortcut-new', Icon::SIZE_SMALL)->render() . '</a>';
     }
 
@@ -347,11 +408,29 @@ function jumpToUrl(URL) {
     }
 
     /**
+     * Returns <input> attributes to set the width of an text-type input field.
+     * For client browsers with no CSS support the cols/size attribute is returned.
+     * For CSS compliant browsers (recommended) a ' style="width: ...px;"' is returned.
+     *
+     * @param int $size A relative number which multiplied with approx. 10 will lead to the width in pixels
+     * @param bool $textarea A flag you can set for textareas - DEPRECATED as there is no difference any more between the two
+     * @param string $styleOverride A string which will be returned as attribute-value for style="" instead of the calculated width (if CSS is enabled)
+     * @return string Tag attributes for an <input> tag (regarding width)
+     * @deprecated since TYPO3 v9, will be removed in TYPO3 v10.0.
+     */
+    public function formWidth($size = 48, $textarea = false, $styleOverride = '')
+    {
+        trigger_error('DocumentTemplate->formWidth() will be removed in TYPO3 10.0 - use responsive code or direct inline styles to format your input fields instead.', E_USER_DEPRECATED);
+        return ' style="' . ($styleOverride ?: 'width:' . ceil($size * 9.58) . 'px;') . '"';
+    }
+
+    /**
      * Returns JavaScript variables setting the returnUrl and thisScript location for use by JavaScript on the page.
      * Used in fx. db_list.php (Web>List)
      *
      * @param string $thisLocation URL to "this location" / current script
      * @return string Urls are returned as JavaScript variables T3_RETURN_URL and T3_THIS_LOCATION
+     * @see typo3/db_list.php
      */
     public function redirectUrls($thisLocation = '')
     {
@@ -362,9 +441,7 @@ function jumpToUrl(URL) {
             'popViewId' => ''
         ]);
         $out = '
-	// @deprecated
 	var T3_RETURN_URL = ' . GeneralUtility::quoteJSvalue(str_replace('%20', '', rawurlencode(GeneralUtility::sanitizeLocalUrl(GeneralUtility::_GP('returnUrl'))))) . ';
-	// @deprecated
 	var T3_THIS_LOCATION = ' . GeneralUtility::quoteJSvalue(str_replace('%20', '', rawurlencode($thisLocation))) . '
 		';
         return $out;
@@ -419,6 +496,8 @@ function jumpToUrl(URL) {
 
         $headerStart = '<!DOCTYPE html>';
         $this->pageRenderer->setXmlPrologAndDocType($headerStart);
+        $this->pageRenderer->setHeadTag('<head>' . LF . '<!-- TYPO3 Script ID: ' . htmlspecialchars($this->scriptID) . ' -->');
+        header('Content-Type:text/html;charset=utf-8');
         $this->pageRenderer->setCharSet('utf-8');
         $this->pageRenderer->setMetaTag('name', 'generator', $this->generator());
         $this->pageRenderer->setMetaTag('name', 'robots', 'noindex,follow');
@@ -553,6 +632,22 @@ function jumpToUrl(URL) {
     }
 
     /**
+     * Insert additional style sheet link
+     *
+     * @param string $key some key identifying the style sheet
+     * @param string $href uri to the style sheet file
+     * @param string $title value for the title attribute of the link element
+     * @param string $relation value for the rel attribute of the link element
+     * @deprecated since TYPO3 v9.4, will be removed in TYPO3 v10.0
+     * @see PageRenderer::addCssFile()
+     */
+    public function addStyleSheet($key, $href, $title = '', $relation = 'stylesheet')
+    {
+        trigger_error('DocumentTemplate->->addStyleSheet() will be removed in TYPO3 v10.0.', E_USER_DEPRECATED);
+        $this->pageRenderer->addCssFile($href, $relation, 'screen', $title);
+    }
+
+    /**
      * Add all *.css files of the directory $path to the stylesheets
      *
      * @param string $path directory to add
@@ -561,16 +656,15 @@ function jumpToUrl(URL) {
     {
         $path = GeneralUtility::getFileAbsFileName($path);
         // Read all files in directory and sort them alphabetically
-        foreach (GeneralUtility::getFilesInDir($path, 'css', true) as $cssFile) {
-            $this->pageRenderer->addCssFile($cssFile);
+        $cssFiles = GeneralUtility::getFilesInDir($path, 'css');
+        foreach ($cssFiles as $cssFile) {
+            $this->pageRenderer->addCssFile(PathUtility::getRelativePathTo($path) . $cssFile);
         }
     }
 
     /**
      * Insert post rendering document style into already rendered content
-     *
-     * @todo: Review this, it may be obsolete or could be done differently?
-     * @todo: Previous comment was: "This is needed for extobjbase" (AbstractFunctionModule)
+     * This is needed for extobjbase
      *
      * @param string $content style-content to insert.
      * @return string content with inserted styles
@@ -601,7 +695,7 @@ function jumpToUrl(URL) {
             foreach ($GLOBALS['TBE_STYLES']['skins'] as $skinExtKey => $skin) {
                 $skinStylesheetDirs = $this->stylesheetsSkins;
                 // Skins can add custom stylesheetDirectories using
-                // $GLOBALS['TBE_STYLES']['skins']['your_extension_key']['stylesheetDirectories']
+                // $GLOBALS['TBE_STYLES']['skins'][$_EXTKEY]['stylesheetDirectories']
                 if (is_array($skin['stylesheetDirectories'])) {
                     $skinStylesheetDirs = array_merge($skinStylesheetDirs, $skin['stylesheetDirectories']);
                 }
@@ -631,6 +725,19 @@ function jumpToUrl(URL) {
     public function generator()
     {
         return 'TYPO3 CMS, ' . TYPO3_URL_GENERAL . ', &#169; Kasper Sk&#229;rh&#248;j ' . TYPO3_copyright_year . ', extensions are copyright of their respective owners.';
+    }
+
+    /**
+     * Returns X-UA-Compatible meta tag
+     * @deprecated since TYPO3 v9, will be removed in TYPO3 v10.0.
+     *
+     * @param string $content Content of the compatible tag (default: IE-8)
+     * @return string <meta http-equiv="X-UA-Compatible" content="???" />
+     */
+    public function xUaCompatible($content = 'IE=8')
+    {
+        trigger_error('DocumentTemplate->xUaCompatible() will be removed with TYPO3 v10.0. Use PageRenderer->setMetaTag() instead.', E_USER_DEPRECATED);
+        return '<meta http-equiv="X-UA-Compatible" content="' . $content . '" />';
     }
 
     /*****************************************
@@ -801,7 +908,7 @@ function jumpToUrl(URL) {
             $title = '';
         }
         // Setting the path of the page
-        $pagePath = htmlspecialchars($this->getLanguageService()->sL('LLL:EXT:core/Resources/Private/Language/locallang_core.xlf:labels.path')) . ': <span class="typo3-docheader-pagePath">';
+        $pagePath = htmlspecialchars($GLOBALS['LANG']->sL('LLL:EXT:core/Resources/Private/Language/locallang_core.xlf:labels.path')) . ': <span class="typo3-docheader-pagePath">';
         // crop the title to title limit (or 50, if not defined)
         $cropLength = empty($GLOBALS['BE_USER']->uc['titleLen']) ? 50 : $GLOBALS['BE_USER']->uc['titleLen'];
         $croppedTitle = GeneralUtility::fixed_lgd_cs($title, -$cropLength);
@@ -896,13 +1003,5 @@ function jumpToUrl(URL) {
     protected function getBackendUser()
     {
         return $GLOBALS['BE_USER'] ?? null;
-    }
-
-    /**
-     * @return LanguageService|null
-     */
-    protected function getLanguageService(): ?LanguageService
-    {
-        return $GLOBALS['LANG'] ?? null;
     }
 }

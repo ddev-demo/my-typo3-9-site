@@ -17,6 +17,7 @@ namespace TYPO3\CMS\Core\Log\Writer;
 
 use TYPO3\CMS\Core\Core\Environment;
 use TYPO3\CMS\Core\Log\Exception\InvalidLogWriterConfigurationException;
+use TYPO3\CMS\Core\Log\LogLevel;
 use TYPO3\CMS\Core\Log\LogRecord;
 use TYPO3\CMS\Core\Utility\GeneralUtility;
 use TYPO3\CMS\Core\Utility\PathUtility;
@@ -144,7 +145,7 @@ class FileWriter extends AbstractWriter
     public function writeLog(LogRecord $record)
     {
         $timestamp = date('r', (int)$record->getCreated());
-        $levelName = strtoupper($record->getLevel());
+        $levelName = LogLevel::getName($record->getLevel());
         $data = '';
         $recordData = $record->getData();
         if (!empty($recordData)) {
@@ -216,13 +217,19 @@ class FileWriter extends AbstractWriter
         if (file_exists($this->logFile)) {
             return;
         }
-        $logFileDirectory = PathUtility::dirname($this->logFile);
-        if (!@is_dir($logFileDirectory)) {
-            GeneralUtility::mkdir_deep($logFileDirectory);
-            // create .htaccess file if log file is within the site path
-            if (PathUtility::getCommonPrefix([Environment::getPublicPath() . '/', $logFileDirectory]) === (Environment::getPublicPath() . '/')) {
-                // only create .htaccess, if we created the directory on our own
-                $this->createHtaccessFile($logFileDirectory . '/.htaccess');
+
+        // skip mkdir if logFile refers to any scheme but vfs://, file:// or empty
+        $scheme = parse_url($this->logFile, PHP_URL_SCHEME);
+        if ($scheme === null || $scheme === 'file' || $scheme === 'vfs' || GeneralUtility::isAbsPath($this->logFile)) {
+            // remove file:/ before creating the directory
+            $logFileDirectory = PathUtility::dirname(preg_replace('#^file:/#', '', $this->logFile));
+            if (!@is_dir($logFileDirectory)) {
+                GeneralUtility::mkdir_deep($logFileDirectory);
+                // create .htaccess file if log file is within the site path
+                if (PathUtility::getCommonPrefix([Environment::getPublicPath() . '/', $logFileDirectory]) === (Environment::getPublicPath() . '/')) {
+                    // only create .htaccess, if we created the directory on our own
+                    $this->createHtaccessFile($logFileDirectory . '/.htaccess');
+                }
             }
         }
         // create the log file

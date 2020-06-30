@@ -16,10 +16,7 @@ namespace TYPO3\CMS\Backend\Form\FormDataProvider;
  */
 
 use TYPO3\CMS\Backend\Form\FormDataProviderInterface;
-use TYPO3\CMS\Core\Exception\SiteNotFoundException;
-use TYPO3\CMS\Core\Site\Entity\NullSite;
-use TYPO3\CMS\Core\Site\Entity\SiteInterface;
-use TYPO3\CMS\Core\Site\SiteFinder;
+use TYPO3\CMS\Core\Routing\SiteMatcher;
 use TYPO3\CMS\Core\Utility\GeneralUtility;
 
 /**
@@ -31,13 +28,6 @@ use TYPO3\CMS\Core\Utility\GeneralUtility;
  */
 class SiteResolving implements FormDataProviderInterface
 {
-    protected $siteFinder;
-
-    public function __construct(SiteFinder $siteFinder = null)
-    {
-        $this->siteFinder = $siteFinder ?? GeneralUtility::makeInstance(SiteFinder::class);
-    }
-
     /**
      * Find and add site object
      *
@@ -59,20 +49,7 @@ class SiteResolving implements FormDataProviderInterface
         } else {
             $pageIdDefaultLanguage = $result['effectivePid'];
         }
-        $result['site'] = $this->resolveSite((int)$pageIdDefaultLanguage);
+        $result['site'] = GeneralUtility::makeInstance(SiteMatcher::class)->matchByPageId((int)$pageIdDefaultLanguage);
         return $result;
-    }
-
-    /**
-     * @param int $pageId
-     * @return SiteInterface
-     */
-    protected function resolveSite(int $pageId): SiteInterface
-    {
-        try {
-            return $this->siteFinder->getSiteByPageId($pageId);
-        } catch (SiteNotFoundException $e) {
-            return new NullSite();
-        }
     }
 }

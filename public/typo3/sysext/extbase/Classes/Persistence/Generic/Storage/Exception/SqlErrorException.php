@@ -1,6 +1,4 @@
 <?php
-declare(strict_types = 1);
-
 namespace TYPO3\CMS\Extbase\Persistence\Generic\Storage\Exception;
 
 /*
@@ -16,11 +14,9 @@ namespace TYPO3\CMS\Extbase\Persistence\Generic\Storage\Exception;
  * The TYPO3 project - inspiring people to share!
  */
 
-use TYPO3\CMS\Extbase\Persistence\Generic\Exception;
-
 /**
  * An SQL exception
  */
-class SqlErrorException extends Exception
+class SqlErrorException extends \TYPO3\CMS\Extbase\Persistence\Generic\Exception
 {
 }

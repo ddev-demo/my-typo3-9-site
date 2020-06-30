@@ -96,7 +96,7 @@ class FormEngineUtility
      */
     public static function getTSconfigForTableRow($table, $row, $field = '')
     {
-        $runtimeCache = GeneralUtility::makeInstance(CacheManager::class)->getCache('runtime');
+        $runtimeCache = GeneralUtility::makeInstance(CacheManager::class)->getCache('cache_runtime');
         $cache = $runtimeCache->get('formEngineUtilityTsConfigForTableRow') ?: [];
         $cacheIdentifier = $table . ':' . $row['uid'];
         if (!isset($cache[$cacheIdentifier])) {
@@ -147,7 +147,7 @@ class FormEngineUtility
     {
         $backendUser = static::getBackendUserAuthentication();
         if (isset($uc['inlineView']) && is_array($uc['inlineView'])) {
-            $inlineView = (array)json_decode($backendUser->uc['inlineView'], true);
+            $inlineView = (array)unserialize($backendUser->uc['inlineView'], ['allowed_classes' => false]);
             foreach ($uc['inlineView'] as $topTable => $topRecords) {
                 foreach ($topRecords as $topUid => $childElements) {
                     foreach ($childElements as $childTable => $childRecords) {
@@ -173,7 +173,7 @@ class FormEngineUtility
                     }
                 }
             }
-            $backendUser->uc['inlineView'] = json_encode($inlineView);
+            $backendUser->uc['inlineView'] = serialize($inlineView);
             $backendUser->writeUC();
         }
     }

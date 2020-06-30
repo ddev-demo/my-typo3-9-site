@@ -20,10 +20,9 @@ use TYPO3\CMS\Extbase\Mvc\Controller\ControllerContext;
 use TYPO3\CMS\Extbase\Mvc\Web\Request as WebRequest;
 use TYPO3\CMS\Extbase\Mvc\Web\Routing\UriBuilder;
 use TYPO3\CMS\Extbase\Object\ObjectManager;
-use TYPO3\CMS\Extbase\Service\EnvironmentService;
 use TYPO3\CMS\Fluid\Core\Rendering\RenderingContext;
+use TYPO3\CMS\Fluid\View\Exception\InvalidTemplateResourceException;
 use TYPO3\CMS\Frontend\ContentObject\ContentObjectRenderer;
-use TYPO3Fluid\Fluid\View\Exception\InvalidTemplateResourceException;
 
 /**
  * A standalone template view.
@@ -55,15 +54,10 @@ class StandaloneView extends AbstractTemplateView
         }
         $configurationManager->setContentObject($contentObject);
 
-        $baseUri = \TYPO3\CMS\Core\Utility\GeneralUtility::getIndpEnv('TYPO3_SITE_URL');
-        if ($this->objectManager->get(EnvironmentService::class)->isEnvironmentInBackendMode()) {
-            $baseUri .= TYPO3_mainDir;
-        }
-
         /** @var WebRequest $request */
         $request = $this->objectManager->get(WebRequest::class);
         $request->setRequestUri(GeneralUtility::getIndpEnv('TYPO3_REQUEST_URL'));
-        $request->setBaseUri($baseUri);
+        $request->setBaseUri(GeneralUtility::getIndpEnv('TYPO3_SITE_URL'));
         /** @var UriBuilder $uriBuilder */
         $uriBuilder = $this->objectManager->get(UriBuilder::class);
         $uriBuilder->setRequest($request);

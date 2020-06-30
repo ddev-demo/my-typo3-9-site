@@ -65,7 +65,11 @@ class Request extends Message implements RequestInterface
         'MOVE',
         'PROPFIND',
         'PROPPATCH',
-        'UNLOCK'
+        'REPORT',
+        'UNLOCK',
+        // Custom methods
+        'PURGE',
+        'BAN'
     ];
 
     /**
@@ -77,9 +81,9 @@ class Request extends Message implements RequestInterface
     /**
      * Constructor, the only place to set all parameters of this Request
      *
-     * @param string|UriInterface|null $uri URI for the request, if any.
+     * @param string|null $uri URI for the request, if any.
      * @param string|null $method HTTP method for the request, if any.
-     * @param string|resource|StreamInterface|null $body Message body, if any.
+     * @param string|resource|StreamInterface $body Message body, if any.
      * @param array $headers Headers for the message, if any.
      * @throws \InvalidArgumentException for any invalid value.
      */
@@ -87,11 +91,11 @@ class Request extends Message implements RequestInterface
     {
 
         // Build a streamable object for the body
-        if ($body !== null && !is_string($body) && !is_resource($body) && !$body instanceof StreamInterface) {
+        if (!is_string($body) && !is_resource($body) && !$body instanceof StreamInterface) {
             throw new \InvalidArgumentException('Body must be a string stream resource identifier, a stream resource, or a StreamInterface instance', 1436717271);
         }
 
-        if ($body !== null && !$body instanceof StreamInterface) {
+        if (!$body instanceof StreamInterface) {
             $body = new Stream($body);
         }
 

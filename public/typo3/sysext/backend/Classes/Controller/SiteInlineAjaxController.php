@@ -144,14 +144,30 @@ class SiteInlineAjaxController extends AbstractFormEngineAjaxController
             'data' => '',
             'stylesheetFiles' => [],
             'scriptCall' => [],
-            'compilerInput' => [
-                'uid' => $childData['databaseRow']['uid'],
-                'childChildUid' => $childChildUid,
-                'parentConfig' => $parentConfig,
-            ],
         ];
 
+        // The HTML-object-id's prefix of the dynamically created record
+        $objectName = $inlineStackProcessor->getCurrentStructureDomObjectIdPrefix($inlineFirstPid);
+        $objectPrefix = $objectName . '-' . $child['table'];
+        $objectId = $objectPrefix . '-' . $childData['databaseRow']['uid'];
+        $expandSingle = $parentConfig['appearance']['expandSingle'];
+        if (!$child['uid']) {
+            $jsonArray['scriptCall'][] = 'inline.domAddNewRecord(\'bottom\',' . GeneralUtility::quoteJSvalue($objectName . '_records') . ',' . GeneralUtility::quoteJSvalue($objectPrefix) . ',json.data);';
+            $jsonArray['scriptCall'][] = 'inline.memorizeAddRecord(' . GeneralUtility::quoteJSvalue($objectPrefix) . ',' . GeneralUtility::quoteJSvalue($childData['databaseRow']['uid']) . ',null,' . GeneralUtility::quoteJSvalue($childChildUid) . ');';
+        } else {
+            $jsonArray['scriptCall'][] = 'inline.domAddNewRecord(\'after\',' . GeneralUtility::quoteJSvalue($domObjectId . '_div') . ',' . GeneralUtility::quoteJSvalue($objectPrefix) . ',json.data);';
+            $jsonArray['scriptCall'][] = 'inline.memorizeAddRecord(' . GeneralUtility::quoteJSvalue($objectPrefix) . ',' . GeneralUtility::quoteJSvalue($childData['databaseRow']['uid']) . ',' . GeneralUtility::quoteJSvalue($child['uid']) . ',' . GeneralUtility::quoteJSvalue($childChildUid) . ');';
+        }
         $jsonArray = $this->mergeChildResultIntoJsonResult($jsonArray, $childResult);
+        if ($parentConfig['appearance']['useSortable']) {
+            $inlineObjectName = $inlineStackProcessor->getCurrentStructureDomObjectIdPrefix($inlineFirstPid);
+            $jsonArray['scriptCall'][] = 'inline.createDragAndDropSorting(' . GeneralUtility::quoteJSvalue($inlineObjectName . '_records') . ');';
+        }
+        if (!$parentConfig['appearance']['collapseAll'] && $expandSingle) {
+            $jsonArray['scriptCall'][] = 'inline.collapseAllRecords(' . GeneralUtility::quoteJSvalue($objectId) . ',' . GeneralUtility::quoteJSvalue($objectPrefix) . ',' . GeneralUtility::quoteJSvalue($childData['databaseRow']['uid']) . ');';
+        }
+        // Fade out and fade in the new record in the browser view to catch the user's eye
+        $jsonArray['scriptCall'][] = 'inline.fadeOutFadeIn(' . GeneralUtility::quoteJSvalue($objectId . '_div') . ');';
 
         return new JsonResponse($jsonArray);
     }
@@ -217,7 +233,22 @@ class SiteInlineAjaxController extends AbstractFormEngineAjaxController
             'scriptCall' => [],
         ];
 
+        // The HTML-object-id's prefix of the dynamically created record
+        $objectPrefix = $inlineStackProcessor->getCurrentStructureDomObjectIdPrefix($inlineFirstPid) . '-' . $child['table'];
+        $objectId = $objectPrefix . '-' . (int)$child['uid'];
+        $expandSingle = $parentConfig['appearance']['expandSingle'];
+        $jsonArray['scriptCall'][] = 'inline.domAddRecordDetails(' . GeneralUtility::quoteJSvalue($domObjectId) . ',' . GeneralUtility::quoteJSvalue($objectPrefix) . ',' . ($expandSingle ? '1' : '0') . ',json.data);';
+        if ($parentConfig['foreign_unique']) {
+            $jsonArray['scriptCall'][] = 'inline.removeUsed(' . GeneralUtility::quoteJSvalue($objectPrefix) . ',\'' . (int)$child['uid'] . '\');';
+        }
         $jsonArray = $this->mergeChildResultIntoJsonResult($jsonArray, $childResult);
+        if ($parentConfig['appearance']['useSortable']) {
+            $inlineObjectName = $inlineStackProcessor->getCurrentStructureDomObjectIdPrefix($inlineFirstPid);
+            $jsonArray['scriptCall'][] = 'inline.createDragAndDropSorting(' . GeneralUtility::quoteJSvalue($inlineObjectName . '_records') . ');';
+        }
+        if (!$parentConfig['appearance']['collapseAll'] && $expandSingle) {
+            $jsonArray['scriptCall'][] = 'inline.collapseAllRecords(' . GeneralUtility::quoteJSvalue($objectId) . ',' . GeneralUtility::quoteJSvalue($objectPrefix) . ',\'' . (int)$child['uid'] . '\');';
+        }
 
         return new JsonResponse($jsonArray);
     }
@@ -293,7 +324,12 @@ class SiteInlineAjaxController extends AbstractFormEngineAjaxController
             $jsonResult['stylesheetFiles'][] = $this->getRelativePathToStylesheetFile($stylesheetFile);
         }
         if (!empty($childResult['inlineData'])) {
-            $jsonResult['inlineData'] = $childResult['inlineData'];
+            $jsonResult['scriptCall'][] = 'inline.addToDataArray(' . json_encode($childResult['inlineData']) . ');';
+        }
+        if (!empty($childResult['additionalJavaScriptSubmit'])) {
+            $additionalJavaScriptSubmit = implode('', $childResult['additionalJavaScriptSubmit']);
+            $additionalJavaScriptSubmit = str_replace([CR, LF], '', $additionalJavaScriptSubmit);
+            $jsonResult['scriptCall'][] = 'TBE_EDITOR.addActionChecks("submit", "' . addslashes($additionalJavaScriptSubmit) . '");';
         }
         foreach ($childResult['additionalJavaScriptPost'] as $singleAdditionalJavaScriptPost) {
             $jsonResult['scriptCall'][] = $singleAdditionalJavaScriptPost;
@@ -319,7 +355,8 @@ class SiteInlineAjaxController extends AbstractFormEngineAjaxController
 
             $jsonResult['scriptCall'][] = implode(LF, $javaScriptCode);
         }
-        $jsonResult['requireJsModules'] = $this->createExecutableStringRepresentationOfRegisteredRequireJsModules($childResult);
+        $requireJsModule = $this->createExecutableStringRepresentationOfRegisteredRequireJsModules($childResult);
+        $jsonResult['scriptCall'] = array_merge($requireJsModule, $jsonResult['scriptCall']);
 
         return $jsonResult;
     }
@@ -343,10 +380,10 @@ class SiteInlineAjaxController extends AbstractFormEngineAjaxController
         if (empty($context['config'])) {
             throw new \RuntimeException('Empty context config section given', 1522771632);
         }
-        if (!hash_equals(GeneralUtility::hmac(json_encode($context['config']), 'InlineContext'), $context['hmac'])) {
+        if (!hash_equals(GeneralUtility::hmac((string)$context['config'], 'InlineContext'), (string)$context['hmac'])) {
             throw new \RuntimeException('Hash does not validate', 1522771640);
         }
-        return $context['config'];
+        return json_decode($context['config'], true);
     }
 
     /**
@@ -360,7 +397,7 @@ class SiteInlineAjaxController extends AbstractFormEngineAjaxController
         // Substitute FlexForm addition and make parsing a bit easier
         $domObjectId = str_replace('---', ':', $domObjectId);
         // The starting pattern of an object identifier (e.g. "data-<firstPidValue>-<anything>)
-        $pattern = '/^data-(.+?)-(.+)$/';
+        $pattern = '/^data' . '-' . '(.+?)' . '-' . '(.+)$/';
         if (preg_match($pattern, $domObjectId, $match)) {
             return (int)$match[1];
         }

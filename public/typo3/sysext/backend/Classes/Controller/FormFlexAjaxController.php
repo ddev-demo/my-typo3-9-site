@@ -96,7 +96,7 @@ class FormFlexAjaxController extends AbstractFormEngineAjaxController
         $formData['flexFormContainerIdentifier'] = $flexFormContainerIdentifier;
         $formData['flexFormContainerElementCollapsed'] = false;
 
-        $formData['flexFormFormPrefix'] = '[data][' . $flexFormSheetName . '][lDEF][' . $flexFormFieldName . '][el]';
+        $formData['flexFormFormPrefix'] = '[data][' . $flexFormSheetName . '][lDEF]' . '[' . $flexFormFieldName . ']' . '[el]';
 
         // Set initialized data of that section container from compiler to the array part used
         // by flexFormElementContainer which prepares parameterArray. Important for initialized
@@ -144,6 +144,11 @@ class FormFlexAjaxController extends AbstractFormEngineAjaxController
             'scriptCall' => [],
         ];
 
+        if (!empty($newContainerResult['additionalJavaScriptSubmit'])) {
+            $additionalJavaScriptSubmit = implode('', $newContainerResult['additionalJavaScriptSubmit']);
+            $additionalJavaScriptSubmit = str_replace([CR, LF], '', $additionalJavaScriptSubmit);
+            $jsonResult['scriptCall'][] = 'TBE_EDITOR.addActionChecks("submit", "' . addslashes($additionalJavaScriptSubmit) . '");';
+        }
         foreach ($newContainerResult['additionalJavaScriptPost'] as $singleAdditionalJavaScriptPost) {
             $jsonResult['scriptCall'][] = $singleAdditionalJavaScriptPost;
         }

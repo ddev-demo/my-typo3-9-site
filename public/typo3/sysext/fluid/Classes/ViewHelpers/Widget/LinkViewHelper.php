@@ -14,7 +14,6 @@ namespace TYPO3\CMS\Fluid\ViewHelpers\Widget;
  * The TYPO3 project - inspiring people to share!
  */
 
-use TYPO3\CMS\Extbase\Mvc\Web\Routing\UriBuilder;
 use TYPO3Fluid\Fluid\Core\ViewHelper\AbstractTagBasedViewHelper;
 
 /**
@@ -51,8 +50,7 @@ class LinkViewHelper extends AbstractTagBasedViewHelper
         $this->registerTagAttribute('rel', 'string', 'Specifies the relationship between the current document and the linked document');
         $this->registerTagAttribute('rev', 'string', 'Specifies the relationship between the linked document and the current document');
         $this->registerTagAttribute('target', 'string', 'Specifies where to open the linked document');
-        // @deprecated
-        $this->registerArgument('useCacheHash', 'bool', 'Deprecated: True whether the cache hash should be appended to the URL', false, null);
+        $this->registerArgument('useCacheHash', 'bool', 'True whether the cache hash should be appended to the URL', false, false);
         $this->registerArgument('addQueryStringMethod', 'string', 'Method to be used for query string');
         $this->registerArgument('action', 'string', 'Target action');
         $this->registerArgument('arguments', 'array', 'Arguments', false, []);
@@ -107,7 +105,6 @@ class LinkViewHelper extends AbstractTagBasedViewHelper
      */
     protected function getWidgetUri()
     {
-        /** @var UriBuilder $uriBuilder */
         $uriBuilder = $this->renderingContext->getControllerContext()->getUriBuilder();
         $argumentPrefix = $this->renderingContext->getControllerContext()->getRequest()->getArgumentPrefix();
         $arguments = $this->hasArgument('arguments') ? $this->arguments['arguments'] : [];
@@ -117,22 +114,14 @@ class LinkViewHelper extends AbstractTagBasedViewHelper
         if ($this->hasArgument('format') && $this->arguments['format'] !== '') {
             $arguments['format'] = $this->arguments['format'];
         }
-        if (isset($arguments['useCacheHash'])) {
-            trigger_error('Using the argument "useCacheHash" in <f:widget.link> ViewHelper has no effect anymore. Remove the argument in your fluid template, as it will result in a fatal error.', E_USER_DEPRECATED);
-        }
-        $uriBuilder->reset()
+        return $uriBuilder->reset()
             ->setArguments([$argumentPrefix => $arguments])
             ->setSection($this->arguments['section'])
+            ->setUseCacheHash($this->arguments['useCacheHash'])
             ->setAddQueryString(true)
+            ->setAddQueryStringMethod($this->arguments['addQueryStringMethod'])
             ->setArgumentsToBeExcludedFromQueryString([$argumentPrefix, 'cHash'])
             ->setFormat($this->arguments['format'])
-        ;
-
-        $addQueryStringMethod = $this->arguments['addQueryStringMethod'] ?? null;
-        if (is_string($addQueryStringMethod)) {
-            $uriBuilder->setAddQueryStringMethod($addQueryStringMethod);
-        }
-
-        return $uriBuilder->build();
+            ->build();
     }
 }

@@ -37,5 +37,4 @@ $GLOBALS['TYPO3\_CONF\_VARS']['EXTCONF']['felogin']['forgotPasswordMail ']
   Hook to change the contents of the forgot password mail
 
 $GLOBALS['TYPO3\_CONF\_VARS']['EXTCONF']['felogin']['password\_changed']
-  Receives an array containing the user and the newPassword, allows to mark the
-  password as invalid using 'passwordValid' and set a 'passwordInvalidMessage'
+  Receives an array containing the user and the newPassword.

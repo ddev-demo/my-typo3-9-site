@@ -14,23 +14,32 @@ namespace TYPO3\CMS\Core\TypoScript;
  * The TYPO3 project - inspiring people to share!
  */
 
+use TYPO3\CMS\Backend\Utility\BackendUtility;
 use TYPO3\CMS\Core\Cache\CacheManager;
+use TYPO3\CMS\Core\Compatibility\PublicMethodDeprecationTrait;
 use TYPO3\CMS\Core\Compatibility\PublicPropertyDeprecationTrait;
 use TYPO3\CMS\Core\Context\Context;
-use TYPO3\CMS\Core\Context\TypoScriptAspect;
 use TYPO3\CMS\Core\Database\Connection;
 use TYPO3\CMS\Core\Database\ConnectionPool;
 use TYPO3\CMS\Core\Database\Query\Restriction\AbstractRestrictionContainer;
 use TYPO3\CMS\Core\Database\Query\Restriction\DefaultRestrictionContainer;
+use TYPO3\CMS\Core\Database\Query\Restriction\DeletedRestriction;
 use TYPO3\CMS\Core\Database\Query\Restriction\HiddenRestriction;
-use TYPO3\CMS\Core\Domain\Repository\PageRepository;
 use TYPO3\CMS\Core\Package\PackageManager;
+use TYPO3\CMS\Core\Resource\Exception\FileDoesNotExistException;
+use TYPO3\CMS\Core\Resource\Exception\InvalidFileException;
+use TYPO3\CMS\Core\Resource\Exception\InvalidFileNameException;
+use TYPO3\CMS\Core\Resource\Exception\InvalidPathException;
 use TYPO3\CMS\Core\TimeTracker\TimeTracker;
 use TYPO3\CMS\Core\Utility\ArrayUtility;
 use TYPO3\CMS\Core\Utility\ExtensionManagementUtility;
 use TYPO3\CMS\Core\Utility\GeneralUtility;
+use TYPO3\CMS\Core\Utility\HttpUtility;
+use TYPO3\CMS\Core\Utility\MathUtility;
 use TYPO3\CMS\Frontend\Configuration\TypoScript\ConditionMatching\ConditionMatcher;
 use TYPO3\CMS\Frontend\Controller\TypoScriptFrontendController;
+use TYPO3\CMS\Frontend\Page\PageRepository;
+use TYPO3\CMS\Frontend\Resource\FilePathSanitizer;
 
 /**
  * Template object that is responsible for generating the TypoScript template based on template records.
@@ -40,9 +49,41 @@ use TYPO3\CMS\Frontend\Controller\TypoScriptFrontendController;
 class TemplateService
 {
     use PublicPropertyDeprecationTrait;
+    use PublicMethodDeprecationTrait;
 
-    private $deprecatedPublicProperties = [
-        'forceTemplateParsing' => 'Using tmpl->forceTemplateParsing is deprecated and will no longer work with TYPO3 v11.0. Use TypoScriptAspect from Context instead.'
+    /**
+     * Properties which have been moved to protected status from public
+     * @var array
+     */
+    protected $deprecatedPublicProperties = [
+        'matchAll' => 'Using $matchAll of class TemplateService from the outside is discouraged, as this variable is only used for internal storage.',
+        'whereClause' => 'Using $whereClause of class TemplateService is discouraged, as this has been superseded by Doctrine DBAL API.',
+        'debug' => 'Using $debug of class TemplateService is discouraged, as this option has no effect anymore.',
+        'allowedPaths' => 'Using $allowedPaths of class TemplateService from the outside is discouraged, as this variable is only used for internal storage.',
+        'simulationHiddenOrTime' => 'Using $simulationHiddenOrTime of class TemplateService is discouraged, as this has been superseeded by Doctrine DBAL API.',
+        'nextLevel' => 'Using $nextLevel of class TemplateService from the outside is discouraged, as this variable is only used for internal storage.',
+        'rootId' => 'Using $rootId of class TemplateService from the outside is discouraged, use TemplateService->getRootId() instead.',
+        'absoluteRootLine' => 'Using $absoluteRootLine of class TemplateService from the outside is discouraged, as this variable is only used for internal storage.',
+        'outermostRootlineIndexWithTemplate' => 'Using $outermostRootlineIndexWithTemplate of class TemplateService from the outside is discouraged, as this variable is only used for internal storage.',
+        'rowSum' => 'Using $rowSum of class TemplateService from the outside is discouraged, as this variable is only used for internal storage.',
+        'sitetitle' => 'Using $sitetitle of class TemplateService from the outside is discouraged, as this variable is only used for internal storage.',
+        'sectionsMatch' => 'Using $sectionsMatch of class TemplateService from the outside is discouraged, as this variable is only used for internal storage.',
+        'frames' => 'Using $frames of class TemplateService from the outside is discouraged, as this variable is only used for internal storage.',
+        'MPmap' => 'Using $MPmap of class TemplateService from the outside is discouraged, as this variable is only used for internal storage.',
+        'fileCache' => 'Using $fileCache of class TemplateService from the outside is discouraged, the property will be removed in TYPO3 v10.0.',
+    ];
+
+    /**
+     * Methods which have been moved to protected status from public
+     * @var array
+     */
+    protected $deprecatedPublicMethods = [
+        'prependStaticExtra' => 'Using prependStaticExtra() of class TemplateService from the outside is discouraged, as this method is only meant to be used internally.',
+        'versionOL' => 'Using versionOL() of class TemplateService from the outside is discouraged, as this method is only meant to be used internally.',
+        'processIncludes' => 'Using processIncludes() of class TemplateService from the outside is discouraged, as this method is only meant to be used internally.',
+        'mergeConstantsFromPageTSconfig' => 'Using mergeConstantsFromPageTSconfig() of class TemplateService from the outside is discouraged, as this method is only meant to be used internally.',
+        'flattenSetup' => 'Using flattenSetup() of class TemplateService from the outside is discouraged, as this method is only meant to be used internally.',
+        'substituteConstants' => 'Using substituteConstants() of class TemplateService from the outside is discouraged, as this method is only meant to be used internally.',
     ];
 
     /**
@@ -65,9 +106,8 @@ class TemplateService
      * If set, the template is always rendered. Used from Admin Panel.
      *
      * @var bool
-     * @deprecated
      */
-    private $forceTemplateParsing = false;
+    public $forceTemplateParsing = false;
 
     /**
      * This array is passed on to matchObj by generateConfig().
@@ -109,11 +149,31 @@ class TemplateService
     public $ext_regComments = false;
 
     /**
-     * Set if preview of some kind is enabled.
+     * This MUST be initialized by the init() function
      *
+     * @var string
+     */
+    protected $whereClause = '';
+
+    /**
      * @var bool
      */
-    protected $simulationHiddenOrTime = false;
+    protected $debug = false;
+
+    /**
+     * This is the only paths (relative!!) that are allowed for resources in TypoScript.
+     * Should all be appended with '/'. You can extend these by the global array TYPO3_CONF_VARS. See init() function.
+     *
+     * @var array
+     */
+    protected $allowedPaths = [];
+
+    /**
+     * See init(); Set if preview of some kind is enabled.
+     *
+     * @var int
+     */
+    protected $simulationHiddenOrTime = 0;
 
     /**
      * Set, if the TypoScript template structure is loaded and OK, see ->start()
@@ -170,6 +230,13 @@ class TemplateService
     protected $hierarchyInfoToRoot = [];
 
     /**
+     * Next-level flag (see runThroughTemplates())
+     *
+     * @var int
+     */
+    protected $nextLevel = 0;
+
+    /**
      * The Page UID of the root page
      *
      * @var int
@@ -189,6 +256,13 @@ class TemplateService
      * @var array
      */
     protected $absoluteRootLine;
+
+    /**
+     * A pointer to the last entry in the rootline where a template was found.
+     *
+     * @var int
+     */
+    protected $outermostRootlineIndexWithTemplate = 0;
 
     /**
      * Array of arrays with title/uid of templates in hierarchy
@@ -239,6 +313,29 @@ class TemplateService
      * @var array
      */
     public $setup_constants = [];
+
+    /**
+     * Used by getFileName for caching of references to file resources
+     *
+     * @var array
+     * @deprecated Will be removed in TYPO3 v10.0
+     */
+    protected $fileCache = [];
+
+    /**
+     * Keys are frame names and values are type-values, which must be used to refer correctly to the content of the frames.
+     *
+     * @var array
+     */
+    protected $frames = [];
+
+    /**
+     * Contains mapping of Page id numbers to MP variables.
+     * This is not used anymore, and will be removed in TYPO3 v10.0.
+     *
+     * @var string
+     */
+    protected $MPmap = '';
 
     /**
      * Indicator that extension statics are processed.
@@ -294,25 +391,37 @@ class TemplateService
     protected $packageManager;
 
     /**
-     * @var TypoScriptFrontendController|null
-     */
-    protected $frontendController;
-
-    /**
      * @param Context|null $context
      * @param PackageManager|null $packageManager
-     * @param TypoScriptFrontendController|null $frontendController
      */
-    public function __construct(Context $context = null, PackageManager $packageManager = null, TypoScriptFrontendController $frontendController = null)
+    public function __construct(Context $context = null, PackageManager $packageManager = null)
     {
         $this->context = $context ?? GeneralUtility::makeInstance(Context::class);
         $this->packageManager = $packageManager ?? GeneralUtility::makeInstance(PackageManager::class);
-        $this->frontendController = $frontendController;
         $this->initializeDatabaseQueryRestrictions();
         if ($this->context->getPropertyFromAspect('visibility', 'includeHiddenContent', false) || $GLOBALS['SIM_ACCESS_TIME'] !== $GLOBALS['ACCESS_TIME']) {
             // Set the simulation flag, if simulation is detected!
-            $this->simulationHiddenOrTime = true;
+            $this->simulationHiddenOrTime = 1;
         }
+
+        // Sets the paths from where TypoScript resources are allowed to be used:
+        $this->allowedPaths = [
+            $GLOBALS['TYPO3_CONF_VARS']['BE']['fileadminDir'],
+            // fileadmin/ path
+            'uploads/',
+            'typo3temp/',
+            TYPO3_mainDir . 'ext/',
+            TYPO3_mainDir . 'sysext/',
+            'typo3conf/ext/'
+        ];
+        if ($GLOBALS['TYPO3_CONF_VARS']['FE']['addAllowedPaths']) {
+            $pathArr = GeneralUtility::trimExplode(',', $GLOBALS['TYPO3_CONF_VARS']['FE']['addAllowedPaths'], true);
+            foreach ($pathArr as $p) {
+                // Once checked for path, but as this may run from typo3/mod/web/ts/ dir, that'll not work!! So the paths ar uncritically included here.
+                $this->allowedPaths[] = $p;
+            }
+        }
+
         $this->tt_track = $this->verbose = (bool)$this->context->getPropertyFromAspect('backend.user', 'isLoggedIn', false);
     }
 
@@ -342,13 +451,56 @@ class TemplateService
     }
 
     /**
-     * Set up the query builder restrictions, optionally include hidden records
+     * Initialize
+     *
+     * @deprecated since TYPO3 v9, will be removed in TYPO3 v10.0
+     */
+    public function init()
+    {
+        trigger_error('TemplateService->init() will be removed in TYPO3 v10.0, __construct() does the job.', E_USER_DEPRECATED);
+        $this->initializeDatabaseQueryRestrictions();
+        if ($this->context->getPropertyFromAspect('visibility', 'includeHiddenContent', false) || $GLOBALS['SIM_ACCESS_TIME'] !== $GLOBALS['ACCESS_TIME']) {
+            // Set the simulation flag, if simulation is detected!
+            $this->simulationHiddenOrTime = 1;
+        }
+
+        // Sets the paths from where TypoScript resources are allowed to be used:
+        $this->allowedPaths = [
+            $GLOBALS['TYPO3_CONF_VARS']['BE']['fileadminDir'],
+            // fileadmin/ path
+            'uploads/',
+            'typo3temp/',
+            TYPO3_mainDir . 'ext/',
+            TYPO3_mainDir . 'sysext/',
+            'typo3conf/ext/'
+        ];
+        if ($GLOBALS['TYPO3_CONF_VARS']['FE']['addAllowedPaths']) {
+            $pathArr = GeneralUtility::trimExplode(',', $GLOBALS['TYPO3_CONF_VARS']['FE']['addAllowedPaths'], true);
+            foreach ($pathArr as $p) {
+                // Once checked for path, but as this may run from typo3/mod/web/ts/ dir, that'll not work!! So the paths ar uncritically included here.
+                $this->allowedPaths[] = $p;
+            }
+        }
+    }
+
+    /**
+     * $this->whereclause is kept for backwards compatibility
      */
     protected function initializeDatabaseQueryRestrictions()
     {
+        $includeHiddenRecords = $this->context->getPropertyFromAspect('visibility', 'includeHiddenContent', false);
+        // $this->whereClause is used only to select templates from sys_template.
+        // $GLOBALS['SIM_ACCESS_TIME'] is used so that we're able to simulate a later time as a test...
+        $this->whereClause = 'AND deleted=0 ';
+        if (!$includeHiddenRecords) {
+            $this->whereClause .= 'AND hidden=0 ';
+        }
+        $this->whereClause .= 'AND (starttime<=' . $GLOBALS['SIM_ACCESS_TIME'] . ') AND (endtime=0 OR endtime>' . $GLOBALS['SIM_ACCESS_TIME'] . ')';
+
+        // set up the query builder restrictions
         $this->queryBuilderRestrictions = GeneralUtility::makeInstance(DefaultRestrictionContainer::class);
 
-        if ($this->context->getPropertyFromAspect('visibility', 'includeHiddenContent', false)) {
+        if ($includeHiddenRecords) {
             $this->queryBuilderRestrictions->removeByType(HiddenRestriction::class);
         }
     }
@@ -372,7 +524,7 @@ class TemplateService
      */
     public function getCurrentPageData()
     {
-        return GeneralUtility::makeInstance(CacheManager::class)->getCache('pagesection')->get((int)$this->getTypoScriptFrontendController()->id . '_' . GeneralUtility::md5int($this->getTypoScriptFrontendController()->MP));
+        return GeneralUtility::makeInstance(CacheManager::class)->getCache('cache_pagesection')->get((int)$this->getTypoScriptFrontendController()->id . '_' . GeneralUtility::md5int($this->getTypoScriptFrontendController()->MP));
     }
 
     /**
@@ -408,10 +560,6 @@ class TemplateService
      */
     public function start($theRootLine)
     {
-        // @deprecated - can be removed with TYPO3 v11.0
-        if ((bool)$this->forceTemplateParsing) {
-            $this->context->setAspect('typoscript', GeneralUtility::makeInstance(TypoScriptAspect::class, true));
-        }
         if (is_array($theRootLine)) {
             $constantsData = [];
             $setupData = [];
@@ -467,7 +615,7 @@ class TemplateService
                     $setupData = $cachedData['setup'];
                 }
             }
-            if (!empty($setupData) && !$this->context->getPropertyFromAspect('typoscript', 'forcedTemplateParsing')) {
+            if (!empty($setupData) && !$this->forceTemplateParsing) {
                 // TypoScript constants + setup are found in the cache
                 $this->setup_constants = $constantsData;
                 $this->setup = $setupData;
@@ -509,7 +657,7 @@ class TemplateService
                 // Only save the data if we're not simulating by hidden/starttime/endtime
                 $mpvarHash = GeneralUtility::md5int($this->getTypoScriptFrontendController()->MP);
                 /** @var \TYPO3\CMS\Core\Cache\Frontend\FrontendInterface $pageSectionCache */
-                $pageSectionCache = GeneralUtility::makeInstance(CacheManager::class)->getCache('pagesection');
+                $pageSectionCache = GeneralUtility::makeInstance(CacheManager::class)->getCache('cache_pagesection');
                 $pageSectionCache->set((int)$this->getTypoScriptFrontendController()->id . '_' . $mpvarHash, $cc, [
                     'pageId_' . (int)$this->getTypoScriptFrontendController()->id,
                     'mpvarHash_' . $mpvarHash
@@ -549,6 +697,29 @@ class TemplateService
         $c = count($this->absoluteRootLine);
         $queryBuilder = GeneralUtility::makeInstance(ConnectionPool::class)->getQueryBuilderForTable('sys_template');
         for ($a = 0; $a < $c; $a++) {
+            // If some template loaded before has set a template-id for the next level, then load this template first!
+            if ($this->nextLevel) {
+                $queryBuilder->setRestrictions($this->queryBuilderRestrictions);
+                $queryResult = $queryBuilder
+                    ->select('*')
+                    ->from('sys_template')
+                    ->where(
+                        $queryBuilder->expr()->eq(
+                            'uid',
+                            $queryBuilder->createNamedParameter($this->nextLevel, \PDO::PARAM_INT)
+                        )
+                    )
+                    ->execute();
+                $this->nextLevel = 0;
+                if ($row = $queryResult->fetch()) {
+                    $this->versionOL($row);
+                    if (is_array($row)) {
+                        $this->processTemplate($row, 'sys_' . $row['uid'], $this->absoluteRootLine[$a]['uid'], 'sys_' . $row['uid']);
+                        $this->outermostRootlineIndexWithTemplate = $a;
+                    }
+                }
+            }
+
             $where = [
                 $queryBuilder->expr()->eq(
                     'pid',
@@ -575,6 +746,7 @@ class TemplateService
                 $this->versionOL($row);
                 if (is_array($row)) {
                     $this->processTemplate($row, 'sys_' . $row['uid'], $this->absoluteRootLine[$a]['uid'], 'sys_' . $row['uid']);
+                    $this->outermostRootlineIndexWithTemplate = $a;
                 }
             }
             $this->rootLine[] = $this->absoluteRootLine[$a];
@@ -694,6 +866,7 @@ class TemplateService
         // Creating hierarchy information; Used by backend analysis tools
         $this->hierarchyInfo[] = ($this->hierarchyInfoToRoot[] = [
             'root' => trim($row['root'] ?? ''),
+            'next' => $row['nextLevel'] ?? null,
             'clConst' => $clConst,
             'clConf' => $clConf,
             'templateID' => $templateID,
@@ -717,6 +890,12 @@ class TemplateService
         if (trim($row['root'] ?? null)) {
             $this->rootId = $pid;
             $this->rootLine = [];
+        }
+        // If a template is set to be active on the next level set this internal value to point to this UID. (See runThroughTemplates())
+        if ($row['nextLevel'] ?? null) {
+            $this->nextLevel = $row['nextLevel'];
+        } else {
+            $this->nextLevel = 0;
         }
     }
 
@@ -917,8 +1096,7 @@ class TemplateService
      *
      * @param array $subrow Static template record/file
      * @return array Returns the input array where the values for keys "config" and "constants" may have been modified with prepended code.
-     * @see addExtensionStatics()
-     * @see includeStaticTypoScriptSources()
+     * @see addExtensionStatics(), includeStaticTypoScriptSources()
      */
     protected function prependStaticExtra($subrow)
     {
@@ -936,14 +1114,22 @@ class TemplateService
 
     /**
      * Creating versioning overlay of a sys_template record.
+     * This will use either frontend or backend overlay functionality depending on environment.
      *
      * @param array $row Row to overlay (passed by reference)
      */
     protected function versionOL(&$row)
     {
-        if ($this->context->getPropertyFromAspect('workspace', 'isOffline')) {
-            $pageRepository = GeneralUtility::makeInstance(PageRepository::class, $this->context);
-            $pageRepository->versionOL('sys_template', $row);
+        // Distinguish frontend and backend call:
+        // To do the fronted call a full frontend is required, just checking for
+        // TYPO3_MODE === 'FE' is not enough. This could otherwise lead to fatals in
+        // eId scripts that run in frontend scope, but do not have a full blown frontend.
+        if (is_object($this->getTypoScriptFrontendController()) && property_exists($this->getTypoScriptFrontendController(), 'sys_page') && method_exists($this->getTypoScriptFrontendController()->sys_page, 'versionOL')) {
+            // Frontend
+            $this->getTypoScriptFrontendController()->sys_page->versionOL('sys_template', $row);
+        } else {
+            // Backend
+            BackendUtility::workspaceOL('sys_template', $row);
         }
     }
 
@@ -956,8 +1142,7 @@ class TemplateService
      * Generates the configuration array by replacing constants and parsing the whole thing.
      * Depends on $this->config and $this->constants to be set prior to this! (done by processTemplate/runThroughTemplates)
      *
-     * @see \TYPO3\CMS\Core\TypoScript\Parser\TypoScriptParser
-     * @see start()
+     * @see \TYPO3\CMS\Core\TypoScript\Parser\TypoScriptParser, start()
      */
     public function generateConfig()
     {
@@ -975,6 +1160,7 @@ class TemplateService
         /** @var Parser\TypoScriptParser $constants */
         $constants = GeneralUtility::makeInstance(Parser\TypoScriptParser::class);
         $constants->breakPointLN = (int)$this->ext_constants_BRP;
+        $constants->setup = $this->mergeConstantsFromPageTSconfig([]);
         /** @var ConditionMatcher $matchObj */
         $matchObj = GeneralUtility::makeInstance(ConditionMatcher::class);
         $matchObj->setSimulateMatchConditions($this->matchAlternative);
@@ -986,7 +1172,8 @@ class TemplateService
         // Read out parse errors if any
         $this->parserErrors['constants'] = $constants->errors;
         // Then flatten the structure from a multi-dim array to a single dim array with all constants listed as key/value pairs (ready for substitution)
-        $this->flatSetup = ArrayUtility::flatten($constants->setup, '', true);
+        $this->flatSetup = [];
+        $this->flattenSetup($constants->setup, '');
         // ***********************************************
         // Parse TypoScript Setup (here called "config")
         // ***********************************************
@@ -1073,8 +1260,7 @@ class TemplateService
      * for include instructions and does the inclusion of external TypoScript files
      * if needed.
      *
-     * @see \TYPO3\CMS\Core\TypoScript\Parser\TypoScriptParser
-     * @see generateConfig()
+     * @see \TYPO3\CMS\Core\TypoScript\Parser\TypoScriptParser, generateConfig()
      */
     protected function processIncludes()
     {
@@ -1109,11 +1295,100 @@ class TemplateService
     }
 
     /**
+     * Loads Page TSconfig until the outermost template record and parses the configuration - if TSFE.constants object path is found it is merged with the default data in here!
+     *
+     * @param array $constArray Constants array, default input.
+     * @return array Constants array, modified
+     * @todo Apply caching to the parsed Page TSconfig. This is done in the other similar functions for both frontend and backend. However, since this functions works for BOTH frontend and backend we will have to either write our own local caching function or (more likely) detect if we are in FE or BE and use caching functions accordingly. Not having caching affects mostly the backend modules inside the "Template" module since the overhead in the frontend is only seen when TypoScript templates are parsed anyways (after which point they are cached anyways...)
+     */
+    protected function mergeConstantsFromPageTSconfig($constArray)
+    {
+        $TSdataArray = [];
+        // Setting default configuration:
+        $TSdataArray[] = $GLOBALS['TYPO3_CONF_VARS']['BE']['defaultPageTSconfig'];
+        for ($a = 0; $a <= $this->outermostRootlineIndexWithTemplate; $a++) {
+            if (trim($this->absoluteRootLine[$a]['tsconfig_includes'])) {
+                $includeTsConfigFileList = GeneralUtility::trimExplode(
+                    ',',
+                    $this->absoluteRootLine[$a]['tsconfig_includes'],
+                    true
+                );
+
+                $TSdataArray = $this->mergeConstantsFromIncludedTsConfigFiles($includeTsConfigFileList, $TSdataArray);
+            }
+            $TSdataArray[] = $this->absoluteRootLine[$a]['TSconfig'];
+        }
+        // Parsing the user TS (or getting from cache)
+        $TSdataArray = Parser\TypoScriptParser::checkIncludeLines_array($TSdataArray);
+        $userTS = implode(LF . '[GLOBAL]' . LF, $TSdataArray);
+        /** @var Parser\TypoScriptParser $parseObj */
+        $parseObj = GeneralUtility::makeInstance(Parser\TypoScriptParser::class);
+        $parseObj->parse($userTS);
+        if (is_array($parseObj->setup['TSFE.']['constants.'])) {
+            ArrayUtility::mergeRecursiveWithOverrule($constArray, $parseObj->setup['TSFE.']['constants.']);
+        }
+
+        return $constArray;
+    }
+
+    /**
+     * Reads TSconfig defined in external files and appends it to the given TSconfig array (in this case only constants)
+     *
+     * @param array $filesToInclude The files to read constants from
+     * @param array $TSdataArray The TSconfig array the constants should be appended to
+     * @return array The TSconfig with the included constants appended
+     */
+    protected function mergeConstantsFromIncludedTsConfigFiles($filesToInclude, $TSdataArray)
+    {
+        foreach ($filesToInclude as $key => $file) {
+            if (strpos($file, 'EXT:') !== 0) {
+                continue;
+            }
+
+            list($extensionKey, $filePath) = explode('/', substr($file, 4), 2);
+
+            if ((string)$extensionKey === '' || !ExtensionManagementUtility::isLoaded($extensionKey)) {
+                continue;
+            }
+            if ((string)$filePath == '') {
+                continue;
+            }
+
+            $tsConfigFile = ExtensionManagementUtility::extPath($extensionKey) . $filePath;
+            if (file_exists($tsConfigFile)) {
+                $TSdataArray[] = file_get_contents($tsConfigFile);
+            }
+        }
+
+        return $TSdataArray;
+    }
+
+    /**
+     * This flattens a hierarchical TypoScript array to $this->flatSetup
+     *
+     * @param array $setupArray TypoScript array
+     * @param string $prefix Prefix to the object path. Used for recursive calls to this function.
+     * @see generateConfig()
+     */
+    protected function flattenSetup($setupArray, $prefix)
+    {
+        if (is_array($setupArray)) {
+            foreach ($setupArray as $key => $val) {
+                if (is_array($val)) {
+                    $this->flattenSetup($val, $prefix . $key);
+                } else {
+                    $this->flatSetup[$prefix . $key] = $val;
+                }
+            }
+        }
+    }
+
+    /**
      * Substitutes the constants from $this->flatSetup in the text string $all
      *
      * @param string $all TypoScript code text string
      * @return string The processed string with all constants found in $this->flatSetup as key/value pairs substituted.
-     * @see generateConfig()
+     * @see generateConfig(), flattenSetup()
      */
     protected function substituteConstants($all)
     {
@@ -1153,6 +1428,72 @@ class TemplateService
      *******************************************************************/
 
     /**
+     * Returns the reference used for the frontend inclusion, checks against allowed paths for inclusion.
+     *
+     * @param string $fileFromSetup TypoScript "resource" data type value.
+     * @return string|null Resulting filename, is either a full absolute URL or a relative path. Returns NULL if invalid filename or a directory is given
+     * @deprecated since TYPO3 v9.4, will be removed in TYPO3 v10.0.
+     */
+    public function getFileName($fileFromSetup)
+    {
+        trigger_error('TemplateService->getFileName() will be removed in TYPO3 v10.0. Use FilePathSanitizer->sanitize() of EXT:frontend instead.', E_USER_DEPRECATED);
+        try {
+            $file = GeneralUtility::makeInstance(FilePathSanitizer::class)->sanitize((string)$fileFromSetup);
+            $hash = md5($file);
+            if (!isset($this->fileCache[$hash])) {
+                $this->fileCache[$hash] = $file;
+            }
+            return $file;
+        } catch (InvalidFileNameException $e) {
+            // Empty file name
+        } catch (InvalidPathException $e) {
+            if ($this->tt_track) {
+                $this->getTimeTracker()->setTSlogMessage('File path "' . $fileFromSetup . '" contained illegal string "../"!', 3);
+            }
+        } catch (FileDoesNotExistException $e) {
+            if ($this->tt_track) {
+                $this->getTimeTracker()->setTSlogMessage('File "' . $fileFromSetup . '" was not found!', 3);
+            }
+        } catch (InvalidFileException $e) {
+            if ($this->tt_track) {
+                $this->getTimeTracker()->setTSlogMessage('"' . $fileFromSetup . '" was not located in the allowed paths: (' . implode(',', $this->allowedPaths) . ')', 3);
+            }
+        }
+        return null;
+    }
+
+    /**
+     * Compiles the content for the page <title> tag.
+     *
+     * @param string $pageTitle The input title string, typically the "title" field of a page's record.
+     * @param bool $noTitle If set, then only the site title is outputted (from $this->setup['sitetitle'])
+     * @param bool $showTitleFirst If set, then "sitetitle" and $title is swapped
+     * @param string $pageTitleSeparator an alternative to the ": " as the separator between site title and page title
+     * @return string The page title on the form "[sitetitle]: [input-title]". Not htmlspecialchar()'ed.
+     * @see \TYPO3\CMS\Frontend\Controller\TypoScriptFrontendController::tempPageCacheContent(), \TYPO3\CMS\Frontend\Page\PageGenerator::renderContentWithHeader()
+     * @deprecated since TYPO3 v9, will be removed in TYPO3 v10.0, use $TSFE->generatePageTitle() instead.
+     */
+    public function printTitle($pageTitle, $noTitle = false, $showTitleFirst = false, $pageTitleSeparator = '')
+    {
+        trigger_error('TemplateService->printTitle() will be removed in TYPO3 v10.0. Title tag generation has been moved into $TSFE itself, re-implement this method if you need to, otherwise use TSFE->generatePageTitle() for full usage.', E_USER_DEPRECATED);
+        $siteTitle = trim($this->setup['sitetitle']);
+        $pageTitle = $noTitle ? '' : $pageTitle;
+        if ($showTitleFirst) {
+            $temp = $siteTitle;
+            $siteTitle = $pageTitle;
+            $pageTitle = $temp;
+        }
+        // only show a separator if there are both site title and page title
+        if ($pageTitle === '' || $siteTitle === '') {
+            $pageTitleSeparator = '';
+        } elseif (empty($pageTitleSeparator)) {
+            // use the default separator if non given
+            $pageTitleSeparator = ': ';
+        }
+        return $siteTitle . $pageTitleSeparator . $pageTitle;
+    }
+
+    /**
      * Returns the level of the given page in the rootline - Multiple pages can be given by separating the UIDs by comma.
      *
      * @param string $list A list of UIDs for which the rootline-level should get returned
@@ -1185,6 +1526,224 @@ class TemplateService
      * Functions for creating links
      *
      *******************************************************************/
+    /**
+     * The mother of all functions creating links/URLs etc in a TypoScript environment.
+     * See the references below.
+     * Basically this function takes care of issues such as type,id,alias and Mount Points, URL rewriting (through hooks), M5/B6 encoded parameters etc.
+     * It is important to pass all links created through this function since this is the guarantee that globally configured settings for link creating are observed and that your applications will conform to the various/many configuration options in TypoScript Templates regarding this.
+     *
+     * @param array $page The page record of the page to which we are creating a link. Needed due to fields like uid, alias, target, title and sectionIndex_uid.
+     * @param string $oTarget Default target string to use IF not $page['target'] is set.
+     * @param bool $no_cache If set, then the "&no_cache=1" parameter is included in the URL.
+     * @param string $_ not in use anymore
+     * @param array $overrideArray Array with overriding values for the $page array.
+     * @param string $addParams Additional URL parameters to set in the URL. Syntax is "&foo=bar&foo2=bar2" etc. Also used internally to add parameters if needed.
+     * @param string $typeOverride If you set this value to something else than a blank string, then the typeNumber used in the link will be forced to this value. Normally the typeNum is based on the target set OR on $this->getTypoScriptFrontendController()->config['config']['forceTypeValue'] if found.
+     * @param string $targetDomain The target Doamin, if any was detected in typolink
+     * @return array Contains keys like "totalURL", "url", "sectionIndex", "linkVars", "no_cache", "type", "target" of which "totalURL" is normally the value you would use while the other keys contains various parts that was used to construct "totalURL
+     * @see \TYPO3\CMS\Frontend\ContentObject\ContentObjectRenderer::typoLink(), \TYPO3\CMS\Frontend\ContentObject\Menu\AbstractMenuContentObject::link()
+     * @deprecated - will be removed in TYPO3 v10.0 - have a look at PageLinkBuilder
+     */
+    public function linkData($page, $oTarget, $no_cache, $_ = null, $overrideArray = null, $addParams = '', $typeOverride = '', $targetDomain = '')
+    {
+        trigger_error('Creating URLs to pages is now encapsulated into PageLinkBuilder, and should be used in the future. TemplateService->linkData() will be removed in TYPO3 v10.0.', E_USER_DEPRECATED);
+        $LD = [];
+        // Overriding some fields in the page record and still preserves the values by adding them as parameters. Little strange function.
+        if (is_array($overrideArray)) {
+            foreach ($overrideArray as $theKey => $theNewVal) {
+                $addParams .= '&real_' . $theKey . '=' . rawurlencode($page[$theKey]);
+                $page[$theKey] = $theNewVal;
+            }
+        }
+        // Adding Mount Points, "&MP=", parameter for the current page if any is set:
+        if (!strstr($addParams, '&MP=')) {
+            // Looking for hardcoded defaults:
+            if (trim($this->getTypoScriptFrontendController()->MP_defaults[$page['uid']])) {
+                $addParams .= '&MP=' . rawurlencode(trim($this->getTypoScriptFrontendController()->MP_defaults[$page['uid']]));
+            } elseif ($this->getTypoScriptFrontendController()->config['config']['MP_mapRootPoints']) {
+                // Else look in automatically created map:
+                $m = $this->getFromMPmap($page['uid']);
+                if ($m) {
+                    $addParams .= '&MP=' . rawurlencode($m);
+                }
+            }
+        }
+        // Setting ID/alias:
+        $script = 'index.php';
+        if ($page['alias']) {
+            $LD['url'] = $script . '?id=' . rawurlencode($page['alias']);
+        } else {
+            $LD['url'] = $script . '?id=' . $page['uid'];
+        }
+        // Setting target
+        $LD['target'] = trim($page['target']) ?: $oTarget;
+        // typeNum
+        $typeNum = $this->setup[$LD['target'] . '.']['typeNum'];
+        if (!MathUtility::canBeInterpretedAsInteger($typeOverride) && (int)$this->getTypoScriptFrontendController()->config['config']['forceTypeValue']) {
+            $typeOverride = (int)$this->getTypoScriptFrontendController()->config['config']['forceTypeValue'];
+        }
+        if ((string)$typeOverride !== '') {
+            $typeNum = $typeOverride;
+        }
+        // Override...
+        if ($typeNum) {
+            $LD['type'] = '&type=' . (int)$typeNum;
+        } else {
+            $LD['type'] = '';
+        }
+        // Preserving the type number.
+        $LD['orig_type'] = $LD['type'];
+        // noCache
+        $LD['no_cache'] = $no_cache ? '&no_cache=1' : '';
+        // linkVars
+        if ($addParams) {
+            $LD['linkVars'] = HttpUtility::buildQueryString(GeneralUtility::explodeUrl2Array($this->getTypoScriptFrontendController()->linkVars . $addParams), '&');
+        } else {
+            $LD['linkVars'] = $this->getTypoScriptFrontendController()->linkVars;
+        }
+        // Add absRefPrefix if exists.
+        $LD['url'] = $this->getTypoScriptFrontendController()->absRefPrefix . $LD['url'];
+        // If the special key 'sectionIndex_uid' (added 'manually' in tslib/menu.php to the page-record) is set, then the link jumps directly to a section on the page.
+        $LD['sectionIndex'] = $page['sectionIndex_uid'] ? '#c' . $page['sectionIndex_uid'] : '';
+        // Compile the normal total url
+        $LD['totalURL'] = rtrim($LD['url'] . $LD['type'] . $LD['no_cache'] . $LD['linkVars'] . $this->getTypoScriptFrontendController()->getMethodUrlIdToken, '?') . $LD['sectionIndex'];
+        // Call post processing function for link rendering:
+        $_params = [
+            'LD' => &$LD,
+            'args' => ['page' => $page, 'oTarget' => $oTarget, 'no_cache' => $no_cache, 'script' => $script, 'overrideArray' => $overrideArray, 'addParams' => $addParams, 'typeOverride' => $typeOverride, 'targetDomain' => $targetDomain],
+            'typeNum' => $typeNum
+        ];
+        foreach ($GLOBALS['TYPO3_CONF_VARS']['SC_OPTIONS']['t3lib/class.t3lib_tstemplate.php']['linkData-PostProc'] ?? [] as $_funcRef) {
+            GeneralUtility::callUserFunction($_funcRef, $_params, $this);
+        }
+        // Return the LD-array
+        return $LD;
+    }
+
+    /**
+     * Initializes the automatically created MPmap coming from the "config.MP_mapRootPoints" setting
+     * Can be called many times with overhead only the first time since then the map is generated and cached in memory.
+     *
+     * @param int $pageId Page id to return MPvar value for.
+     * @return string
+     * @see initMPmap_create()
+     * @todo Implement some caching of the result between hits. (more than just the memory caching used here)
+     * @deprecated - will be removed in TYPO3 v10.0.
+     */
+    public function getFromMPmap($pageId = 0)
+    {
+        trigger_error('Getting a mount point parameter for a page is now built into PageLinkBuilder, and should be used in the future. TemplateService->getFromMPmap() will be removed in TYPO3 v10.0.', E_USER_DEPRECATED);
+        // Create map if not found already:
+        if (!is_array($this->MPmap)) {
+            $this->MPmap = [];
+            $rootPoints = GeneralUtility::trimExplode(',', strtolower($this->getTypoScriptFrontendController()->config['config']['MP_mapRootPoints']), true);
+            // Traverse rootpoints:
+            foreach ($rootPoints as $p) {
+                $initMParray = [];
+                if ($p === 'root') {
+                    $p = $this->rootLine[0]['uid'];
+                    if ($this->rootLine[0]['_MOUNT_OL'] && $this->rootLine[0]['_MP_PARAM']) {
+                        $initMParray[] = $this->rootLine[0]['_MP_PARAM'];
+                    }
+                }
+                $this->initMPmap_create($p, $initMParray);
+            }
+        }
+        // Finding MP var for Page ID:
+        if ($pageId) {
+            if (is_array($this->MPmap[$pageId]) && !empty($this->MPmap[$pageId])) {
+                return implode(',', $this->MPmap[$pageId]);
+            }
+        }
+        return '';
+    }
+
+    /**
+     * Creating MPmap for a certain ID root point.
+     *
+     * @param int $id Root id from which to start map creation.
+     * @param array $MP_array MP_array passed from root page.
+     * @param int $level Recursion brake. Incremented for each recursive call. 20 is the limit.
+     * @see getFromMPvar()
+     * @deprecated will be removed in TYPO3 v10.0
+     */
+    public function initMPmap_create($id, $MP_array = [], $level = 0)
+    {
+        trigger_error('Building a mount point parameter map is now built into PageLinkBuilder, and should be used in the future. TemplateService->initMPmap_creat() will be removed in TYPO3 v10.0.', E_USER_DEPRECATED);
+        $id = (int)$id;
+        if ($id <= 0) {
+            return;
+        }
+        // First level, check id
+        if (!$level) {
+            // Find mount point if any:
+            $mount_info = $this->getTypoScriptFrontendController()->sys_page->getMountPointInfo($id);
+            // Overlay mode:
+            if (is_array($mount_info) && $mount_info['overlay']) {
+                $MP_array[] = $mount_info['MPvar'];
+                $id = $mount_info['mount_pid'];
+            }
+            // Set mapping information for this level:
+            $this->MPmap[$id] = $MP_array;
+            // Normal mode:
+            if (is_array($mount_info) && !$mount_info['overlay']) {
+                $MP_array[] = $mount_info['MPvar'];
+                $id = $mount_info['mount_pid'];
+            }
+        }
+        if ($id && $level < 20) {
+            $nextLevelAcc = [];
+            // Select and traverse current level pages:
+            $queryBuilder = GeneralUtility::makeInstance(ConnectionPool::class)->getQueryBuilderForTable('pages');
+            $queryBuilder->getRestrictions()
+                ->removeAll()
+                ->add(GeneralUtility::makeInstance(DeletedRestriction::class));
+            $queryResult = $queryBuilder
+                ->select('uid', 'pid', 'doktype', 'mount_pid', 'mount_pid_ol')
+                ->from('pages')
+                ->where(
+                    $queryBuilder->expr()->eq(
+                        'pid',
+                        $queryBuilder->createNamedParameter($id, \PDO::PARAM_INT)
+                    ),
+                    $queryBuilder->expr()->neq(
+                        'doktype',
+                        $queryBuilder->createNamedParameter(PageRepository::DOKTYPE_RECYCLER, \PDO::PARAM_INT)
+                    ),
+                    $queryBuilder->expr()->neq(
+                        'doktype',
+                        $queryBuilder->createNamedParameter(PageRepository::DOKTYPE_BE_USER_SECTION, \PDO::PARAM_INT)
+                    )
+                )->execute();
+            while ($row = $queryResult->fetch()) {
+                // Find mount point if any:
+                $next_id = $row['uid'];
+                $next_MP_array = $MP_array;
+                $mount_info = $this->getTypoScriptFrontendController()->sys_page->getMountPointInfo($next_id, $row);
+                // Overlay mode:
+                if (is_array($mount_info) && $mount_info['overlay']) {
+                    $next_MP_array[] = $mount_info['MPvar'];
+                    $next_id = $mount_info['mount_pid'];
+                }
+                if (!isset($this->MPmap[$next_id])) {
+                    // Set mapping information for this level:
+                    $this->MPmap[$next_id] = $next_MP_array;
+                    // Normal mode:
+                    if (is_array($mount_info) && !$mount_info['overlay']) {
+                        $next_MP_array[] = $mount_info['MPvar'];
+                        $next_id = $mount_info['mount_pid'];
+                    }
+                    // Register recursive call
+                    // (have to do it this way since ALL of the current level should be registered BEFORE the sublevel at any time)
+                    $nextLevelAcc[] = [$next_id, $next_MP_array];
+                }
+            }
+            // Call recursively, if any:
+            foreach ($nextLevelAcc as $pSet) {
+                $this->initMPmap_create($pSet[0], $pSet[1], $level + 1);
+            }
+        }
+    }
 
     /**
      * Adds the TypoScript from the global array.
@@ -1207,6 +1766,7 @@ class TemplateService
             $rootTemplateId = $this->hierarchyInfo[count($this->hierarchyInfo) - 1]['templateID'] ?? null;
             $defaultTemplateInfo = [
                 'root' => '',
+                'next' => '',
                 'clConst' => '',
                 'clConf' => '',
                 'templateID' => '_defaultTypoScript_',
@@ -1229,7 +1789,7 @@ class TemplateService
      */
     protected function getTypoScriptFrontendController()
     {
-        return $this->frontendController ?? $GLOBALS['TSFE'];
+        return $GLOBALS['TSFE'];
     }
 
     /**
@@ -1249,11 +1809,11 @@ class TemplateService
      */
     protected function getCacheEntry($identifier)
     {
-        return GeneralUtility::makeInstance(CacheManager::class)->getCache('hash')->get($identifier);
+        return GeneralUtility::makeInstance(CacheManager::class)->getCache('cache_hash')->get($identifier);
     }
 
     /**
-     * Stores $data in the 'hash' cache with the hash key $identifier
+     * Stores $data in the 'cache_hash' cache with the hash key $identifier
      *
      * @param string $identifier 32 bit hash string (eg. a md5 hash of a serialized array identifying the data being stored)
      * @param mixed $data The data to store
@@ -1261,6 +1821,6 @@ class TemplateService
      */
     protected function setCacheEntry($identifier, $data, $tag)
     {
-        GeneralUtility::makeInstance(CacheManager::class)->getCache('hash')->set($identifier, $data, ['ident_' . $tag], 0);
+        GeneralUtility::makeInstance(CacheManager::class)->getCache('cache_hash')->set($identifier, $data, ['ident_' . $tag], 0);
     }
 }

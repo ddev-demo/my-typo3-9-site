@@ -10,4 +10,66 @@
  *
  * The TYPO3 project - inspiring people to share!
  */
-define(["require","exports","jquery"],function(e,t,s){"use strict";return new class{constructor(){this.initialize=((e,t)=>{let n=s(e),i=n.prev(".input-group-icon");t=t||{},n.on("change",e=>{let t=s(e.target);i.html(n.find(":selected").data("icon"));let c=t.closest(".t3js-formengine-field-item").find(".t3js-forms-select-single-icons");c.find(".item.active").removeClass("active"),c.find('[data-select-index="'+t.prop("selectedIndex")+'"]').closest(".item").addClass("active")}),"function"==typeof t.onChange&&n.on("change",t.onChange),"function"==typeof t.onFocus&&n.on("focus",t.onFocus),n.closest(".form-control-wrap").find(".t3js-forms-select-single-icons a").on("click",e=>{let t=s(e.target),i=t.closest("[data-select-index]");return t.closest(".t3js-forms-select-single-icons").find(".item.active").removeClass("active"),n.prop("selectedIndex",i.data("selectIndex")).trigger("change"),i.closest(".item").addClass("active"),!1})})}}});
+
+/**
+ * Module: TYPO3/CMS/Backend/FormEngine/Element/SelectSingleElement
+ * Logic for SelectSingleElement
+ */
+define(['jquery'], function($) {
+
+  /**
+   *
+   * @type {{}}
+   * @exports TYPO3/CMS/Backend/FormEngine/Element/SelectSingleElement
+   */
+  var SelectSingleElement = {};
+
+  /**
+   * Initializes the SelectSingleEleemnt
+   *
+   * @param {String} selector
+   * @param {Object} options
+   */
+  SelectSingleElement.initialize = function(selector, options) {
+
+    var $selectElement = $(selector);
+    var $groupIconContainer = $selectElement.prev('.input-group-icon');
+    var options = options || {};
+
+    $selectElement.on('change', function(e) {
+      var $me = $(e.target);
+
+      // Update prepended select icon
+      $groupIconContainer.html($selectElement.find(':selected').data('icon'));
+
+      var $selectIcons = $me.closest('.t3js-formengine-field-item').find('.t3js-forms-select-single-icons');
+      $selectIcons.find('.item.active').removeClass('active');
+      $selectIcons.find('[data-select-index="' + $me.prop('selectedIndex') + '"]').closest('.item').addClass('active');
+    });
+
+    // Append optionally passed additional "change" event callback
+    if (typeof options.onChange === 'function') {
+      $selectElement.on('change', options.onChange);
+    }
+
+    // Append optionally passed additional "focus" event callback
+    if (typeof options.onFocus === 'function') {
+      $selectElement.on('focus', options.onFocus);
+    }
+
+    $selectElement.closest('.form-control-wrap').find('.t3js-forms-select-single-icons a').on('click', function(e) {
+      var $me = $(e.target);
+      var $selectIcon = $me.closest('[data-select-index]');
+
+      $me.closest('.t3js-forms-select-single-icons').find('.item.active').removeClass('active');
+      $selectElement
+        .prop('selectedIndex', $selectIcon.data('selectIndex'))
+        .trigger('change');
+      $selectIcon.closest('.item').addClass('active');
+
+      return false;
+    });
+  };
+
+  return SelectSingleElement;
+});

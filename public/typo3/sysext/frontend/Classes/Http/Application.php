@@ -17,7 +17,6 @@ namespace TYPO3\CMS\Frontend\Http;
 
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
-use Psr\Http\Server\RequestHandlerInterface;
 use TYPO3\CMS\Core\Configuration\ConfigurationManager;
 use TYPO3\CMS\Core\Context\Context;
 use TYPO3\CMS\Core\Context\DateTimeAspect;
@@ -27,6 +26,7 @@ use TYPO3\CMS\Core\Context\WorkspaceAspect;
 use TYPO3\CMS\Core\Core\Environment;
 use TYPO3\CMS\Core\Http\AbstractApplication;
 use TYPO3\CMS\Core\Http\RedirectResponse;
+use TYPO3\CMS\Core\Utility\GeneralUtility;
 
 /**
  * Entry point for the TYPO3 Frontend
@@ -34,25 +34,32 @@ use TYPO3\CMS\Core\Http\RedirectResponse;
 class Application extends AbstractApplication
 {
     /**
+     * @var string
+     */
+    protected $requestHandler = RequestHandler::class;
+
+    /**
+     * @var string
+     */
+    protected $middlewareStack = 'frontend';
+
+    /**
      * @var ConfigurationManager
      */
     protected $configurationManager;
 
     /**
-     * @var Context
+     * @param ConfigurationManager $configurationManager
      */
-    protected $context;
-
-    public function __construct(
-        RequestHandlerInterface $requestHandler,
-        ConfigurationManager $configurationManager,
-        Context $context
-    ) {
-        $this->requestHandler = $requestHandler;
+    public function __construct(ConfigurationManager $configurationManager)
+    {
         $this->configurationManager = $configurationManager;
-        $this->context = $context;
     }
 
+    /**
+     * @param ServerRequestInterface $request
+     * @return ResponseInterface
+     */
     protected function handle(ServerRequestInterface $request): ResponseInterface
     {
         if (!$this->checkIfEssentialConfigurationExists()) {
@@ -86,13 +93,16 @@ class Application extends AbstractApplication
 
     /**
      * Initializes the Context used for accessing data and finding out the current state of the application
+     * Will be moved to a DI-like concept once introduced, for now, this is a singleton
      */
-    protected function initializeContext(): void
+    protected function initializeContext()
     {
-        $this->context->setAspect('date', new DateTimeAspect(new \DateTimeImmutable('@' . $GLOBALS['EXEC_TIME'])));
-        $this->context->setAspect('visibility', new VisibilityAspect());
-        $this->context->setAspect('workspace', new WorkspaceAspect(0));
-        $this->context->setAspect('backend.user', new UserAspect(null));
-        $this->context->setAspect('frontend.user', new UserAspect(null, [0, -1]));
+        GeneralUtility::makeInstance(Context::class, [
+            'date' => new DateTimeAspect(new \DateTimeImmutable('@' . $GLOBALS['EXEC_TIME'])),
+            'visibility' => new VisibilityAspect(),
+            'workspace' => new WorkspaceAspect(0),
+            'backend.user' => new UserAspect(null),
+            'frontend.user' => new UserAspect(null, [0, -1]),
+        ]);
     }
 }

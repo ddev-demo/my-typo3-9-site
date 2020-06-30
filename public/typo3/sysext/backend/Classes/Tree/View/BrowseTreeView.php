@@ -16,6 +16,7 @@ namespace TYPO3\CMS\Backend\Tree\View;
 
 use TYPO3\CMS\Backend\Utility\BackendUtility;
 use TYPO3\CMS\Core\Exception\SiteNotFoundException;
+use TYPO3\CMS\Core\Site\PseudoSiteFinder;
 use TYPO3\CMS\Core\Site\SiteFinder;
 use TYPO3\CMS\Core\Type\Bitmask\Permission;
 use TYPO3\CMS\Core\Utility\GeneralUtility;
@@ -36,6 +37,7 @@ class BrowseTreeView extends AbstractTreeView
         'nav_title',
         'mount_pid',
         'php_tree_stop',
+        't3ver_id',
         't3ver_state',
         'hidden',
         'starttime',
@@ -159,7 +161,15 @@ class BrowseTreeView extends AbstractTreeView
                 $site = $siteFinder->getSiteByRootPageId($pageId);
                 $title .= ' [' . (string)$site->getBase() . ']';
             } catch (SiteNotFoundException $e) {
-                // No site found
+                // No site found, let's see if it is a legacy-pseudo-site
+                $pseudoSiteFinder = GeneralUtility::makeInstance(PseudoSiteFinder::class);
+
+                try {
+                    $site = $pseudoSiteFinder->getSiteByRootPageId($pageId);
+                    $title .= ' [' . trim((string)$site->getBase(), '/') . ']';
+                } catch (SiteNotFoundException $e) {
+                    // No pseudo-site found either
+                }
             }
         }
         return $title;

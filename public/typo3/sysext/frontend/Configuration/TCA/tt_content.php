@@ -287,6 +287,8 @@ return [
                 ],
                 'exclusiveKeys' => '-1,-2',
                 'foreign_table' => 'fe_groups',
+                'foreign_table_where' => 'ORDER BY fe_groups.title',
+                'enableMultiSelectFilterTextfield' => true
             ]
         ],
         'sys_language_uid' => [
@@ -580,7 +582,7 @@ return [
                 'type' => 'text',
                 'cols' => 80,
                 'rows' => 15,
-                'softref' => 'typolink_tag,email[subst],url',
+                'softref' => 'typolink_tag,images,email[subst],url',
                 'search' => [
                     'andWhere' => '{#CType}=\'text\' OR {#CType}=\'textpic\' OR {#CType}=\'textmedia\''
                 ]
@@ -1009,8 +1011,7 @@ return [
                     ['LLL:EXT:frontend/Resources/Private/Language/locallang_ttc.xlf:filelink_sorting.type', 'type'],
                     ['LLL:EXT:frontend/Resources/Private/Language/locallang_ttc.xlf:filelink_sorting.size', 'size'],
                     ['LLL:EXT:frontend/Resources/Private/Language/locallang_ttc.xlf:filelink_sorting.creation_date', 'creation_date'],
-                    ['LLL:EXT:frontend/Resources/Private/Language/locallang_ttc.xlf:filelink_sorting.modification_date', 'modification_date'],
-                    ['LLL:EXT:frontend/Resources/Private/Language/locallang_ttc.xlf:filelink_sorting.title', 'title'],
+                    ['LLL:EXT:frontend/Resources/Private/Language/locallang_ttc.xlf:filelink_sorting.modification_date', 'modification_date']
                 ]
             ]
         ],
@@ -1150,13 +1151,21 @@ return [
                 'default' => ''
             ]
         ],
+        't3ver_label' => [
+            'label' => 'LLL:EXT:core/Resources/Private/Language/locallang_general.xlf:LGL.versionLabel',
+            'config' => [
+                'type' => 'input',
+                'size' => 30,
+                'max' => 255
+            ]
+        ],
         'selected_categories' => [
             'label' => 'LLL:EXT:frontend/Resources/Private/Language/locallang_ttc.xlf:selected_categories',
             'config' => [
                 'type' => 'select',
                 'renderType' => 'selectTree',
                 'foreign_table' => 'sys_category',
-                'foreign_table_where' => 'AND sys_category.sys_language_uid IN (0,-1)',
+                'foreign_table_where' => 'AND sys_category.sys_language_uid IN (0,-1) ORDER BY sys_category.title ASC',
                 'size' => 20,
                 'treeConfig' => [
                     'parentField' => 'parent',

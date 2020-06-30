@@ -15,7 +15,6 @@ namespace TYPO3\CMS\Install\Configuration;
  */
 
 use TYPO3\CMS\Core\Utility\GeneralUtility;
-use TYPO3\CMS\Install\Configuration\Cache\CacheFeature;
 use TYPO3\CMS\Install\Configuration\Context\ContextFeature;
 use TYPO3\CMS\Install\Configuration\Image\ImageFeature;
 use TYPO3\CMS\Install\Configuration\Mail\MailFeature;
@@ -31,7 +30,6 @@ class FeatureManager
      * @var array List of feature class names
      */
     protected $featureRegistry = [
-        CacheFeature::class,
         ContextFeature::class,
         ImageFeature::class,
         MailFeature::class,

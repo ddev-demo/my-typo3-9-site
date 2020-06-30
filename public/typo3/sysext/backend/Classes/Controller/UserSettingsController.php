@@ -23,11 +23,24 @@ use TYPO3\CMS\Core\Utility\GeneralUtility;
 
 /**
  * A wrapper class to call BE_USER->uc
- * used for AJAX and Storage/Persistent JS object
+ * used for AJAX and TYPO3.Storage JS object
  * @internal This class is a specific Backend controller implementation and is not considered part of the Public TYPO3 API.
  */
 class UserSettingsController
 {
+    /**
+     * @var BackendUserConfiguration
+     */
+    protected $backendUserConfiguration;
+
+    /**
+     * Initializes the backendUserConfiguration
+     */
+    public function __construct()
+    {
+        $this->backendUserConfiguration = GeneralUtility::makeInstance(BackendUserConfiguration::class);
+    }
+
     /**
      * Processes all AJAX calls and returns a JSON for the data
      *
@@ -40,37 +53,68 @@ class UserSettingsController
         $action = $request->getParsedBody()['action'] ?? $request->getQueryParams()['action'] ?? '';
         $key = $request->getParsedBody()['key'] ?? $request->getQueryParams()['key'] ?? '';
         $value = $request->getParsedBody()['value'] ?? $request->getQueryParams()['value'] ?? '';
-        $backendUserConfiguration = GeneralUtility::makeInstance(BackendUserConfiguration::class);
+        $data = $this->processRequest($action, $key, $value);
+
+        return (new JsonResponse())->setPayload($data);
+    }
+
+    /**
+     * Process data
+     *
+     * @param string $action
+     * @param string $key
+     * @param string $value
+     * @return mixed
+     *
+     * @deprecated since TYPO3 v9, will be removed in TYPO3 v10.0
+     */
+    public function process($action, $key = '', $value = '')
+    {
+        trigger_error('UserSettingsController->process() will be replaced by protected method processRequest() in TYPO3 v10.0. Do not call from other extensions.', E_USER_DEPRECATED);
+        return $this->processRequest($action, $key, $value);
+    }
+
+    /**
+     * Process data
+     *
+     * @param string $action
+     * @param string $key
+     * @param mixed $value
+     * @return mixed
+     */
+    protected function processRequest(string $action, string $key = '', $value = '')
+    {
         switch ($action) {
             case 'get':
-                $content = $backendUserConfiguration->get($key);
+                $content = $this->backendUserConfiguration->get($key);
                 break;
             case 'getAll':
-                $content = $backendUserConfiguration->getAll();
+                $content = $this->backendUserConfiguration->getAll();
                 break;
             case 'set':
-                $backendUserConfiguration->set($key, $value);
-                $content = $backendUserConfiguration->getAll();
+                $this->backendUserConfiguration->set($key, $value);
+                $content = $this->backendUserConfiguration->getAll();
                 break;
             case 'addToList':
-                $backendUserConfiguration->addToList($key, $value);
-                $content = $backendUserConfiguration->getAll();
+                $this->backendUserConfiguration->addToList($key, $value);
+                $content = $this->backendUserConfiguration->getAll();
                 break;
             case 'removeFromList':
-                $backendUserConfiguration->removeFromList($key, $value);
-                $content = $backendUserConfiguration->getAll();
+                $this->backendUserConfiguration->removeFromList($key, $value);
+                $content = $this->backendUserConfiguration->getAll();
                 break;
             case 'unset':
-                $backendUserConfiguration->unsetOption($key);
-                $content = $backendUserConfiguration->getAll();
+                $this->backendUserConfiguration->unsetOption($key);
+                $content = $this->backendUserConfiguration->getAll();
                 break;
             case 'clear':
-                $backendUserConfiguration->clear();
+                $this->backendUserConfiguration->clear();
                 $content = ['result' => true];
                 break;
             default:
                 $content = ['result' => false];
         }
-        return (new JsonResponse())->setPayload($content);
+
+        return $content;
     }
 }

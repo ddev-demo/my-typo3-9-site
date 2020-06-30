@@ -76,8 +76,7 @@ class TerUtility
      * @param string $externalData Data stream from remove server
      * @throws ExtensionManagerException
      * @return array $externalData
-     * @see fetchServerData()
-     * @see processRepositoryReturnData()
+     * @see fetchServerData(), processRepositoryReturnData()
      */
     public function decodeServerData($externalData)
     {
@@ -118,16 +117,16 @@ class TerUtility
             if (function_exists('gzuncompress')) {
                 $parts[2] = gzuncompress($parts[2]);
             } else {
-                throw new ExtensionManagerException('Decoding Error: No decompressor available for compressed content. gzcompress()/gzuncompress() functions are not available!', 1344761814);
+                throw new ExtensionManagerException('Decoding Error: No decompressor available for compressed content. gzcompress()/gzuncompress() ' . 'functions are not available!', 1344761814);
             }
         }
-        if (md5($parts[2]) === $parts[0]) {
+        if (hash_equals($parts[0], md5($parts[2]))) {
             $output = unserialize($parts[2], ['allowed_classes' => false]);
             if (!is_array($output)) {
                 throw new ExtensionManagerException('Error: Content could not be unserialized to an array. Strange (since MD5 hashes match!)', 1344761938);
             }
         } else {
-            throw new ExtensionManagerException('Error: MD5 mismatch. Maybe the extension file was downloaded and saved as a text file by the browser and thereby corrupted!? (Always select "All" filetype when saving extensions)', 1344761991);
+            throw new ExtensionManagerException('Error: MD5 mismatch. Maybe the extension file was downloaded and saved as a text file by the ' . 'browser and thereby corrupted!? (Always select "All" filetype when saving extensions)', 1344761991);
         }
         return $output;
     }

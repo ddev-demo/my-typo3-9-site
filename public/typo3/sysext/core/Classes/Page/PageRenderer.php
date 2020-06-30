@@ -19,26 +19,30 @@ use TYPO3\CMS\Backend\Routing\UriBuilder;
 use TYPO3\CMS\Core\Cache\CacheManager;
 use TYPO3\CMS\Core\Cache\Frontend\FrontendInterface;
 use TYPO3\CMS\Core\Core\Environment;
-use TYPO3\CMS\Core\Localization\Locales;
 use TYPO3\CMS\Core\Localization\LocalizationFactory;
 use TYPO3\CMS\Core\MetaTag\MetaTagManagerRegistry;
 use TYPO3\CMS\Core\Package\PackageManager;
-use TYPO3\CMS\Core\Resource\ResourceCompressor;
 use TYPO3\CMS\Core\Service\MarkerBasedTemplateService;
-use TYPO3\CMS\Core\SingletonInterface;
 use TYPO3\CMS\Core\Utility\GeneralUtility;
 use TYPO3\CMS\Core\Utility\PathUtility;
+use TYPO3\CMS\Frontend\Controller\TypoScriptFrontendController;
 
 /**
  * TYPO3 pageRender class
  * This class render the HTML of a webpage, usable for BE and FE
  */
-class PageRenderer implements SingletonInterface
+class PageRenderer implements \TYPO3\CMS\Core\SingletonInterface
 {
     // Constants for the part to be rendered
     const PART_COMPLETE = 0;
     const PART_HEADER = 1;
     const PART_FOOTER = 2;
+    // @deprecated will be removed in TYPO3 v10.0.
+    // jQuery Core version that is shipped with TYPO3
+    const JQUERY_VERSION_LATEST = '3.3.1';
+    // jQuery namespace options
+    // @deprecated will be removed in TYPO3 v10.0.
+    const JQUERY_NAMESPACE_NONE = 'none';
 
     const REQUIREJS_SCOPE_CONFIG = 'config';
     const REQUIREJS_SCOPE_RESOLVE = 'resolve';
@@ -60,6 +64,12 @@ class PageRenderer implements SingletonInterface
 
     /**
      * @var bool
+     * @deprecated will be removed in TYPO3 v10.0, in favor of concatenateJavaScript and concatenateCss
+     */
+    protected $concatenateFiles = false;
+
+    /**
+     * @var bool
      */
     protected $concatenateJavascript = false;
 
@@ -74,7 +84,7 @@ class PageRenderer implements SingletonInterface
     protected $moveJsFromHeaderToFooter = false;
 
     /**
-     * @var Locales
+     * @var \TYPO3\CMS\Core\Localization\Locales
      */
     protected $locales;
 
@@ -95,7 +105,7 @@ class PageRenderer implements SingletonInterface
     protected $languageDependencies = [];
 
     /**
-     * @var ResourceCompressor
+     * @var \TYPO3\CMS\Core\Resource\ResourceCompressor
      */
     protected $compressor;
 
@@ -234,6 +244,11 @@ class PageRenderer implements SingletonInterface
     /**
      * @var array
      */
+    protected $extOnReadyCode = [];
+
+    /**
+     * @var array
+     */
     protected $cssInline = [];
 
     /**
@@ -254,7 +269,57 @@ class PageRenderer implements SingletonInterface
      */
     protected $requireJsPath = 'EXT:core/Resources/Public/JavaScript/Contrib/';
 
+    /**
+     * The local directory where one can find jQuery versions and plugins
+     *
+     * @var string
+     * @deprecated will be removed in TYPO3 v10.0.
+     */
+    protected $jQueryPath = 'EXT:core/Resources/Public/JavaScript/Contrib/jquery/';
+
     // Internal flags for JS-libraries
+    /**
+     * This array holds all jQuery versions that should be included in the
+     * current page.
+     * Each version is described by "source", "version" and "namespace"
+     *
+     * The namespace of every particular version is the key
+     * of that array, because only one version per namespace can exist.
+     *
+     * The type "source" describes where the jQuery core should be included from
+     * currently, TYPO3 supports "local" (make use of jQuery path), "google",
+     * "jquery", "msn" and "cloudflare".
+     *
+     * Currently there are downsides to "local" which supports only the latest/shipped
+     * jQuery core out of the box.
+     *
+     * @var array
+     * @deprecated will be removed in TYPO3 v10.0.
+     */
+    protected $jQueryVersions = [];
+
+    /**
+     * Array of jQuery version numbers shipped with the core
+     *
+     * @var array
+     * @deprecated will be removed in TYPO3 v10.0.
+     */
+    protected $availableLocalJqueryVersions = [
+        self::JQUERY_VERSION_LATEST
+    ];
+
+    /**
+     * Array of jQuery CDNs with placeholders
+     *
+     * @var array
+     */
+    protected $jQueryCdnUrls = [
+        'google' => 'https://ajax.googleapis.com/ajax/libs/jquery/%1$s/jquery%2$s.js',
+        'msn' => 'https://ajax.aspnetcdn.com/ajax/jQuery/jquery-%1$s%2$s.js',
+        'jquery' => 'https://code.jquery.com/jquery-%1$s%2$s.js',
+        'cloudflare' => 'https://cdnjs.cloudflare.com/ajax/libs/jquery/%1$s/jquery%2$s.js'
+    ];
+
     /**
      * if set, the requireJS library is included
      * @var bool
@@ -278,6 +343,11 @@ class PageRenderer implements SingletonInterface
      * @var array
      */
     protected $publicRequireJsConfig = [];
+
+    /**
+     * @var bool
+     */
+    protected $enableJqueryDebug = false;
 
     /**
      * @var array
@@ -334,7 +404,7 @@ class PageRenderer implements SingletonInterface
     public function __construct($templateFile = '')
     {
         $this->reset();
-        $this->locales = GeneralUtility::makeInstance(Locales::class);
+        $this->locales = GeneralUtility::makeInstance(\TYPO3\CMS\Core\Localization\Locales::class);
         if ($templateFile !== '') {
             $this->templateFile = $templateFile;
         }
@@ -382,10 +452,11 @@ class PageRenderer implements SingletonInterface
         $this->cssFiles = [];
         $this->cssInline = [];
         $this->metaTags = [];
-        $this->metaTagsByAPI = [];
         $this->inlineComments = [];
         $this->headerData = [];
         $this->footerData = [];
+        $this->extOnReadyCode = [];
+        $this->jQueryVersions = [];
     }
 
     /*****************************************************/
@@ -626,6 +697,26 @@ class PageRenderer implements SingletonInterface
     }
 
     /**
+     * Enables concatenation of js and css files
+     * @deprecated since TYPO3 v9.4, will be removed in TYPO3 v10.0
+     */
+    public function enableConcatenateFiles()
+    {
+        trigger_error('This method will be removed in TYPO3 v10.0. Use concatenateCss() and concatenateJavascript() instead.', E_USER_DEPRECATED);
+        $this->concatenateFiles = true;
+    }
+
+    /**
+     * Disables concatenation of js and css files
+     * @deprecated since TYPO3 v9.4, will be removed in TYPO3 v10.0
+     */
+    public function disableConcatenateFiles()
+    {
+        trigger_error('This method will be removed in TYPO3 v10.0. Use concatenateCss() and concatenateJavascript() instead.', E_USER_DEPRECATED);
+        $this->concatenateFiles = false;
+    }
+
+    /**
      * Enables concatenation of js files
      */
     public function enableConcatenateJavascript()
@@ -684,6 +775,7 @@ class PageRenderer implements SingletonInterface
         $this->concatenateCss = false;
         $this->concatenateJavascript = false;
         $this->removeLineBreaksFromTemplate = false;
+        $this->enableJqueryDebug = true;
     }
 
     /*****************************************************/
@@ -833,6 +925,18 @@ class PageRenderer implements SingletonInterface
     }
 
     /**
+     * Gets concatenate of js and css files
+     *
+     * @return bool
+     * @deprecated since TYPO3 v9.4, will be removed in TYPO3 v10.0
+     */
+    public function getConcatenateFiles()
+    {
+        trigger_error('This method will be removed in TYPO3 v10.0. Use concatenateCss() and concatenateJavascript() instead.', E_USER_DEPRECATED);
+        return $this->concatenateFiles;
+    }
+
+    /**
      * Gets concatenate of js files
      *
      * @return bool
@@ -898,6 +1002,18 @@ class PageRenderer implements SingletonInterface
     /*                                                   */
     /*                                                   */
     /*****************************************************/
+    /**
+     * Adds meta data
+     * @deprecated since TYPO3 v9, will be removed in TYPO3 v10.0.
+     * @param string $meta Meta data (complete metatag)
+     */
+    public function addMetaTag($meta)
+    {
+        trigger_error('Method pageRenderer->addMetaTag will be removed with TYPO3 v10.0. Use pageRenderer->setMetaTag instead.', E_USER_DEPRECATED);
+        if (!in_array($meta, $this->metaTags)) {
+            $this->metaTags[] = $meta;
+        }
+    }
 
     /**
      * Sets a given meta tag
@@ -1019,8 +1135,11 @@ class PageRenderer implements SingletonInterface
      * @param bool $defer Flag if property 'defer="defer"' should be added to JavaScript tags
      * @param string $crossorigin CORS settings attribute
      */
-    public function addJsLibrary($name, $file, $type = '', $compress = false, $forceOnTop = false, $allWrap = '', $excludeFromConcatenation = false, $splitChar = '|', $async = false, $integrity = '', $defer = false, $crossorigin = '')
+    public function addJsLibrary($name, $file, $type = 'text/javascript', $compress = false, $forceOnTop = false, $allWrap = '', $excludeFromConcatenation = false, $splitChar = '|', $async = false, $integrity = '', $defer = false, $crossorigin = '')
     {
+        if (!$type) {
+            $type = 'text/javascript';
+        }
         if (!in_array(strtolower($name), $this->jsLibs)) {
             $this->jsLibs[strtolower($name)] = [
                 'file' => $file,
@@ -1055,8 +1174,11 @@ class PageRenderer implements SingletonInterface
      * @param bool $defer Flag if property 'defer="defer"' should be added to JavaScript tags
      * @param string $crossorigin CORS settings attribute
      */
-    public function addJsFooterLibrary($name, $file, $type = '', $compress = false, $forceOnTop = false, $allWrap = '', $excludeFromConcatenation = false, $splitChar = '|', $async = false, $integrity = '', $defer = false, $crossorigin = '')
+    public function addJsFooterLibrary($name, $file, $type = 'text/javascript', $compress = false, $forceOnTop = false, $allWrap = '', $excludeFromConcatenation = false, $splitChar = '|', $async = false, $integrity = '', $defer = false, $crossorigin = '')
     {
+        if (!$type) {
+            $type = 'text/javascript';
+        }
         $name .= '_jsFooterLibrary';
         if (!in_array(strtolower($name), $this->jsLibs)) {
             $this->jsLibs[strtolower($name)] = [
@@ -1091,8 +1213,11 @@ class PageRenderer implements SingletonInterface
      * @param bool $defer Flag if property 'defer="defer"' should be added to JavaScript tags
      * @param string $crossorigin CORS settings attribute
      */
-    public function addJsFile($file, $type = '', $compress = true, $forceOnTop = false, $allWrap = '', $excludeFromConcatenation = false, $splitChar = '|', $async = false, $integrity = '', $defer = false, $crossorigin = '')
+    public function addJsFile($file, $type = 'text/javascript', $compress = true, $forceOnTop = false, $allWrap = '', $excludeFromConcatenation = false, $splitChar = '|', $async = false, $integrity = '', $defer = false, $crossorigin = '')
     {
+        if (!$type) {
+            $type = 'text/javascript';
+        }
         if (!isset($this->jsFiles[$file])) {
             $this->jsFiles[$file] = [
                 'file' => $file,
@@ -1126,8 +1251,11 @@ class PageRenderer implements SingletonInterface
      * @param bool $defer Flag if property 'defer="defer"' should be added to JavaScript tags
      * @param string $crossorigin CORS settings attribute
      */
-    public function addJsFooterFile($file, $type = '', $compress = true, $forceOnTop = false, $allWrap = '', $excludeFromConcatenation = false, $splitChar = '|', $async = false, $integrity = '', $defer = false, $crossorigin = '')
+    public function addJsFooterFile($file, $type = 'text/javascript', $compress = true, $forceOnTop = false, $allWrap = '', $excludeFromConcatenation = false, $splitChar = '|', $async = false, $integrity = '', $defer = false, $crossorigin = '')
     {
+        if (!$type) {
+            $type = 'text/javascript';
+        }
         if (!isset($this->jsFiles[$file])) {
             $this->jsFiles[$file] = [
                 'file' => $file,
@@ -1270,6 +1398,41 @@ class PageRenderer implements SingletonInterface
     }
 
     /**
+     * Call this function if you need to include the jQuery library
+     *
+     * @param string|null $version The jQuery version that should be included, either "latest" or any available version
+     * @param string|null $source The location of the jQuery source, can be "local", "google", "msn", "jquery" or just an URL to your jQuery lib
+     * @param string $namespace The namespace in which the jQuery object of the specific version should be stored.
+     * @param bool $isCoreCall if set, then the deprecation message is suppressed.
+     * @throws \UnexpectedValueException
+     * @deprecated since TYPO3 v9.5, will be removed in TYPO3 v10.0. This is still in use in deprecated code, so it does not trigger a deprecation warning.
+     */
+    public function loadJquery($version = null, $source = null, $namespace = self::JQUERY_NAMESPACE_NONE, bool $isCoreCall = false)
+    {
+        if (!$isCoreCall) {
+            trigger_error('PageRenderer->loadJquery() will be removed in TYPO3 v10.0. Use a package manager for frontend or custom jQuery files instead.', E_USER_DEPRECATED);
+        }
+        // Set it to the version that is shipped with the TYPO3 core
+        if ($version === null || $version === 'latest') {
+            $version = self::JQUERY_VERSION_LATEST;
+        }
+        // Check if the source is set, otherwise set it to "default"
+        if ($source === null) {
+            $source = 'local';
+        }
+        if ($source === 'local' && !in_array($version, $this->availableLocalJqueryVersions)) {
+            throw new \UnexpectedValueException('The requested jQuery version is not available in the local filesystem.', 1341505305);
+        }
+        if (!preg_match('/^[a-zA-Z0-9]+$/', $namespace)) {
+            throw new \UnexpectedValueException('The requested namespace contains non alphanumeric characters.', 1341571604);
+        }
+        $this->jQueryVersions[$namespace] = [
+            'version' => $version,
+            'source' => $source
+        ];
+    }
+
+    /**
      * Call function if you need the requireJS library
      * this automatically adds the JavaScript path of all loaded extensions in the requireJS path option
      * so it resolves names like TYPO3/CMS/MyExtension/MyJsFile to EXT:MyExtension/Resources/Public/JavaScript/MyJsFile.js
@@ -1335,8 +1498,7 @@ class PageRenderer implements SingletonInterface
             'twbs/bootstrap-slider' => $corePath . 'bootstrap-slider.min',
             'jquery/autocomplete' => $corePath . 'jquery.autocomplete',
             'd3' => $corePath . 'd3/d3',
-            'Sortable' => $corePath . 'Sortable.min',
-            'broadcastchannel' => $corePath . '/broadcastchannel-polyfill',
+            'intersection-observer' => $corePath . '/intersection-observer',
         ];
         $requireJsConfig['public']['waitSeconds'] = 30;
         $requireJsConfig['public']['typo3BaseUrl'] = false;
@@ -1404,7 +1566,7 @@ class PageRenderer implements SingletonInterface
             // Load RequireJS in backend context at first. Doing this in FE could break the output
             $this->loadRequireJs();
         }
-        \TYPO3\CMS\Core\Utility\ArrayUtility::mergeRecursiveWithOverrule($this->requireJsConfig, $configuration);
+        $this->requireJsConfig = array_merge_recursive($this->requireJsConfig, $configuration);
     }
 
     /**
@@ -1441,14 +1603,14 @@ class PageRenderer implements SingletonInterface
         // directly after that, include the require.js file
         $html .= '<script src="'
             . $this->processJsFile($this->requireJsPath . 'require.js')
-            . '"></script>' . LF;
+            . '" type="text/javascript"></script>' . LF;
 
         if (!empty($requireJsConfig['typo3BaseUrl'])) {
             $html .= '<script src="'
                 . $this->processJsFile(
                     'EXT:core/Resources/Public/JavaScript/requirejs-loader.js'
                 )
-                . '"></script>' . LF;
+                . '" type="text/javascript"></script>' . LF;
         }
 
         return $html;
@@ -1545,9 +1707,23 @@ class PageRenderer implements SingletonInterface
      * Array will be merged with existing array.
      *
      * @param array $array
+     * @param bool $parseWithLanguageService
      */
-    public function addInlineLanguageLabelArray(array $array)
+    public function addInlineLanguageLabelArray(array $array, $parseWithLanguageService = null)
     {
+        if ($parseWithLanguageService === true) {
+            trigger_error('PageRenderer::addInlineLanguageLabelArray() second method argument set to true will not be supported anymore in TYPO3 v10.0.', E_USER_DEPRECATED);
+            foreach ($array as $key => $value) {
+                if (TYPO3_MODE === 'FE') {
+                    $array[$key] = $this->getTypoScriptFrontendController()->sL($value);
+                } else {
+                    $array[$key] = $this->getLanguageService()->sL($value);
+                }
+            }
+        } elseif ($parseWithLanguageService !== null) {
+            trigger_error('PageRenderer::addInlineLanguageLabelArray() does not need a second method argument anymore, and will be removed in TYPO3 v10.0.', E_USER_DEPRECATED);
+        }
+
         $this->inlineLanguageLabels = array_merge($this->inlineLanguageLabels, $array);
     }
 
@@ -1699,7 +1875,7 @@ class PageRenderer implements SingletonInterface
      * of uncached content objects (USER_INT, COA_INT)
      *
      * @param string $cachedPageContent
-     * @param string $substituteHash The hash that is used for the variables
+     * @param string $substituteHash The hash that is used for the placehoder markers
      * @internal
      * @return string
      */
@@ -1750,13 +1926,13 @@ class PageRenderer implements SingletonInterface
     /**
      * Renders all JavaScript and CSS
      *
-     * @return array|string[]
+     * @return array<string>
      */
     protected function renderJavaScriptAndCss()
     {
         $this->executePreRenderHook();
         $mainJsLibs = $this->renderMainJavaScriptLibraries();
-        if ($this->concatenateJavascript || $this->concatenateCss) {
+        if ($this->concatenateFiles || $this->concatenateJavascript || $this->concatenateCss) {
             // Do the file concatenation
             $this->doConcatenate();
         }
@@ -1889,7 +2065,7 @@ class PageRenderer implements SingletonInterface
 
     /**
      * Helper function for render the main JavaScript libraries,
-     * currently: RequireJS
+     * currently: RequireJS, jQuery
      *
      * @return string Content with JavaScript libraries
      */
@@ -1900,6 +2076,13 @@ class PageRenderer implements SingletonInterface
         // Include RequireJS
         if ($this->addRequireJs) {
             $out .= $this->getRequireJsLoader();
+        }
+
+        // Include jQuery Core for each namespace, depending on the version and source
+        if (!empty($this->jQueryVersions)) {
+            foreach ($this->jQueryVersions as $namespace => $jQueryVersion) {
+                $out .= $this->renderJqueryScriptTag($jQueryVersion['version'], $jQueryVersion['source'], $namespace);
+            }
         }
 
         $this->loadJavaScriptLanguageStrings();
@@ -2011,6 +2194,45 @@ class PageRenderer implements SingletonInterface
     }
 
     /**
+     * Renders the HTML script tag for the given jQuery version.
+     *
+     * @param string $version The jQuery version that should be included, either "latest" or any available version
+     * @param string $source The location of the jQuery source, can be "local", "google", "msn" or "jquery
+     * @param string $namespace The namespace in which the jQuery object of the specific version should be stored
+     * @return string
+     */
+    protected function renderJqueryScriptTag($version, $source, $namespace)
+    {
+        switch (true) {
+            case isset($this->jQueryCdnUrls[$source]):
+                if ($this->enableJqueryDebug) {
+                    $minifyPart = '';
+                } else {
+                    $minifyPart = '.min';
+                }
+                $jQueryFileName = sprintf($this->jQueryCdnUrls[$source], $version, $minifyPart);
+                break;
+            case $source === 'local':
+                $jQueryFileName = $this->jQueryPath . 'jquery';
+                if ($this->enableJqueryDebug) {
+                    $jQueryFileName .= '.js';
+                } else {
+                    $jQueryFileName .= '.min.js';
+                }
+                $jQueryFileName = $this->processJsFile($jQueryFileName);
+                break;
+            default:
+                $jQueryFileName = $source;
+        }
+        $scriptTag = '<script src="' . htmlspecialchars($jQueryFileName) . '" type="text/javascript"></script>' . LF;
+        // Set the noConflict mode to be globally available via "jQuery"
+        if ($namespace !== self::JQUERY_NAMESPACE_NONE) {
+            $scriptTag .= GeneralUtility::wrapJS('jQuery.noConflict();') . LF;
+        }
+        return $scriptTag;
+    }
+
+    /**
      * Render CSS library files
      *
      * @return string
@@ -2105,7 +2327,7 @@ class PageRenderer implements SingletonInterface
     /**
      * Render JavaScipt libraries
      *
-     * @return array|string[] jsLibs and jsFooterLibs strings
+     * @return array<string> jsLibs and jsFooterLibs strings
      */
     protected function renderAdditionalJavaScriptLibraries()
     {
@@ -2149,7 +2371,7 @@ class PageRenderer implements SingletonInterface
     /**
      * Render JavaScript files
      *
-     * @return array|string[] jsFiles and jsFooterFiles strings
+     * @return array<string> jsFiles and jsFooterFiles strings
      */
     protected function renderJavaScriptFiles()
     {
@@ -2158,12 +2380,11 @@ class PageRenderer implements SingletonInterface
         if (!empty($this->jsFiles)) {
             foreach ($this->jsFiles as $file => $properties) {
                 $file = $this->getStreamlinedFileName($file);
-                $type = $properties['type'] ? ' type="' . htmlspecialchars($properties['type']) . '"' : '';
                 $async = $properties['async'] ? ' async="async"' : '';
                 $defer = $properties['defer'] ? ' defer="defer"' : '';
                 $integrity = $properties['integrity'] ? ' integrity="' . htmlspecialchars($properties['integrity']) . '"' : '';
                 $crossorigin = $properties['crossorigin'] ? ' crossorigin="' . htmlspecialchars($properties['crossorigin']) . '"' : '';
-                $tag = '<script src="' . htmlspecialchars($file) . '"' . $type . $async . $defer . $integrity . $crossorigin . '></script>';
+                $tag = '<script src="' . htmlspecialchars($file) . '" type="' . htmlspecialchars($properties['type']) . '"' . $async . $defer . $integrity . $crossorigin . '></script>';
                 if ($properties['allWrap']) {
                     $wrapArr = explode($properties['splitChar'] ?: '|', $properties['allWrap'], 2);
                     $tag = $wrapArr[0] . $tag . $wrapArr[1];
@@ -2194,7 +2415,7 @@ class PageRenderer implements SingletonInterface
     /**
      * Render inline JavaScript
      *
-     * @return array|string[] jsInline and jsFooterInline string
+     * @return array<string> jsInline and jsFooterInline string
      */
     protected function renderInlineJavaScript()
     {
@@ -2325,7 +2546,7 @@ class PageRenderer implements SingletonInterface
      */
     protected function doConcatenateJavaScript()
     {
-        if ($this->concatenateJavascript) {
+        if ($this->concatenateFiles || $this->concatenateJavascript) {
             if (!empty($GLOBALS['TYPO3_CONF_VARS'][TYPO3_MODE]['jsConcatenateHandler'])) {
                 // use external concatenation routine
                 $params = [
@@ -2349,7 +2570,7 @@ class PageRenderer implements SingletonInterface
      */
     protected function doConcatenateCss()
     {
-        if ($this->concatenateCss) {
+        if ($this->concatenateFiles || $this->concatenateCss) {
             if (!empty($GLOBALS['TYPO3_CONF_VARS'][TYPO3_MODE]['cssConcatenateHandler'])) {
                 // use external concatenation routine
                 $params = [
@@ -2360,8 +2581,12 @@ class PageRenderer implements SingletonInterface
                 ];
                 GeneralUtility::callUserFunction($GLOBALS['TYPO3_CONF_VARS'][TYPO3_MODE]['cssConcatenateHandler'], $params, $this);
             } else {
-                $this->cssLibs = $this->getCompressor()->concatenateCssFiles($this->cssLibs);
-                $this->cssFiles = $this->getCompressor()->concatenateCssFiles($this->cssFiles);
+                $cssOptions = [];
+                if (TYPO3_MODE === 'BE') {
+                    $cssOptions = ['baseDirectories' => $GLOBALS['TBE_TEMPLATE']->getSkinStylesheetDirectories()];
+                }
+                $this->cssLibs = $this->getCompressor()->concatenateCssFiles($this->cssLibs, $cssOptions);
+                $this->cssFiles = $this->getCompressor()->concatenateCssFiles($this->cssFiles, $cssOptions);
             }
         }
     }
@@ -2439,12 +2664,12 @@ class PageRenderer implements SingletonInterface
     /**
      * Returns instance of \TYPO3\CMS\Core\Resource\ResourceCompressor
      *
-     * @return ResourceCompressor
+     * @return \TYPO3\CMS\Core\Resource\ResourceCompressor
      */
     protected function getCompressor()
     {
         if ($this->compressor === null) {
-            $this->compressor = GeneralUtility::makeInstance(ResourceCompressor::class);
+            $this->compressor = GeneralUtility::makeInstance(\TYPO3\CMS\Core\Resource\ResourceCompressor::class);
         }
         return $this->compressor;
     }
@@ -2504,7 +2729,7 @@ class PageRenderer implements SingletonInterface
      *
      * @param string $file
      * @return string
-     * @see \TYPO3\CMS\Frontend\Controller\TypoScriptFrontendController::setAbsRefPrefix()
+     * @see TypoScriptFrontendController::setAbsRefPrefix()
      */
     protected function getAbsoluteWebPath(string $file): string
     {
@@ -2512,6 +2737,26 @@ class PageRenderer implements SingletonInterface
             return $file;
         }
         return PathUtility::getAbsoluteWebPath($file);
+    }
+
+    /**
+     * Returns global frontend controller
+     *
+     * @return TypoScriptFrontendController
+     */
+    protected function getTypoScriptFrontendController()
+    {
+        return $GLOBALS['TSFE'];
+    }
+
+    /**
+     * Returns global language service instance
+     *
+     * @return \TYPO3\CMS\Core\Localization\LanguageService
+     */
+    protected function getLanguageService()
+    {
+        return $GLOBALS['LANG'];
     }
 
     /*****************************************************/

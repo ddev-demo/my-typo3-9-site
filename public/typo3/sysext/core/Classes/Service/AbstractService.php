@@ -16,6 +16,7 @@ namespace TYPO3\CMS\Core\Service;
 
 use Psr\Log\LoggerAwareInterface;
 use Psr\Log\LoggerAwareTrait;
+use TYPO3\CMS\Core\Security\BlockSerializationTrait;
 use TYPO3\CMS\Core\TimeTracker\TimeTracker;
 use TYPO3\CMS\Core\Utility\CommandUtility;
 use TYPO3\CMS\Core\Utility\ExtensionManagementUtility;
@@ -26,6 +27,7 @@ use TYPO3\CMS\Core\Utility\GeneralUtility;
  */
 abstract class AbstractService implements LoggerAwareInterface
 {
+    use BlockSerializationTrait;
     use LoggerAwareTrait;
 
     // General error - something went wrong
@@ -174,6 +176,19 @@ abstract class AbstractService implements LoggerAwareInterface
      *	 Error handling
      *
      ***************************************/
+    /**
+     * Logs debug messages to the Logging API
+     *
+     * @param string $msg Debug message
+     * @param int $severity Severity: 0 is info, 1 is notice, 2 is warning, 3 is fatal error, -1 is "OK" message
+     * @param array|bool $dataVar additional data you want to pass to the logger.
+     * @deprecated since TYPO3 v9, will be removed in TYPO3 v10.0.
+     */
+    public function devLog($msg, $severity = 0, $dataVar = false)
+    {
+        trigger_error('AbstractService->devLog() will be removed with TYPO3 v10.0.', E_USER_DEPRECATED);
+        $this->logger->debug($this->info['serviceKey'] . ': ' . $msg, (array)$dataVar);
+    }
 
     /**
      * Puts an error on the error stack. Calling without parameter adds a general error.

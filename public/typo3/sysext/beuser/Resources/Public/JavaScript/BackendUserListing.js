@@ -10,4 +10,24 @@
  *
  * The TYPO3 project - inspiring people to share!
  */
-define(["require","exports","TYPO3/CMS/Backend/Input/Clearable"],function(e,r){"use strict";return new class{constructor(){let e;if(null!==(e=document.querySelector("#tx_Beuser_username"))){const r=""!==e.value;e.clearable({onClear:e=>{r&&e.closest("form").submit()}})}}}});
+
+/**
+ * Module: TYPO3/CMS/Beuser/BackendUserListing
+ * JavaScript for backend user listing
+ * @exports TYPO3/CMS/Beuser/BackendUserListing
+ */
+define(['jquery', 'TYPO3/CMS/Backend/jquery.clearable'], function($) {
+
+  var $searchFields = $('#tx_Beuser_username');
+  var searchResultShown = ('' !== $searchFields.first().val());
+
+  // make search field clearable
+  $searchFields.clearable({
+    onClear: function() {
+      if (searchResultShown) {
+        $(this).closest('form').submit();
+      }
+    }
+  });
+
+});

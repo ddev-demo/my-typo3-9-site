@@ -10,4 +10,69 @@
  *
  * The TYPO3 project - inspiring people to share!
  */
-define(["require","exports","jquery","./LinkBrowser"],function(n,t,i,e){"use strict";return new class{constructor(){this.currentLink="",this.linkPage=(n=>{n.preventDefault(),e.finalizeFunction(i(n.currentTarget).attr("href"))}),this.linkPageByTextfield=(n=>{n.preventDefault();const t=i("#luid").val();t&&e.finalizeFunction(t)}),this.linkCurrent=(n=>{n.preventDefault(),e.finalizeFunction(this.currentLink)}),i(()=>{this.currentLink=i("body").data("currentLink"),i("a.t3js-pageLink").on("click",this.linkPage),i("input.t3js-linkCurrent").on("click",this.linkCurrent),i("input.t3js-pageLink").on("click",this.linkPageByTextfield)})}}});
+
+/**
+ * Module: TYPO3/CMS/Recordlist/PageLinkHandler
+ * Page link interaction
+ */
+define(['jquery', 'TYPO3/CMS/Recordlist/LinkBrowser'], function($, LinkBrowser) {
+  'use strict';
+
+  /**
+   *
+   * @type {{currentLink: string}}
+   * @exports TYPO3/CMS/Recordlist/PageLinkHandler
+   */
+  var PageLinkHandler = {
+    currentLink: ''
+  };
+
+  /**
+   *
+   * @param {Event} event
+   */
+  PageLinkHandler.linkPage = function(event) {
+    event.preventDefault();
+    LinkBrowser.finalizeFunction($(this).attr('href'));
+  };
+
+  /**
+   *
+   * @param {Event} event
+   */
+  PageLinkHandler.linkPageByTextfield = function(event) {
+    event.preventDefault();
+
+    var value = $('#luid').val();
+    if (!value) {
+      return;
+    }
+
+    // make sure we use proper link syntax if this is an integer only
+    var valueAsNumber = parseInt(value, 10);
+    if (!isNaN(valueAsNumber)) {
+      value = 't3://page?uid=' + valueAsNumber;
+    }
+
+    LinkBrowser.finalizeFunction(value);
+  };
+
+  /**
+   *
+   * @param {Event} event
+   */
+  PageLinkHandler.linkCurrent = function(event) {
+    event.preventDefault();
+    LinkBrowser.finalizeFunction(PageLinkHandler.currentLink);
+  };
+
+  $(function() {
+    PageLinkHandler.currentLink = $('body').data('currentLink');
+
+    $('a.t3js-pageLink').on('click', PageLinkHandler.linkPage);
+    $('input.t3js-linkCurrent').on('click', PageLinkHandler.linkCurrent);
+    $('input.t3js-pageLink').on('click', PageLinkHandler.linkPageByTextfield);
+  });
+
+  return PageLinkHandler;
+});

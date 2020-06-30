@@ -29,6 +29,7 @@ use TYPO3\CMS\Extbase\Object\ObjectManager;
 use TYPO3\CMS\Form\Domain\Model\FormElements\FormElementInterface;
 use TYPO3\CMS\Form\Domain\Model\Renderable\RootRenderableInterface;
 use TYPO3\CMS\Form\Domain\Runtime\FormRuntime;
+use TYPO3\CMS\Frontend\Controller\TypoScriptFrontendController;
 
 /**
  * Advanced translations
@@ -175,32 +176,66 @@ class TranslationService implements SingletonInterface
      * Recursively translate values.
      *
      * @param array $array
-     * @param array $translationFiles
+     * @param array|string|null $translationFile
      * @return array the modified array
      * @internal
      */
-    public function translateValuesRecursive(array $array, array $translationFiles = []): array
+    public function translateValuesRecursive(array $array, $translationFile = null): array
     {
         $result = $array;
         foreach ($result as $key => $value) {
             if (is_array($value)) {
-                $result[$key] = $this->translateValuesRecursive($value, $translationFiles);
+                $result[$key] = $this->translateValuesRecursive($value, $translationFile);
             } else {
-                $this->sortArrayWithIntegerKeysDescending($translationFiles);
+                $translationFiles = null;
+                if (is_string($translationFile)) {
+                    $translationFiles = [$translationFile];
+                } elseif (is_array($translationFile)) {
+                    $translationFiles = $this->sortArrayWithIntegerKeysDescending($translationFile);
+                }
 
-                if (!empty($translationFiles)) {
-                    foreach ($translationFiles as $translationFile) {
-                        $translatedValue = $this->translate($value, null, $translationFile, null);
+                if ($translationFiles) {
+                    foreach ($translationFiles as $_translationFile) {
+                        $translatedValue = $this->translate($value, null, $_translationFile, null);
                         if (!empty($translatedValue)) {
                             $result[$key] = $translatedValue;
                             break;
                         }
                     }
                 } else {
-                    $result[$key] = $this->translate($value, null, null, null, $value);
+                    $result[$key] = $this->translate($value, null, $translationFile, null, $value);
                 }
             }
         }
+        return $result;
+    }
+
+    /**
+     * @param string $key
+     * @param array $arguments
+     * @param array $translationFiles
+     * @return array the modified array
+     * @internal
+     */
+    public function translateToAllBackendLanguages(
+        string $key,
+        array $arguments = null,
+        array $translationFiles = []
+    ): array {
+        $result = [];
+        $translationFiles = $this->sortArrayWithIntegerKeysDescending($translationFiles);
+
+        foreach ($this->getAllTypo3BackendLanguages() as $language) {
+            $result[$language] = $key;
+            foreach ($translationFiles as $translationFile) {
+                $translatedValue = $this->translate($key, $arguments, $translationFile, $language, $key);
+                if ($translatedValue !== $key) {
+                    $result[$language] = $translatedValue;
+                    break;
+                }
+            }
+        }
+
         return $result;
     }
 
@@ -228,12 +263,16 @@ class TranslationService implements SingletonInterface
         }
 
         $finisherIdentifier = preg_replace('/Finisher$/', '', $finisherIdentifier);
-        $translationFiles = $renderingOptions['translationFiles'] ?? [];
-        if (empty($translationFiles)) {
-            $translationFiles = $formRuntime->getRenderingOptions()['translation']['translationFiles'];
+        $translationFile = $renderingOptions['translationFile'] ?? null;
+        if (empty($translationFile)) {
+            $translationFile = $formRuntime->getRenderingOptions()['translation']['translationFile'];
         }
 
-        $translationFiles = $this->sortArrayWithIntegerKeysDescending($translationFiles);
+        if (is_string($translationFile)) {
+            $translationFiles = [$translationFile];
+        } else {
+            $translationFiles = $this->sortArrayWithIntegerKeysDescending($translationFile);
+        }
 
         if (isset($renderingOptions['translatePropertyValueIfEmpty'])) {
             $translatePropertyValueIfEmpty = (bool)$renderingOptions['translatePropertyValueIfEmpty'];
@@ -327,12 +366,16 @@ class TranslationService implements SingletonInterface
         }
 
         $defaultValue = empty($defaultValue) ? '' : $defaultValue;
-        $translationFiles = $renderingOptions['translation']['translationFiles'] ?? [];
-        if (empty($translationFiles)) {
-            $translationFiles = $formRuntime->getRenderingOptions()['translation']['translationFiles'];
+        $translationFile = $renderingOptions['translation']['translationFile'] ?? null;
+        if (empty($translationFile)) {
+            $translationFile = $formRuntime->getRenderingOptions()['translation']['translationFile'];
         }
 
-        $translationFiles = $this->sortArrayWithIntegerKeysDescending($translationFiles);
+        if (is_string($translationFile)) {
+            $translationFiles = [$translationFile];
+        } else {
+            $translationFiles = $this->sortArrayWithIntegerKeysDescending($translationFile);
+        }
 
         $language = null;
         if (isset($renderingOptions['translation']['language'])) {
@@ -446,12 +489,16 @@ class TranslationService implements SingletonInterface
         }
 
         $renderingOptions = $element->getRenderingOptions();
-        $translationFiles = $renderingOptions['translation']['translationFiles'] ?? [];
-        if (empty($translationFiles)) {
-            $translationFiles = $formRuntime->getRenderingOptions()['translation']['translationFiles'];
+        $translationFile = $renderingOptions['translation']['translationFile'] ?? null;
+        if (empty($translationFile)) {
+            $translationFile = $formRuntime->getRenderingOptions()['translation']['translationFile'];
         }
 
-        $translationFiles = $this->sortArrayWithIntegerKeysDescending($translationFiles);
+        if (is_string($translationFile)) {
+            $translationFiles = [$translationFile];
+        } else {
+            $translationFiles = $this->sortArrayWithIntegerKeysDescending($translationFile);
+        }
 
         $language = null;
         if (isset($renderingOptions['language'])) {
@@ -549,7 +596,8 @@ class TranslationService implements SingletonInterface
     }
 
     /**
-     * Sets the currently active language keys.
+     * Sets the currently active language/language_alt keys.
+     * Default values are "default" for language key and "" for language_alt key.
      */
     protected function setLanguageKeys()
     {
@@ -557,9 +605,18 @@ class TranslationService implements SingletonInterface
 
         $this->alternativeLanguageKeys = [];
         if (TYPO3_MODE === 'FE') {
-            $this->languageKey = $this->getCurrentSiteLanguage()->getTypo3Language();
+            $tsfe = $this->getTypoScriptFrontendController();
 
-            if ($this->languageKey !== 'default') {
+            if ($this->getCurrentSiteLanguage() instanceof SiteLanguage) {
+                $this->languageKey = $this->getCurrentSiteLanguage()->getTypo3Language();
+            } elseif (isset($tsfe->config['config']['language'])) {
+                $this->languageKey = $tsfe->config['config']['language'];
+                if (isset($tsfe->config['config']['language_alt'])) {
+                    $this->alternativeLanguageKeys[] = $tsfe->config['config']['language_alt'];
+                }
+            }
+
+            if ($this->languageKey !== 'default' && empty($this->alternativeLanguageKeys)) {
                 /** @var \TYPO3\CMS\Core\Localization\Locales $locales */
                 $locales = GeneralUtility::makeInstance(Locales::class);
                 if (in_array($this->languageKey, $locales->getLocales(), true)) {
@@ -684,10 +741,31 @@ class TranslationService implements SingletonInterface
     }
 
     /**
+     * @return array
+     */
+    protected function getAllTypo3BackendLanguages(): array
+    {
+        $languages = array_merge(
+            ['default'],
+            array_values($GLOBALS['TYPO3_CONF_VARS']['EXTCONF']['lang']['availableLanguages'] ?? [])
+        );
+
+        return $languages;
+    }
+
+    /**
      * @return LanguageService
      */
     protected function getLanguageService(): LanguageService
     {
         return $GLOBALS['LANG'];
+    }
+
+    /**
+     * @return TypoScriptFrontendController
+     */
+    protected function getTypoScriptFrontendController(): TypoScriptFrontendController
+    {
+        return $GLOBALS['TSFE'];
     }
 }

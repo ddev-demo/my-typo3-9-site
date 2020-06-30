@@ -16,10 +16,12 @@ namespace TYPO3\CMS\Core\Authentication;
 
 use Psr\Log\LoggerAwareInterface;
 use Psr\Log\LoggerAwareTrait;
+use Symfony\Component\HttpFoundation\Cookie;
 use TYPO3\CMS\Core\Core\Environment;
 use TYPO3\CMS\Core\Crypto\Random;
 use TYPO3\CMS\Core\Database\Connection;
 use TYPO3\CMS\Core\Database\ConnectionPool;
+use TYPO3\CMS\Core\Database\Query\QueryHelper;
 use TYPO3\CMS\Core\Database\Query\Restriction\DefaultRestrictionContainer;
 use TYPO3\CMS\Core\Database\Query\Restriction\DeletedRestriction;
 use TYPO3\CMS\Core\Database\Query\Restriction\EndTimeRestriction;
@@ -28,10 +30,12 @@ use TYPO3\CMS\Core\Database\Query\Restriction\QueryRestrictionContainerInterface
 use TYPO3\CMS\Core\Database\Query\Restriction\RootLevelRestriction;
 use TYPO3\CMS\Core\Database\Query\Restriction\StartTimeRestriction;
 use TYPO3\CMS\Core\Exception;
+use TYPO3\CMS\Core\Http\CookieHeaderTrait;
 use TYPO3\CMS\Core\Session\Backend\Exception\SessionNotFoundException;
 use TYPO3\CMS\Core\Session\Backend\SessionBackendInterface;
 use TYPO3\CMS\Core\Session\SessionManager;
 use TYPO3\CMS\Core\Utility\GeneralUtility;
+use TYPO3\CMS\Core\Utility\MathUtility;
 
 /**
  * Authentication of users in TYPO3
@@ -45,12 +49,19 @@ use TYPO3\CMS\Core\Utility\GeneralUtility;
 abstract class AbstractUserAuthentication implements LoggerAwareInterface
 {
     use LoggerAwareTrait;
+    use CookieHeaderTrait;
 
     /**
      * Session/Cookie name
      * @var string
      */
     public $name = '';
+
+    /**
+     * Session/GET-var name
+     * @var string
+     */
+    public $get_name = '';
 
     /**
      * Table in database with user data
@@ -161,10 +172,10 @@ abstract class AbstractUserAuthentication implements LoggerAwareInterface
     /**
      * GarbageCollection
      * Purge all server session data older than $gc_time seconds.
-     * if $this->sessionTimeout > 0, then the session timeout is used instead.
+     * 0 = default to $this->sessionTimeout or use 86400 seconds (1 day) if $this->sessionTimeout == 0
      * @var int
      */
-    public $gc_time = 86400;
+    public $gc_time = 0;
 
     /**
      * Probability for garbage collection to be run (in percent)
@@ -191,6 +202,14 @@ abstract class AbstractUserAuthentication implements LoggerAwareInterface
     public $sendNoCacheHeaders = true;
 
     /**
+     * If this is set, authentication is also accepted by $_GET.
+     * Notice that the identification is NOT 128bit MD5 hash but reduced.
+     * This is done in order to minimize the size for mobile-devices, such as WAP-phones
+     * @var bool
+     */
+    public $getFallBack = false;
+
+    /**
      * The ident-hash is normally 32 characters and should be!
      * But if you are making sites for WAP-devices or other low-bandwidth stuff,
      * you may shorten the length.
@@ -199,6 +218,20 @@ abstract class AbstractUserAuthentication implements LoggerAwareInterface
      * @var int
      */
     public $hash_length = 32;
+
+    /**
+     * Setting this flag TRUE lets user-authentication happen from GET_VARS if
+     * POST_VARS are not set. Thus you may supply username/password with the URL.
+     * @var bool
+     */
+    public $getMethodEnabled = false;
+
+    /**
+     * If set to 4, the session will be locked to the user's IP address (all four numbers).
+     * Reducing this to 1-3 means that only the given number of parts of the IP address is used.
+     * @var int
+     */
+    public $lockIP = 4;
 
     /**
      * @var string
@@ -255,6 +288,14 @@ abstract class AbstractUserAuthentication implements LoggerAwareInterface
     public $user;
 
     /**
+     * Will be added to the url (eg. '&login=ab7ef8d...')
+     * GET-auth-var if getFallBack is TRUE. Should be inserted in links!
+     * @var string
+     * @internal
+     */
+    public $get_URL_ID = '';
+
+    /**
      * Will be set to TRUE if a new session ID was created
      * @var bool
      */
@@ -295,11 +336,6 @@ abstract class AbstractUserAuthentication implements LoggerAwareInterface
     public $uc;
 
     /**
-     * @var IpLocker
-     */
-    protected $ipLocker;
-
-    /**
      * @var SessionBackendInterface
      */
     protected $sessionBackend;
@@ -314,26 +350,11 @@ abstract class AbstractUserAuthentication implements LoggerAwareInterface
 
     /**
      * Initialize some important variables
-     *
-     * @throws Exception
      */
     public function __construct()
     {
-        $this->svConfig = $GLOBALS['TYPO3_CONF_VARS']['SVCONF']['auth'] ?? [];
-        // If there is a custom session timeout, use this instead of the 1d default gc time.
-        if ($this->sessionTimeout > 0) {
-            $this->gc_time = $this->sessionTimeout;
-        }
-        // Backend or frontend login - used for auth services
-        if (empty($this->loginType)) {
-            throw new Exception('No loginType defined, must be set explicitly by subclass', 1476045345);
-        }
-
-        $this->ipLocker = GeneralUtility::makeInstance(
-            IpLocker::class,
-            $GLOBALS['TYPO3_CONF_VARS'][$this->loginType]['lockIP'],
-            $GLOBALS['TYPO3_CONF_VARS'][$this->loginType]['lockIPv6']
-        );
+        // This function has to stay even if it's empty
+        // Implementations of that abstract class might call parent::__construct();
     }
 
     /**
@@ -344,22 +365,47 @@ abstract class AbstractUserAuthentication implements LoggerAwareInterface
      * c) Lookup a session attached to a user and check timeout etc.
      * d) Garbage collection, setting of no-cache headers.
      * If a user is authenticated the database record of the user (array) will be set in the ->user internal variable.
+     *
+     * @throws Exception
      */
     public function start()
     {
+        // Backend or frontend login - used for auth services
+        if (empty($this->loginType)) {
+            throw new Exception('No loginType defined, should be set explicitly by subclass', 1476045345);
+        }
         $this->logger->debug('## Beginning of auth logging.');
+        // Init vars.
+        $mode = '';
         $this->newSessionID = false;
-        // Make certain that NO user is set initially
-        $this->user = null;
-        // sessionID is set to ses_id if cookie is present. Otherwise a new session will start
-        $this->id = $this->getCookie($this->name);
+        // $id is set to ses_id if cookie is present. Else set to FALSE, which will start a new session
+        $id = $this->getCookie($this->name);
+        $this->svConfig = $GLOBALS['TYPO3_CONF_VARS']['SVCONF']['auth'] ?? [];
 
-        // If new session or client tries to fix session...
-        if (!$this->isExistingSessionRecord($this->id)) {
-            $this->id = $this->createSessionId();
-            $this->newSessionID = true;
+        // If fallback to get mode....
+        if (!$id && $this->getFallBack && $this->get_name) {
+            $id = isset($_GET[$this->get_name]) ? GeneralUtility::_GET($this->get_name) : '';
+            if (strlen($id) != $this->hash_length) {
+                $id = '';
+            }
+            $mode = 'get';
         }
 
+        // If new session or client tries to fix session...
+        if (!$id || !$this->isExistingSessionRecord($id)) {
+            // New random session-$id is made
+            $id = $this->createSessionId();
+            // New session
+            $this->newSessionID = true;
+        }
+        // Internal var 'id' is set
+        $this->id = $id;
+        // If fallback to get mode....
+        if ($mode === 'get' && $this->getFallBack && $this->get_name) {
+            $this->get_URL_ID = '&' . $this->get_name . '=' . $id;
+        }
+        // Make certain that NO user is set initially
+        $this->user = null;
         // Set all possible headers that could ensure that the script is not cached on the client-side
         $this->sendHttpHeaders();
         // Load user session, check to see if anyone has submitted login-information and if so authenticate
@@ -375,6 +421,11 @@ abstract class AbstractUserAuthentication implements LoggerAwareInterface
                 'pObj' => $this,
             ];
             GeneralUtility::callUserFunction($funcName, $_params, $this);
+        }
+        // Set $this->gc_time if not explicitly specified
+        if ($this->gc_time === 0) {
+            // Default to 86400 seconds (1 day) if $this->sessionTimeout is 0
+            $this->gc_time = $this->sessionTimeout === 0 ? 86400 : $this->sessionTimeout;
         }
         // If we're lucky we'll get to clean up old sessions
         if (rand() % 100 <= $this->gc_probability) {
@@ -448,9 +499,28 @@ abstract class AbstractUserAuthentication implements LoggerAwareInterface
             $cookieExpire = $isRefreshTimeBasedCookie ? $GLOBALS['EXEC_TIME'] + $this->lifetime : 0;
             // Use the secure option when the current request is served by a secure connection:
             $cookieSecure = (bool)$settings['cookieSecure'] && GeneralUtility::getIndpEnv('TYPO3_SSL');
+            // Valid options are "strict", "lax" or "none", whereas "none" only works in HTTPS requests (default & fallback is "strict")
+            $cookieSameSite = $this->sanitizeSameSiteCookieValue(
+                strtolower($GLOBALS['TYPO3_CONF_VARS'][$this->loginType]['cookieSameSite'] ?? Cookie::SAMESITE_STRICT)
+            );
+            // SameSite "none" needs the secure option (only allowed on HTTPS)
+            if ($cookieSameSite === Cookie::SAMESITE_NONE) {
+                $cookieSecure = true;
+            }
             // Do not set cookie if cookieSecure is set to "1" (force HTTPS) and no secure channel is used:
             if ((int)$settings['cookieSecure'] !== 1 || GeneralUtility::getIndpEnv('TYPO3_SSL')) {
-                setcookie($this->name, $this->id, $cookieExpire, $cookiePath, $cookieDomain, $cookieSecure, true);
+                $cookie = new Cookie(
+                    $this->name,
+                    $this->id,
+                    $cookieExpire,
+                    $cookiePath,
+                    $cookieDomain,
+                    $cookieSecure,
+                    true,
+                    false,
+                    $cookieSameSite
+                );
+                header('Set-Cookie: ' . $cookie->__toString(), false);
                 $this->cookieWasSetOnCurrentRequest = true;
             } else {
                 throw new Exception('Cookie was not set since HTTPS was forced in $TYPO3_CONF_VARS[SYS][cookieSecure].', 1254325546);
@@ -613,7 +683,6 @@ abstract class AbstractUserAuthentication implements LoggerAwareInterface
             // Use 'auth' service to find the user
             // First found user will be used
             $subType = 'getUser' . $this->loginType;
-            /** @var AuthenticationService $serviceObj */
             foreach ($this->getAuthServices($subType, $loginData, $authInfo) as $serviceObj) {
                 if ($row = $serviceObj->getUser()) {
                     $tempuserArr[] = $row;
@@ -663,7 +732,6 @@ abstract class AbstractUserAuthentication implements LoggerAwareInterface
                 $this->logger->debug('Auth user', $tempuser);
                 $subType = 'authUser' . $this->loginType;
 
-                /** @var AuthenticationService $serviceObj */
                 foreach ($this->getAuthServices($subType, $loginData, $authInfo) as $serviceObj) {
                     if (($ret = $serviceObj->authUser($tempuser)) > 0) {
                         // If the service returns >=200 then no more checking is needed - useful for IP checking without password
@@ -896,7 +964,10 @@ abstract class AbstractUserAuthentication implements LoggerAwareInterface
      */
     public function getNewSessionRecord($tempuser)
     {
-        $sessionIpLock = $this->ipLocker->getSessionIpLock((string)GeneralUtility::getIndpEnv('REMOTE_ADDR'), empty($tempuser['disableIPlock']));
+        $sessionIpLock = '[DISABLED]';
+        if ($this->lockIP && empty($tempuser['disableIPlock'])) {
+            $sessionIpLock = $this->ipLockClause_remoteIPNumber($this->lockIP);
+        }
 
         return [
             'ses_id' => $this->id,
@@ -1031,9 +1102,6 @@ abstract class AbstractUserAuthentication implements LoggerAwareInterface
      */
     public function isExistingSessionRecord($id)
     {
-        if (empty($id)) {
-            return false;
-        }
         try {
             $sessionRecord = $this->getSessionBackend()->get($id);
             if (empty($sessionRecord)) {
@@ -1041,7 +1109,10 @@ abstract class AbstractUserAuthentication implements LoggerAwareInterface
             }
             // If the session does not match the current IP lock, it should be treated as invalid
             // and a new session should be created.
-            return $this->ipLocker->validateRemoteAddressAgainstSessionIpLock((string)GeneralUtility::getIndpEnv('REMOTE_ADDR'), $sessionRecord['ses_iplock']);
+            if ($sessionRecord['ses_iplock'] !== $this->ipLockClause_remoteIPNumber($this->lockIP) && $sessionRecord['ses_iplock'] !== '[DISABLED]') {
+                return false;
+            }
+            return true;
         } catch (SessionNotFoundException $e) {
             return false;
         }
@@ -1098,6 +1169,27 @@ abstract class AbstractUserAuthentication implements LoggerAwareInterface
         return $restrictionContainer;
     }
 
+    /**
+     * Returns the IP address to lock to.
+     * The IP address may be partial based on $parts.
+     *
+     * @param int $parts 1-4: Indicates how many parts of the IP address to return. 4 means all, 1 means only first number.
+     * @return string (Partial) IP address for REMOTE_ADDR
+     */
+    protected function ipLockClause_remoteIPNumber($parts)
+    {
+        $IP = GeneralUtility::getIndpEnv('REMOTE_ADDR');
+        if ($parts >= 4) {
+            return $IP;
+        }
+        $parts = MathUtility::forceIntegerInRange($parts, 1, 3);
+        $IPparts = explode('.', $IP);
+        for ($a = 4; $a > $parts; $a--) {
+            unset($IPparts[$a - 1]);
+        }
+        return implode('.', $IPparts);
+    }
+
     /*************************
      *
      * Session and Configuration Handling
@@ -1135,7 +1227,7 @@ abstract class AbstractUserAuthentication implements LoggerAwareInterface
     public function unpack_uc($theUC = '')
     {
         if (!$theUC && isset($this->user['uc'])) {
-            $theUC = unserialize($this->user['uc']);
+            $theUC = unserialize($this->user['uc'], ['allowed_classes' => false]);
         }
         if (is_array($theUC)) {
             $this->uc = $theUC;
@@ -1234,11 +1326,15 @@ abstract class AbstractUserAuthentication implements LoggerAwareInterface
      */
     public function getLoginFormData()
     {
-        $loginData = [
-            'status' => GeneralUtility::_GP($this->formfield_status),
-            'uname'  => GeneralUtility::_POST($this->formfield_uname),
-            'uident' => GeneralUtility::_POST($this->formfield_uident)
-        ];
+        $loginData = [];
+        $loginData['status'] = GeneralUtility::_GP($this->formfield_status);
+        if ($this->getMethodEnabled) {
+            $loginData['uname'] = GeneralUtility::_GP($this->formfield_uname);
+            $loginData['uident'] = GeneralUtility::_GP($this->formfield_uident);
+        } else {
+            $loginData['uname'] = GeneralUtility::_POST($this->formfield_uname);
+            $loginData['uident'] = GeneralUtility::_POST($this->formfield_uident);
+        }
         // Only process the login data if a login is requested
         if ($loginData['status'] === LoginType::LOGIN) {
             $loginData = $this->processLoginData($loginData);
@@ -1261,20 +1357,24 @@ abstract class AbstractUserAuthentication implements LoggerAwareInterface
         $loginSecurityLevel = trim($GLOBALS['TYPO3_CONF_VARS'][$this->loginType]['loginSecurityLevel']) ?: 'normal';
         $passwordTransmissionStrategy = $passwordTransmissionStrategy ?: $loginSecurityLevel;
         $this->logger->debug('Login data before processing', $loginData);
+        $serviceChain = '';
         $subType = 'processLoginData' . $this->loginType;
         $authInfo = $this->getAuthInfoArray();
         $isLoginDataProcessed = false;
         $processedLoginData = $loginData;
-        /** @var AuthenticationService $serviceObject */
-        foreach ($this->getAuthServices($subType, $loginData, $authInfo) as $serviceObject) {
+        while (is_object($serviceObject = GeneralUtility::makeInstanceService('auth', $subType, $serviceChain))) {
+            $serviceChain .= ',' . $serviceObject->getServiceKey();
+            $serviceObject->initAuth($subType, $loginData, $authInfo, $this);
             $serviceResult = $serviceObject->processLoginData($processedLoginData, $passwordTransmissionStrategy);
             if (!empty($serviceResult)) {
                 $isLoginDataProcessed = true;
                 // If the service returns >=200 then no more processing is needed
                 if ((int)$serviceResult >= 200) {
+                    unset($serviceObject);
                     break;
                 }
             }
+            unset($serviceObject);
         }
         if ($isLoginDataProcessed) {
             $loginData = $processedLoginData;
@@ -1300,7 +1400,7 @@ abstract class AbstractUserAuthentication implements LoggerAwareInterface
         $authInfo['REMOTE_ADDR'] = GeneralUtility::getIndpEnv('REMOTE_ADDR');
         $authInfo['REMOTE_HOST'] = GeneralUtility::getIndpEnv('REMOTE_HOST');
         $authInfo['showHiddenRecords'] = $this->showHiddenRecords;
-        // Can be overridden in localconf by SVCONF:
+        // Can be overidden in localconf by SVCONF:
         $authInfo['db_user']['table'] = $this->user_table;
         $authInfo['db_user']['userid_column'] = $this->userid_column;
         $authInfo['db_user']['username_column'] = $this->username_column;
@@ -1325,6 +1425,21 @@ abstract class AbstractUserAuthentication implements LoggerAwareInterface
     }
 
     /**
+     * Check the login data with the user record data for builtin login methods
+     *
+     * @param array $user User data array
+     * @param array $loginData Login data array
+     * @param string $passwordCompareStrategy Alternative passwordCompareStrategy. Used when authentication services wants to override the default.
+     * @return bool TRUE if login data matched
+     * @deprecated since TYPO3 v9, will be removed in TYPO3 v10.0.
+     */
+    public function compareUident($user, $loginData, $passwordCompareStrategy = '')
+    {
+        trigger_error('This method will be removed in TYPO3 v10.0.', E_USER_DEPRECATED);
+        return (string)$loginData['uident_text'] !== '' && (string)$loginData['uident_text'] === (string)$user[$this->userident_column];
+    }
+
+    /**
      * Garbage collector, removing old expired sessions.
      *
      * @internal
@@ -1344,8 +1459,8 @@ abstract class AbstractUserAuthentication implements LoggerAwareInterface
      * @param string $details Default text that follows the message
      * @param array $data Data that follows the log. Might be used to carry special information. If an array the first 5 entries (0-4) will be sprintf'ed the details-text...
      * @param string $tablename Special field used by tce_main.php. These ($tablename, $recuid, $recpid) holds the reference to the record which the log-entry is about. (Was used in attic status.php to update the interface.)
-     * @param int|string $recuid Special field used by tce_main.php. These ($tablename, $recuid, $recpid) holds the reference to the record which the log-entry is about. (Was used in attic status.php to update the interface.)
-     * @param int|string $recpid Special field used by tce_main.php. These ($tablename, $recuid, $recpid) holds the reference to the record which the log-entry is about. (Was used in attic status.php to update the interface.)
+     * @param int $recuid Special field used by tce_main.php. These ($tablename, $recuid, $recpid) holds the reference to the record which the log-entry is about. (Was used in attic status.php to update the interface.)
+     * @param int $recpid Special field used by tce_main.php. These ($tablename, $recuid, $recpid) holds the reference to the record which the log-entry is about. (Was used in attic status.php to update the interface.)
      */
     public function writelog($type, $action, $error, $details_nr, $details, $data, $tablename, $recuid, $recpid)
     {
@@ -1426,6 +1541,50 @@ abstract class AbstractUserAuthentication implements LoggerAwareInterface
             ->where($query->expr()->eq('username', $query->createNamedParameter($name, \PDO::PARAM_STR)));
 
         return $query->execute()->fetch();
+    }
+
+    /**
+     * Get a user from DB by username
+     * provided for usage from services
+     *
+     * @param array $dbUser User db table definition: $this->db_user
+     * @param string $username user name
+     * @param string $extraWhere Additional WHERE clause: " AND ...
+     * @return mixed User array or FALSE
+     * @deprecated since TYPO3 v9, will be removed in TYPO3 v10.0
+     */
+    public function fetchUserRecord($dbUser, $username, $extraWhere = '')
+    {
+        trigger_error('This method will be removed in TYPO3 v10.0.', E_USER_DEPRECATED);
+        $user = false;
+        if ($username || $extraWhere) {
+            $query = GeneralUtility::makeInstance(ConnectionPool::class)->getQueryBuilderForTable($dbUser['table']);
+            $query->getRestrictions()->removeAll()
+                ->add(GeneralUtility::makeInstance(DeletedRestriction::class));
+
+            $constraints = array_filter([
+                QueryHelper::stripLogicalOperatorPrefix($dbUser['check_pid_clause']),
+                QueryHelper::stripLogicalOperatorPrefix($dbUser['enable_clause']),
+                QueryHelper::stripLogicalOperatorPrefix($extraWhere),
+            ]);
+
+            if (!empty($username)) {
+                array_unshift(
+                    $constraints,
+                    $query->expr()->eq(
+                        $dbUser['username_column'],
+                        $query->createNamedParameter($username, \PDO::PARAM_STR)
+                    )
+                );
+            }
+
+            $user = $query->select('*')
+                ->from($dbUser['table'])
+                ->where(...$constraints)
+                ->execute()
+                ->fetch();
+        }
+        return $user;
     }
 
     /**

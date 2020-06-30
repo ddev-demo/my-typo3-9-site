@@ -47,21 +47,17 @@ class PageArgumentValidator implements MiddlewareInterface, LoggerAwareInterface
     protected $cacheHashCalculator;
 
     /**
-     * @var TimeTracker
+     * @var TypoScriptFrontendController
      */
-    protected $timeTracker;
+    protected $controller;
 
     /**
-     * @var bool will be used to set $TSFE->no_cache later-on
+     * @param TypoScriptFrontendController|null $controller
      */
-    protected $disableCache = false;
-
-    public function __construct(
-        CacheHashCalculator $cacheHashCalculator,
-        TimeTracker $timeTracker
-    ) {
-        $this->cacheHashCalculator = $cacheHashCalculator;
-        $this->timeTracker = $timeTracker;
+    public function __construct(TypoScriptFrontendController $controller = null)
+    {
+        $this->controller = $controller ?? $GLOBALS['TSFE'];
+        $this->cacheHashCalculator = GeneralUtility::makeInstance(CacheHashCalculator::class);
     }
 
     /**
@@ -73,124 +69,81 @@ class PageArgumentValidator implements MiddlewareInterface, LoggerAwareInterface
      */
     public function process(ServerRequestInterface $request, RequestHandlerInterface $handler): ResponseInterface
     {
-        $this->disableCache = (bool)$request->getAttribute('noCache', false);
         $pageNotFoundOnValidationError = (bool)($GLOBALS['TYPO3_CONF_VARS']['FE']['pageNotFoundOnCHashError'] ?? true);
-        /** @var PageArguments $pageArguments */
         $pageArguments = $request->getAttribute('routing', null);
-        if (!($pageArguments instanceof PageArguments)) {
-            // Page Arguments must be set in order to validate. This middleware only works if PageArguments
-            // is available, and is usually combined with the Page Resolver middleware
-            return GeneralUtility::makeInstance(ErrorController::class)->pageNotFoundAction(
-                $request,
-                'Page Arguments could not be resolved',
-                ['code' => PageAccessFailureReasons::INVALID_PAGE_ARGUMENTS]
-            );
-        }
-        if ($GLOBALS['TYPO3_CONF_VARS']['FE']['disableNoCacheParameter'] ?? true) {
-            $cachingDisabledByRequest = false;
-        } else {
-            $cachingDisabledByRequest = $pageArguments->getArguments()['no_cache'] ?? $request->getParsedBody()['no_cache'] ?? false;
-        }
-        if (($cachingDisabledByRequest || $this->disableCache) && !$pageNotFoundOnValidationError) {
+        if ($this->controller->no_cache && !$pageNotFoundOnValidationError) {
             // No need to test anything if caching was already disabled.
-            return $handler->handle($request);
-        }
-        // Evaluate the cache hash parameter or dynamic arguments when coming from a Site-based routing
-        $cHash = $pageArguments->getArguments()['cHash'] ?? '';
-        $queryParams = $pageArguments->getDynamicArguments();
-        if ($cHash || !empty($queryParams)) {
-            $relevantParametersForCacheHashArgument = $this->getRelevantParametersForCacheHashCalculation($pageArguments);
-            if ($cHash) {
-                if (empty($relevantParametersForCacheHashArgument)) {
-                    // cHash was given, but nothing to be calculated, so let's do a redirect to the current page
-                    // but without the cHash
-                    $this->logger->notice('The incoming cHash "' . $cHash . '" is given but not needed. cHash is unset');
+        } else {
+            // Evaluate the cache hash parameter or dynamic arguments when coming from a Site-based routing
+            if ($pageArguments instanceof PageArguments) {
+                $queryParams = $pageArguments->getDynamicArguments();
+            } else {
+                $queryParams = $request->getQueryParams();
+            }
+            if (!empty($queryParams) && !$this->evaluateCacheHashParameter($queryParams, $pageNotFoundOnValidationError)) {
+                // cHash was given, but nothing to be calculated, so let's do a redirect to the current page
+                // but without the cHash
+                if ($this->controller->cHash && empty($this->controller->cHash_array)) {
                     $uri = $request->getUri();
                     unset($queryParams['cHash']);
                     $uri = $uri->withQuery(HttpUtility::buildQueryString($queryParams));
                     return new RedirectResponse($uri, 308);
                 }
-                if (!$this->evaluateCacheHashParameter($cHash, $relevantParametersForCacheHashArgument, $pageNotFoundOnValidationError)) {
-                    return GeneralUtility::makeInstance(ErrorController::class)->pageNotFoundAction(
-                        $request,
-                        'Request parameters could not be validated (&cHash comparison failed)',
-                        ['code' => PageAccessFailureReasons::CACHEHASH_COMPARISON_FAILED]
-                    );
-                }
-                // No cHash given but was required
-            } elseif (!$this->evaluateQueryParametersWithoutCacheHash($queryParams, $pageNotFoundOnValidationError)) {
                 return GeneralUtility::makeInstance(ErrorController::class)->pageNotFoundAction(
                     $request,
-                    'Request parameters could not be validated (&cHash empty)',
-                    ['code' => PageAccessFailureReasons::CACHEHASH_EMPTY]
+                    'Request parameters could not be validated (&cHash comparison failed)',
+                    ['code' => PageAccessFailureReasons::CACHEHASH_COMPARISON_FAILED]
                 );
             }
         }
-
-        $request = $request->withAttribute('noCache', $this->disableCache);
         return $handler->handle($request);
     }
 
     /**
-     * Filters out the arguments that are necessary for calculating cHash
-     *
-     * @param PageArguments $pageArguments
-     * @return array
-     */
-    protected function getRelevantParametersForCacheHashCalculation(PageArguments $pageArguments): array
-    {
-        $queryParams = $pageArguments->getDynamicArguments();
-        $queryParams['id'] = $pageArguments->getPageId();
-        return $this->cacheHashCalculator->getRelevantParameters(HttpUtility::buildQueryString($queryParams));
-    }
-
-    /**
      * Calculates a hash string based on additional parameters in the url.
+     *
+     * Calculated hash is stored in $this->controller->cHash_array.
      * This is used to cache pages with more parameters than just id and type.
      *
      * @see TypoScriptFrontendController::reqCHash()
-     * @param string $cHash the chash to check
-     * @param array $relevantParameters GET parameters necessary for cHash calculation
+     * @param array $queryParams GET parameters
      * @param bool $pageNotFoundOnCacheHashError see $GLOBALS['TYPO3_CONF_VARS']['FE']['pageNotFoundOnCHashError']
      * @return bool if false, then a PageNotFound response is triggered
      */
-    protected function evaluateCacheHashParameter(string $cHash, array $relevantParameters, bool $pageNotFoundOnCacheHashError): bool
+    protected function evaluateCacheHashParameter(array $queryParams, bool $pageNotFoundOnCacheHashError): bool
     {
-        $calculatedCacheHash = $this->cacheHashCalculator->calculateCacheHash($relevantParameters);
-        if (hash_equals($calculatedCacheHash, $cHash)) {
-            return true;
+        if ($this->controller->cHash) {
+            // Make sure we use the page uid and not the page alias
+            $queryParams['id'] = $this->controller->id;
+            $relevantParameters = $this->cacheHashCalculator->getRelevantParameters(HttpUtility::buildQueryString($queryParams));
+            $this->controller->cHash_array = $relevantParameters;
+            // cHash was given, but nothing to be calculated, so cHash is unset and all is good.
+            if (empty($relevantParameters)) {
+                $this->logger->notice('The incoming cHash "' . $this->controller->cHash . '" is given but not needed. cHash is unset');
+                return false;
+            }
+            $calculatedCacheHash = $this->cacheHashCalculator->calculateCacheHash($relevantParameters);
+            if (!hash_equals($calculatedCacheHash, $this->controller->cHash)) {
+                // Early return to trigger the error controller
+                if ($pageNotFoundOnCacheHashError) {
+                    return false;
+                }
+                $this->controller->no_cache = true;
+                $this->getTimeTracker()->setTSlogMessage('The incoming cHash "' . $this->controller->cHash . '" and calculated cHash "' . $calculatedCacheHash . '" did not match, so caching was disabled. The fieldlist used was "' . implode(',', array_keys($this->controller->cHash_array)) . '"', 2);
+            }
+            // No cHash is set, check if that is correct
+        } elseif ($this->cacheHashCalculator->doParametersRequireCacheHash(HttpUtility::buildQueryString($queryParams))) {
+            // Will disable caching
+            $this->controller->reqCHash();
         }
-        // Early return to trigger the error controller
-        if ($pageNotFoundOnCacheHashError) {
-            return false;
-        }
-        // Caching is disabled now (but no 404)
-        $this->disableCache = true;
-        $this->timeTracker->setTSlogMessage('The incoming cHash "' . $cHash . '" and calculated cHash "' . $calculatedCacheHash . '" did not match, so caching was disabled. The fieldlist used was "' . implode(',', array_keys($relevantParameters)) . '"', 2);
         return true;
     }
 
     /**
-     * No cHash is set but there are query parameters, check if that is correct
-     *
-     * Should only be called if NO cHash parameter is given.
-     *
-     * @param array $dynamicArguments
-     * @param bool $pageNotFoundOnCacheHashError
-     * @return bool
+     * @return TimeTracker
      */
-    protected function evaluateQueryParametersWithoutCacheHash(array $dynamicArguments, bool $pageNotFoundOnCacheHashError): bool
+    protected function getTimeTracker(): TimeTracker
     {
-        if (!$this->cacheHashCalculator->doParametersRequireCacheHash(HttpUtility::buildQueryString($dynamicArguments))) {
-            return true;
-        }
-        // cHash is required, but not given, so trigger a 404
-        if ($pageNotFoundOnCacheHashError) {
-            return false;
-        }
-        // Caching is disabled now (but no 404)
-        $this->disableCache = true;
-        $this->timeTracker->setTSlogMessage('TSFE->reqCHash(): No &cHash parameter was sent for GET vars though required so caching is disabled', 2);
-        return true;
+        return GeneralUtility::makeInstance(TimeTracker::class);
     }
 }

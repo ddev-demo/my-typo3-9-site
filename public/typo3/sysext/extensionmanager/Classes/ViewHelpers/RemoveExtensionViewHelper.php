@@ -17,7 +17,6 @@ namespace TYPO3\CMS\Extensionmanager\ViewHelpers;
 use TYPO3\CMS\Core\Imaging\Icon;
 use TYPO3\CMS\Core\Imaging\IconFactory;
 use TYPO3\CMS\Core\Utility\GeneralUtility;
-use TYPO3\CMS\Extbase\Mvc\Web\Routing\UriBuilder;
 use TYPO3\CMS\Fluid\ViewHelpers\Link\ActionViewHelper;
 
 /**
@@ -55,7 +54,6 @@ class RemoveExtensionViewHelper extends ActionViewHelper
         ) {
             return '<span class="btn btn-default disabled">' . $iconFactory->getIcon('empty-empty', Icon::SIZE_SMALL)->render() . '</span>';
         }
-        /** @var UriBuilder $uriBuilder */
         $uriBuilder = $this->renderingContext->getControllerContext()->getUriBuilder();
         $action = 'removeExtension';
         $uriBuilder->reset();

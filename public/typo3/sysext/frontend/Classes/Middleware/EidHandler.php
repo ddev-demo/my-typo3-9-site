@@ -20,9 +20,10 @@ use Psr\Http\Message\ServerRequestInterface;
 use Psr\Http\Server\MiddlewareInterface;
 use Psr\Http\Server\RequestHandlerInterface;
 use TYPO3\CMS\Core\Exception;
-use TYPO3\CMS\Core\Http\DispatcherInterface;
+use TYPO3\CMS\Core\Http\Dispatcher;
 use TYPO3\CMS\Core\Http\NullResponse;
 use TYPO3\CMS\Core\Http\Response;
+use TYPO3\CMS\Core\Utility\GeneralUtility;
 
 /**
  * Lightweight alternative to regular frontend requests; used when $_GET[eID] is set.
@@ -33,19 +34,6 @@ use TYPO3\CMS\Core\Http\Response;
  */
 class EidHandler implements MiddlewareInterface
 {
-    /**
-     * @var DispatcherInterface
-     */
-    protected $dispatcher;
-
-    /**
-     * @param DispatcherInterface $dispatcher
-     */
-    public function __construct(DispatcherInterface $dispatcher)
-    {
-        $this->dispatcher = $dispatcher;
-    }
-
     /**
      * Dispatches the request to the corresponding eID class or eID script
      *
@@ -65,12 +53,32 @@ class EidHandler implements MiddlewareInterface
         // Remove any output produced until now
         ob_clean();
 
-        $target = $GLOBALS['TYPO3_CONF_VARS']['FE']['eID_include'][$eID] ?? null;
-        if (empty($target)) {
-            return (new Response())->withStatus(404, 'eID not registered');
+        /** @var Response $response */
+        $response = GeneralUtility::makeInstance(Response::class);
+
+        if (empty($eID) || !isset($GLOBALS['TYPO3_CONF_VARS']['FE']['eID_include'][$eID])) {
+            return $response->withStatus(404, 'eID not registered');
         }
 
-        $request = $request->withAttribute('target', $target);
-        return $this->dispatcher->dispatch($request) ?? new NullResponse();
+        $configuration = $GLOBALS['TYPO3_CONF_VARS']['FE']['eID_include'][$eID];
+
+        // Simple check to make sure that it's not an absolute file (to use the fallback)
+        if (strpos($configuration, '::') !== false || is_callable($configuration)) {
+            /** @var Dispatcher $dispatcher */
+            $dispatcher = GeneralUtility::makeInstance(Dispatcher::class);
+            $request = $request->withAttribute('target', $configuration);
+            return $dispatcher->dispatch($request, $response) ?? new NullResponse();
+        }
+        trigger_error(
+            'eID "' . $eID . '" is registered with a script to a file. This behaviour will be removed in TYPO3 v10.0.'
+            . ' Register eID with a class::method syntax like "\MyVendor\MyExtension\Controller\MyEidController::myMethod" instead.',
+            E_USER_DEPRECATED
+        );
+        $scriptPath = GeneralUtility::getFileAbsFileName($configuration);
+        if ($scriptPath === '') {
+            throw new Exception('Registered eID has invalid script path.', 1518042216);
+        }
+        include $scriptPath;
+        return new NullResponse();
     }
 }

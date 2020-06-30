@@ -30,7 +30,6 @@
   }
 }(function($) {
   $.fn.clearable = function(options) {
-    console.warn('jquery.clearable has been marked as deprecated and will be removed in TYPO3 v11. Use TYPO3/CMS/Backend/Input/Clearable and native HTMLInputElement instead.');
 
     var defaults = {
       'onClear': function() {

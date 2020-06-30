@@ -10,4 +10,27 @@
  *
  * The TYPO3 project - inspiring people to share!
  */
-define(["require","exports","jquery","./ElementBrowser","TYPO3/CMS/Backend/Modal","TYPO3/CMS/Backend/Severity"],function(e,r,t,n,a,o){"use strict";return new class{constructor(){t(()=>{t("[data-folder-id]").on("click",e=>{e.preventDefault();const r=t(e.currentTarget),a=r.data("folderId"),o=1===parseInt(r.data("close"),10);n.insertElement("",a,"folder",a,a,"","","",o)}),t(".t3js-folderIdError").on("click",e=>{e.preventDefault(),a.confirm("",t(e.currentTarget).data("message"),o.error,[],[])})})}}});
+
+/**
+ * Module: TYPO3/CMS/Recordlist/BrowseFolders
+ * Folder selection
+ * @exports TYPO3/CMS/Recordlist/BrowseFolders
+ */
+define(['jquery', 'TYPO3/CMS/Recordlist/ElementBrowser', 'TYPO3/CMS/Backend/Modal', 'TYPO3/CMS/Backend/Severity'], function($, ElementBrowser, Modal, Severity) {
+  'use strict';
+
+  $(function() {
+    $('[data-folder-id]').on('click', function(event) {
+      event.preventDefault();
+      var folderId = $(this).data('folderId');
+      var close = $(this).data('close');
+      ElementBrowser.insertElement('', folderId, 'folder', folderId, folderId, '', '', '', close);
+    });
+
+    $('.t3js-folderIdError').on('click', function(event) {
+      event.preventDefault();
+      Modal.confirm('', $(this).data('message'), Severity.error, [], []);
+    });
+  });
+
+});

@@ -21,6 +21,8 @@ use Psr\Http\Message\ServerRequestInterface;
 use TYPO3\CMS\Backend\Backend\Avatar\Avatar;
 use TYPO3\CMS\Backend\Template\ModuleTemplate;
 use TYPO3\CMS\Backend\Utility\BackendUtility;
+use TYPO3\CMS\Core\Compatibility\PublicMethodDeprecationTrait;
+use TYPO3\CMS\Core\Compatibility\PublicPropertyDeprecationTrait;
 use TYPO3\CMS\Core\Database\ConnectionPool;
 use TYPO3\CMS\Core\Http\HtmlResponse;
 use TYPO3\CMS\Core\Imaging\Icon;
@@ -39,6 +41,29 @@ use TYPO3\CMS\Fluid\View\StandaloneView;
  */
 class ElementInformationController
 {
+    use PublicMethodDeprecationTrait;
+    use PublicPropertyDeprecationTrait;
+
+    /**
+     * @var array
+     */
+    private $deprecatedPublicMethods = [
+        'getLabelForTableColumn' => 'Using ElementInformationController::getLabelForTableColumn() is deprecated and will not be possible anymore in TYPO3 v10.0.',
+    ];
+
+    /**
+     * Properties which have been moved to protected status from public
+     *
+     * @var array
+     */
+    private $deprecatedPublicProperties = [
+        'table' => 'Using $table of class ElementInformationController from the outside is discouraged, as this variable is only used for internal storage.',
+        'uid' => 'Using $uid of class ElementInformationController from the outside is discouraged, as this variable is only used for internal storage.',
+        'access' => 'Using $access of class ElementInformationController from the outside is discouraged, as this variable is only used for internal storage.',
+        'type' => 'Using $type of class ElementInformationController from the outside is discouraged, as this variable is only used for internal storage.',
+        'pageInfo' => 'Using $pageInfo of class ElementInformationController from the outside is discouraged, as this variable is only used for internal storage.',
+    ];
+
     /**
      * Record table name
      *
@@ -114,6 +139,11 @@ class ElementInformationController
     {
         $this->iconFactory = GeneralUtility::makeInstance(IconFactory::class);
         $GLOBALS['SOBE'] = $this;
+
+        // @deprecated since TYPO3 v9, will be obsolete in TYPO3 v10.0 with removal of init()
+        $request = $GLOBALS['TYPO3_REQUEST'];
+        // @deprecated since TYPO3 v9, will be moved out of __construct() in TYPO3 v10.0
+        $this->init($request);
     }
 
     /**
@@ -125,7 +155,6 @@ class ElementInformationController
      */
     public function mainAction(ServerRequestInterface $request): ResponseInterface
     {
-        $this->init($request);
         $this->main($request);
         return new HtmlResponse($this->moduleTemplate->renderContent());
     }
@@ -134,10 +163,19 @@ class ElementInformationController
      * Determines if table/uid point to database record or file and
      * if user has access to view information
      *
-     * @param ServerRequestInterface $request
+     * @param ServerRequestInterface|null $request
      */
-    protected function init(ServerRequestInterface $request): void
+    public function init(ServerRequestInterface $request = null): void
     {
+        if ($request === null) {
+            // Missing argument? This method must have been called from outside.
+            // Method will be protected and $request mandatory in TYPO3 v10.0, giving core freedom to move stuff around
+            // New v10 signature: "protected function init(ServerRequestInterface $request): void"
+            // @deprecated since TYPO3 v9, method argument $request will be set to mandatory
+            trigger_error('ElementInformationController->init() will be set to protected in TYPO3 v10.0. Do not call from other extension.', E_USER_DEPRECATED);
+            $request = $GLOBALS['TYPO3_REQUEST'];
+        }
+
         $queryParams = $request->getQueryParams();
 
         $this->table = $queryParams['table'] ?? null;
@@ -175,6 +213,8 @@ class ElementInformationController
                     if (!empty($this->row['t3ver_oid'])) {
                         $t3OrigRow = BackendUtility::getRecord($this->table, (int)$this->row['t3ver_oid']);
                         $this->pageInfo = BackendUtility::readPageAccess((int)$t3OrigRow['pid'], $this->permsClause);
+                    } else {
+                        $this->pageInfo = BackendUtility::readPageAccess($this->row['pid'], $this->permsClause);
                     }
                     $this->access = is_array($this->pageInfo);
                 }
@@ -213,8 +253,15 @@ class ElementInformationController
      *
      * @param ServerRequestInterface $request
      */
-    protected function main(ServerRequestInterface $request): void
+    public function main(ServerRequestInterface $request = null): void
     {
+        if ($request === null) {
+            // Missing argument? This method must have been called from outside.
+            // @deprecated since TYPO3 v9, method argument $request will be set to mandatory
+            trigger_error('ElementInformationController->main() will be set to protected in TYPO3 v10.0. Do not call from other extension.', E_USER_DEPRECATED);
+            $request = $GLOBALS['TYPO3_REQUEST'];
+        }
+
         $content = '';
 
         // Rendering of the output via fluid
@@ -757,7 +804,7 @@ class ElementInformationController
     protected function canAccessPage(string $tableName, array $record): bool
     {
         $recordPid = (int)($tableName === 'pages' ? $record['uid'] : $record['pid']);
-        return $this->getBackendUser()->isInWebMount($recordPid)
+        return $this->getBackendUser()->isInWebMount($tableName === 'pages' ? $record : $record['pid'])
             || $recordPid === 0 && !empty($GLOBALS['TCA'][$tableName]['ctrl']['security']['ignoreRootLevelRestriction']);
     }
 

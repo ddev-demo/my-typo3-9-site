@@ -8,6 +8,7 @@
 return [
     'BE' => [
         'explicitADmode' => 'explicitAllow',
+        'loginSecurityLevel' => 'normal',
     ],
     'DB' => [
         'Connections' => [
@@ -17,10 +18,14 @@ return [
             ],
         ],
     ],
+    'FE' => [
+        'loginSecurityLevel' => 'normal',
+    ],
     'SYS' => [
         'sitename' => 'New TYPO3 site',
         'features' => [
-            'unifiedPageTranslationHandling' => true
+            'unifiedPageTranslationHandling' => true,
+            'newTranslationServer' => true,
         ],
     ],
 ];

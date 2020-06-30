@@ -17,6 +17,8 @@ namespace TYPO3\CMS\Core\TypoScript\Parser;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\Finder\Finder;
 use TYPO3\CMS\Backend\Configuration\TypoScript\ConditionMatching\ConditionMatcher as BackendConditionMatcher;
+use TYPO3\CMS\Core\Compatibility\PublicMethodDeprecationTrait;
+use TYPO3\CMS\Core\Compatibility\PublicPropertyDeprecationTrait;
 use TYPO3\CMS\Core\Configuration\TypoScript\ConditionMatching\AbstractConditionMatcher;
 use TYPO3\CMS\Core\Core\Environment;
 use TYPO3\CMS\Core\Log\LogManager;
@@ -33,6 +35,37 @@ use TYPO3\CMS\Frontend\Configuration\TypoScript\ConditionMatching\ConditionMatch
  */
 class TypoScriptParser
 {
+    use PublicPropertyDeprecationTrait;
+    use PublicMethodDeprecationTrait;
+
+    protected $deprecatedPublicProperties = [
+        'raw' => 'Using $raw of class TypoScriptParser from the outside is discouraged, as this variable is only used for internal storage.',
+        'rawP' => 'Using $rawP of class TypoScriptParser from the outside is discouraged, as this variable is only used for internal storage.',
+        'lastComment' => 'Using $lastComment of class TypoScriptParser from the outside is discouraged, as this variable is only used for internal storage.',
+        'commentSet' => 'Using $commentSet of class TypoScriptParser from the outside is discouraged, as this variable is only used for internal storage.',
+        'multiLineEnabled' => 'Using $multiLineEnabled of class TypoScriptParser from the outside is discouraged, as this variable is only used for internal storage.',
+        'multiLineObject' => 'Using $multiLineObject of class TypoScriptParser from the outside is discouraged, as this variable is only used for internal storage.',
+        'multiLineValue' => 'Using $multiLineValue of class TypoScriptParser from the outside is discouraged, as this variable is only used for internal storage.',
+        'inBrace' => 'Using $inBrace of class TypoScriptParser from the outside is discouraged, as this variable is only used for internal storage.',
+        'lastConditionTrue' => 'Using $lastConditionTrue of class TypoScriptParser from the outside is discouraged, as this variable is only used for internal storage.',
+        'syntaxHighLight' => 'Using $syntaxHighLight of class TypoScriptParser from the outside is discouraged, as this variable is only used for internal storage.',
+        'highLightData' => 'Using $highLightData of class TypoScriptParser from the outside is discouraged, as this variable is only used for internal storage.',
+        'highLightData_bracelevel' => 'Using $highLightData_bracelevel of class TypoScriptParser from the outside is discouraged, as this variable is only used for internal storage.',
+        'highLightStyles' => 'Using $highLightStyles of class TypoScriptParser from the outside is discouraged, as this variable is only used for internal storage.',
+        'highLightBlockStyles' => 'Using $highLightBlockStyles of class TypoScriptParser from the outside is discouraged, as this variable is only used for internal storage.',
+        'highLightBlockStyles_basecolor' => 'Using $highLightBlockStyles_basecolor of class TypoScriptParser from the outside is discouraged, as this variable is only used for internal storage.',
+    ];
+
+    protected $deprecatedPublicMethods = [
+        'nextDivider' => 'Using nextDivider() of class TypoScriptParser from the outside is discouraged, as this method is only meant to be used internally.',
+        'parseSub' => 'Using parseSub() of class TypoScriptParser from the outside is discouraged, as this method is only meant to be used internally.',
+        'rollParseSub' => 'Using rollParseSub() of class TypoScriptParser from the outside is discouraged, as this method is only meant to be used internally.',
+        'setVal' => 'Using setVal() of class TypoScriptParser from the outside is discouraged, as this method is only meant to be used internally.',
+        'error' => 'Using error() of class TypoScriptParser from the outside is discouraged, as this method is only meant to be used internally.',
+        'regHighLight' => 'Using regHighLight() of class TypoScriptParser from the outside is discouraged, as this method is only meant to be used internally.',
+        'syntaxHighlight_print' => 'Using syntaxHighlight_print() of class TypoScriptParser from the outside is discouraged, as this method is only meant to be used internally.',
+    ];
+
     /**
      * TypoScript hierarchy being build during parsing.
      *
@@ -334,7 +367,7 @@ class TypoScriptParser
                         }
                         // Disable multiline
                         $this->multiLineEnabled = false;
-                        $theValue = implode($this->multiLineValue, LF);
+                        $theValue = implode(LF, $this->multiLineValue);
                         if (strpos($this->multiLineObject, '.') !== false) {
                             // Set the value deeper.
                             $this->setVal($this->multiLineObject, $setup, [$theValue]);
@@ -355,6 +388,10 @@ class TypoScriptParser
                         $this->multiLineValue[] = $this->raw[$this->rawP - 1];
                     }
                 } elseif ($this->inBrace === 0 && $line[0] === '[') {
+                    if (substr(trim($line), -1, 1) !== ']') {
+                        $this->error('Line ' . ($this->lineNumberOffset + $this->rawP - 1) . ': Invalid condition found, any condition must end with "]": ' . $line);
+                        return $line;
+                    }
                     // Beginning of condition (only on level zero compared to brace-levels
                     if ($this->syntaxHighLight) {
                         $this->regHighLight('condition', $lineP);
@@ -425,12 +462,7 @@ class TypoScriptParser
                                                 $setup[$objStrName] = trim(substr($line, 1));
                                                 if ($this->lastComment && $this->regComments) {
                                                     // Setting comment..
-                                                    $matchingCommentKey = $objStrName . '..';
-                                                    if (isset($setup[$matchingCommentKey])) {
-                                                        $setup[$matchingCommentKey] .= $this->lastComment;
-                                                    } else {
-                                                        $setup[$matchingCommentKey] = $this->lastComment;
-                                                    }
+                                                    $setup[$objStrName . '..'] .= $this->lastComment;
                                                 }
                                                 if ($this->regLinenumbers) {
                                                     $setup[$objStrName . '.ln..'][] = $this->lineNumberOffset + $this->rawP - 1;
@@ -471,7 +503,7 @@ class TypoScriptParser
                                             }
                                             // unserialize(serialize(...)) may look stupid but is needed because of some reference issues.
                                             // See forge issue #76919 and functional test hasFlakyReferences()
-                                            $this->setVal($objStrName, $setup, unserialize(serialize($res)), 1);
+                                            $this->setVal($objStrName, $setup, unserialize(serialize($res), ['allowed_classes' => false]), 1);
                                             break;
                                         case '>':
                                             if ($this->syntaxHighLight) {
@@ -1105,6 +1137,16 @@ class TypoScriptParser
                 $fileExists = false;
                 if (@file_exists($absfilename)) {
                     $fileExists = true;
+                } else {
+                    // BC layer after renaming core TypoScript files from .txt to .typoscript
+                    if (substr($absfilename, -4, 4) === '.txt') {
+                        $absfilename = substr($absfilename, 0, -4) . '.typoscript';
+                        if (@file_exists($absfilename)) {
+                            trigger_error('The TypoScript file ' . $filename . ' was renamed to .typoscript extension.'
+                                . ' Update your "<INCLUDE_TYPOSCRIPT" statements.', E_USER_DEPRECATED);
+                            $fileExists = true;
+                        }
+                    }
                 }
 
                 if ($fileExists) {

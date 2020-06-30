@@ -14,10 +14,8 @@ namespace TYPO3\CMS\Frontend\DataProcessing;
  * The TYPO3 project - inspiring people to share!
  */
 
-use TYPO3\CMS\Core\Exception\SiteNotFoundException;
-use TYPO3\CMS\Core\Site\Entity\NullSite;
+use TYPO3\CMS\Core\Routing\SiteMatcher;
 use TYPO3\CMS\Core\Site\Entity\SiteInterface;
-use TYPO3\CMS\Core\Site\SiteFinder;
 use TYPO3\CMS\Core\Utility\GeneralUtility;
 use TYPO3\CMS\Frontend\ContentObject\ContentDataProcessor;
 use TYPO3\CMS\Frontend\ContentObject\ContentObjectRenderer;
@@ -105,6 +103,7 @@ class MenuProcessor implements DataProcessorInterface
         'excludeUidList.',
         'excludeDoktypes',
         'includeNotInMenu',
+        'includeNotInMenu.',
         'alwaysActivePIDlist',
         'alwaysActivePIDlist.',
         'protectLvar',
@@ -533,15 +532,12 @@ class MenuProcessor implements DataProcessorInterface
      * Returns the currently configured "site" if a site is configured (= resolved) in the current request.
      *
      * @return SiteInterface
+     * @throws \TYPO3\CMS\Core\Exception\SiteNotFoundException
      */
     protected function getCurrentSite(): SiteInterface
     {
-        try {
-            return GeneralUtility::makeInstance(SiteFinder::class)
-                ->getSiteByPageId((int)$this->getTypoScriptFrontendController()->id);
-        } catch (SiteNotFoundException $e) {
-            return new NullSite();
-        }
+        $matcher = GeneralUtility::makeInstance(SiteMatcher::class);
+        return $matcher->matchByPageId((int)$this->getTypoScriptFrontendController()->id);
     }
 
     /**

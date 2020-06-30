@@ -74,6 +74,8 @@ class NodeFactory
         'inputDateTime' => Element\InputDateTimeElement::class,
         'inputLink' => Element\InputLinkElement::class,
         'hidden' => Element\InputHiddenElement::class,
+        // rsaInput is defined with a fallback so extensions can use it even if ext:rsaauth is not loaded
+        'rsaInput' => Element\InputTextElement::class,
         'imageManipulation' => Element\ImageManipulationElement::class,
         'none' => Element\NoneElement::class,
         'radio' => Element\RadioElement::class,
@@ -106,6 +108,9 @@ class NodeFactory
 
         // Element wizards
         'defaultLanguageDifferences' => FieldWizard\DefaultLanguageDifferences::class,
+        'fileThumbnails' => FieldWizard\FileThumbnails::class,
+        'fileTypeList' => FieldWizard\FileTypeList::class,
+        'fileUpload' => FieldWizard\FileUpload::class,
         'localizationStateSelector' => FieldWizard\LocalizationStateSelector::class,
         'otherLanguageContent' => FieldWizard\OtherLanguageContent::class,
         'recordsOverview' => FieldWizard\RecordsOverview::class,

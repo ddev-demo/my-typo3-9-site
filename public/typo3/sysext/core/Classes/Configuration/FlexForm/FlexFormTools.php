@@ -828,6 +828,7 @@ class FlexFormTools
                 if (isset($value['type']) && $value['type'] === 'array') {
                     // Array (Section) traversal
                     if ($value['section']) {
+                        $cc = 0;
                         if (isset($editData[$key]['el']) && is_array($editData[$key]['el'])) {
                             if ($this->reNumberIndexesOfSectionData) {
                                 $temp = [];

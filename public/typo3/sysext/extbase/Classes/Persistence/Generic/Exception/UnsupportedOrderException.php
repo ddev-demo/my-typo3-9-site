@@ -1,6 +1,4 @@
 <?php
-declare(strict_types = 1);
-
 namespace TYPO3\CMS\Extbase\Persistence\Generic\Exception;
 
 /*
@@ -16,11 +14,9 @@ namespace TYPO3\CMS\Extbase\Persistence\Generic\Exception;
  * The TYPO3 project - inspiring people to share!
  */
 
-use TYPO3\CMS\Extbase\Persistence\Generic\Exception;
-
 /**
  * An "Unsupported Order" exception: The order you specified in the query is not supported by now.
  */
-class UnsupportedOrderException extends Exception
+class UnsupportedOrderException extends \TYPO3\CMS\Extbase\Persistence\Generic\Exception
 {
 }

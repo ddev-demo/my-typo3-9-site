@@ -1,6 +1,4 @@
 <?php
-declare(strict_types = 1);
-
 namespace TYPO3\CMS\Extbase\Property\TypeConverter;
 
 /*
@@ -29,7 +27,7 @@ abstract class AbstractTypeConverter implements \TYPO3\CMS\Extbase\Property\Type
     /**
      * The source types this converter can convert.
      *
-     * @var string[]
+     * @var array<string>
      */
     protected $sourceTypes = [];
 
@@ -56,7 +54,7 @@ abstract class AbstractTypeConverter implements \TYPO3\CMS\Extbase\Property\Type
      * @param \TYPO3\CMS\Extbase\Object\ObjectManagerInterface $objectManager
      * @internal only to be used within Extbase, not part of TYPO3 Core API.
      */
-    public function injectObjectManager(\TYPO3\CMS\Extbase\Object\ObjectManagerInterface $objectManager): void
+    public function injectObjectManager(\TYPO3\CMS\Extbase\Object\ObjectManagerInterface $objectManager)
     {
         $this->objectManager = $objectManager;
     }
@@ -65,9 +63,9 @@ abstract class AbstractTypeConverter implements \TYPO3\CMS\Extbase\Property\Type
      * Returns the list of source types the TypeConverter can handle.
      * Must be PHP simple types, classes or object is not allowed.
      *
-     * @return string[]
+     * @return array<string>
      */
-    public function getSupportedSourceTypes(): array
+    public function getSupportedSourceTypes()
     {
         return $this->sourceTypes;
     }
@@ -78,7 +76,7 @@ abstract class AbstractTypeConverter implements \TYPO3\CMS\Extbase\Property\Type
      *
      * @return string
      */
-    public function getSupportedTargetType(): string
+    public function getSupportedTargetType()
     {
         return $this->targetType;
     }
@@ -91,7 +89,7 @@ abstract class AbstractTypeConverter implements \TYPO3\CMS\Extbase\Property\Type
      * @param \TYPO3\CMS\Extbase\Property\PropertyMappingConfigurationInterface $configuration
      * @return string
      */
-    public function getTargetTypeForSource($source, string $originalTargetType, \TYPO3\CMS\Extbase\Property\PropertyMappingConfigurationInterface $configuration = null): string
+    public function getTargetTypeForSource($source, $originalTargetType, \TYPO3\CMS\Extbase\Property\PropertyMappingConfigurationInterface $configuration = null)
     {
         return $originalTargetType;
     }
@@ -101,50 +99,42 @@ abstract class AbstractTypeConverter implements \TYPO3\CMS\Extbase\Property\Type
      *
      * @return int
      */
-    public function getPriority(): int
+    public function getPriority()
     {
         return $this->priority;
     }
 
     /**
-     * todo: this method should be abstract or removed, contract is defined by TypeConverterInterface.
-     *
      * This implementation always returns TRUE for this method.
      *
      * @param mixed $source the source data
      * @param string $targetType the type to convert to.
      * @return bool TRUE if this TypeConverter can convert from $source to $targetType, FALSE otherwise.
      */
-    public function canConvertFrom($source, string $targetType): bool
+    public function canConvertFrom($source, $targetType)
     {
         return true;
     }
 
     /**
-     * todo: this method should be abstract or removed, contract is defined by TypeConverterInterface.
-     *
      * Returns an empty list of sub property names
      *
      * @param mixed $source
      * @return array
      */
-    public function getSourceChildPropertiesToBeConverted($source): array
+    public function getSourceChildPropertiesToBeConverted($source)
     {
         return [];
     }
 
     /**
-     * todo: this method should be abstract or removed, contract is defined by TypeConverterInterface.
-     *
      * This method is never called, as getSourceChildPropertiesToBeConverted() returns an empty array.
      *
      * @param string $targetType
      * @param string $propertyName
-     * @return string
      * @param \TYPO3\CMS\Extbase\Property\PropertyMappingConfigurationInterface $configuration
      */
-    public function getTypeOfChildProperty(string $targetType, string $propertyName, \TYPO3\CMS\Extbase\Property\PropertyMappingConfigurationInterface $configuration): string
+    public function getTypeOfChildProperty($targetType, $propertyName, \TYPO3\CMS\Extbase\Property\PropertyMappingConfigurationInterface $configuration)
     {
-        return '';
     }
 }

@@ -68,9 +68,10 @@ class OtherLanguageContent extends AbstractNode
             $defaultLanguageRow['pid']
         );
         if ($defaultLanguageValue !== '') {
+            $iconIdentifier = $this->data['systemLanguageRows'][0]['flagIconIdentifier'] ?: 'flags-multiple';
             $html[] = '<div class="t3-form-original-language">';
-            $html[] =   $iconFactory->getIcon($this->data['systemLanguageRows'][0]['flagIconIdentifier'], Icon::SIZE_SMALL)->render();
-            $html[] =   $this->previewFieldValue($defaultLanguageValue);
+            $html[] =   $iconFactory->getIcon($iconIdentifier, Icon::SIZE_SMALL)->render();
+            $html[] =   $this->previewFieldValue($defaultLanguageValue, $fieldConfig, $fieldName);
             $html[] = '</div>';
         }
         $additionalPreviewLanguages = $this->data['additionalLanguageRows'];
@@ -85,7 +86,7 @@ class OtherLanguageContent extends AbstractNode
             if ($defaultLanguageValue !== '') {
                 $html[] = '<div class="t3-form-original-language">';
                 $html[] =   $iconFactory->getIcon($this->data['systemLanguageRows'][$previewLanguage['sys_language_uid']]['flagIconIdentifier'], Icon::SIZE_SMALL)->render();
-                $html[] =   $this->previewFieldValue($defaultLanguageValue);
+                $html[] =   $this->previewFieldValue($defaultLanguageValue, $fieldConfig, $fieldName);
                 $html[] = '</div>';
             }
         }
@@ -97,10 +98,57 @@ class OtherLanguageContent extends AbstractNode
      * Rendering preview output of a field value which is not shown as a form field but just outputted.
      *
      * @param string $value The value to output
+     * @param array $config Configuration for field.
+     * @param string $field Name of field.
      * @return string HTML formatted output
      */
-    protected function previewFieldValue($value)
+    protected function previewFieldValue($value, $config, $field = '')
     {
-        return nl2br(htmlspecialchars((string)$value));
+        // @deprecated since TYPO3 v9, will be removed in TYPO3 v10.0. Deprecation logged by TcaMigration class.
+        $value = (string)$value;
+        if ($config['config']['type'] === 'group'
+            && ($config['config']['internal_type'] === 'file' || $config['config']['internal_type'] === 'file_reference')
+        ) {
+            // Ignore upload folder if internal_type is file_reference
+            if ($config['config']['internal_type'] === 'file_reference') {
+                $config['config']['uploadfolder'] = '';
+            }
+            $table = 'tt_content';
+            // Making the array of file items:
+            $itemArray = GeneralUtility::trimExplode(',', $value, true);
+            // Showing thumbnails:
+            $imgs = [];
+            $iconFactory = GeneralUtility::makeInstance(IconFactory::class);
+            foreach ($itemArray as $imgRead) {
+                $imgParts = explode('|', $imgRead);
+                $imgPath = rawurldecode($imgParts[0]);
+                $rowCopy = [];
+                $rowCopy[$field] = $imgPath;
+                // Icon + click menu:
+                $absFilePath = GeneralUtility::getFileAbsFileName($config['config']['uploadfolder'] ? $config['config']['uploadfolder'] . '/' . $imgPath : $imgPath);
+                $fileInformation = pathinfo($imgPath);
+                $title = $fileInformation['basename'] . ($absFilePath && @is_file($absFilePath))
+                    ? ' (' . GeneralUtility::formatSize(filesize($absFilePath)) . ')'
+                    : ' - FILE NOT FOUND!';
+                $fileIcon = '<span title="' . htmlspecialchars($title) . '">' . $iconFactory->getIconForFileExtension($fileInformation['extension'], Icon::SIZE_SMALL)->render() . '</span>';
+                $imgs[] =
+                    '<span class="text-nowrap">' .
+                    BackendUtility::thumbCode(
+                        $rowCopy,
+                        $table,
+                        $field,
+                        '',
+                        '',
+                        $config['config']['uploadfolder'],
+                        0,
+                        ' align="middle"'
+                    ) .
+                    ($absFilePath ? BackendUtility::wrapClickMenuOnIcon($fileIcon, $absFilePath) : $fileIcon) .
+                    $imgPath .
+                    '</span>';
+            }
+            return implode('<br />', $imgs);
+        }
+        return nl2br(htmlspecialchars($value));
     }
 }

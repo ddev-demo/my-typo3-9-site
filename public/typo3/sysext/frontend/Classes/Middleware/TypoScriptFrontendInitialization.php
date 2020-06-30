@@ -15,46 +15,35 @@ namespace TYPO3\CMS\Frontend\Middleware;
  * The TYPO3 project - inspiring people to share!
  */
 
+use Doctrine\DBAL\Exception\ConnectionException;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
 use Psr\Http\Server\MiddlewareInterface;
 use Psr\Http\Server\RequestHandlerInterface;
-use TYPO3\CMS\Core\Authentication\BackendUserAuthentication;
-use TYPO3\CMS\Core\Context\Context;
-use TYPO3\CMS\Core\Context\UserAspect;
-use TYPO3\CMS\Core\Context\WorkspaceAspect;
-use TYPO3\CMS\Core\Routing\PageArguments;
-use TYPO3\CMS\Core\Site\Entity\Site;
-use TYPO3\CMS\Core\Type\Bitmask\Permission;
+use Psr\Log\LoggerAwareInterface;
+use Psr\Log\LoggerAwareTrait;
+use TYPO3\CMS\Core\Database\ConnectionPool;
+use TYPO3\CMS\Core\Error\Http\ServiceUnavailableException;
 use TYPO3\CMS\Core\Utility\GeneralUtility;
-use TYPO3\CMS\Frontend\Aspect\PreviewAspect;
 use TYPO3\CMS\Frontend\Controller\ErrorController;
 use TYPO3\CMS\Frontend\Controller\TypoScriptFrontendController;
-use TYPO3\CMS\Frontend\Page\PageAccessFailureReasons;
 
 /**
  * Creates an instance of TypoScriptFrontendController and makes this globally available
  * via $GLOBALS['TSFE'].
  *
- * In addition, determineId builds up the rootline based on a valid frontend-user authentication and
- * Backend permissions if previewing.
+ * For now, GeneralUtility::_GP() is used in favor of $request->getQueryParams() due to
+ * hooks who could have $_GET/$_POST modified before.
  *
- * @internal this middleware might get removed in TYPO3 v11.0.
+ * @internal this middleware might get removed in TYPO3 v10.0.
  */
-class TypoScriptFrontendInitialization implements MiddlewareInterface
+class TypoScriptFrontendInitialization implements MiddlewareInterface, LoggerAwareInterface
 {
-    /**
-     * @var Context
-     */
-    protected $context;
-
-    public function __construct(Context $context)
-    {
-        $this->context = $context;
-    }
+    use LoggerAwareTrait;
 
     /**
-     * Creates an instance of TSFE and sets it as a global variable.
+     * Creates an instance of TSFE and sets it as a global variable,
+     * also pings the database in order ensure a valid database connection.
      *
      * @param ServerRequestInterface $request
      * @param RequestHandlerInterface $handler
@@ -62,60 +51,42 @@ class TypoScriptFrontendInitialization implements MiddlewareInterface
      */
     public function process(ServerRequestInterface $request, RequestHandlerInterface $handler): ResponseInterface
     {
-        $GLOBALS['TYPO3_REQUEST'] = $request;
-        /** @var Site $site */
-        $site = $request->getAttribute('site', null);
-        $pageArguments = $request->getAttribute('routing', null);
-        if (!$pageArguments instanceof PageArguments) {
-            // Page Arguments must be set in order to validate. This middleware only works if PageArguments
-            // is available, and is usually combined with the Page Resolver middleware
-            return GeneralUtility::makeInstance(ErrorController::class)->pageNotFoundAction(
-                $request,
-                'Page Arguments could not be resolved',
-                ['code' => PageAccessFailureReasons::INVALID_PAGE_ARGUMENTS]
-            );
-        }
-        $this->context->setAspect('frontend.preview', GeneralUtility::makeInstance(PreviewAspect::class));
-
-        $controller = GeneralUtility::makeInstance(
+        $GLOBALS['TSFE'] = GeneralUtility::makeInstance(
             TypoScriptFrontendController::class,
-            $this->context,
-            $site,
-            $request->getAttribute('language', $site->getDefaultLanguage()),
-            $pageArguments,
-            $request->getAttribute('frontend.user', null)
+            null,
+            GeneralUtility::_GP('id'),
+            GeneralUtility::_GP('type'),
+            null,
+            GeneralUtility::_GP('cHash'),
+            null,
+            GeneralUtility::_GP('MP')
         );
-        if ($pageArguments->getArguments()['no_cache'] ?? $request->getParsedBody()['no_cache'] ?? false) {
-            $controller->set_no_cache('&no_cache=1 has been supplied, so caching is disabled! URL: "' . (string)$request->getUri() . '"');
-        }
-        // Usually only set by the PageArgumentValidator
-        if ($request->getAttribute('noCache', false)) {
-            $controller->no_cache = 1;
+        if (GeneralUtility::_GP('no_cache')) {
+            $GLOBALS['TSFE']->set_no_cache('&no_cache=1 has been supplied, so caching is disabled! URL: "' . (string)$request->getUri() . '"');
         }
 
-        $controller->determineId();
-
-        // No access? Then remove user and re-evaluate the page id
-        if ($controller->isBackendUserLoggedIn() && !$GLOBALS['BE_USER']->doesUserHaveAccess($controller->page, Permission::PAGE_SHOW)) {
-            unset($GLOBALS['BE_USER']);
-            // Register an empty backend user as aspect
-            $this->setBackendUserAspect(null);
-            $controller->determineId();
+        // Set up the database connection and see if the connection can be established
+        try {
+            $connection = GeneralUtility::makeInstance(ConnectionPool::class)->getConnectionForTable('pages');
+            $connection->connect();
+        } catch (ConnectionException | \RuntimeException $exception) {
+            $message = 'Cannot connect to the configured database';
+            $this->logger->emergency($message, ['exception' => $exception]);
+            try {
+                return GeneralUtility::makeInstance(ErrorController::class)->unavailableAction($request, $message);
+            } catch (ServiceUnavailableException $e) {
+                throw new ServiceUnavailableException($message, 1526013723);
+            }
+        }
+        // Call post processing function for DB connection:
+        if (!empty($GLOBALS['TYPO3_CONF_VARS']['SC_OPTIONS']['tslib/class.tslib_fe.php']['connectToDB'])) {
+            trigger_error('The "connectToDB" hook will be removed in TYPO3 v10.0 in favor of PSR-15. Use a middleware instead.', E_USER_DEPRECATED);
+            $_params = ['pObj' => &$GLOBALS['TSFE']];
+            foreach ($GLOBALS['TYPO3_CONF_VARS']['SC_OPTIONS']['tslib/class.tslib_fe.php']['connectToDB'] as $_funcRef) {
+                GeneralUtility::callUserFunction($_funcRef, $_params, $GLOBALS['TSFE']);
+            }
         }
 
-        // Make TSFE globally available
-        $GLOBALS['TSFE'] = $controller;
         return $handler->handle($request);
-    }
-
-    /**
-     * Register the backend user as aspect
-     *
-     * @param BackendUserAuthentication|null $user
-     */
-    protected function setBackendUserAspect(BackendUserAuthentication $user): void
-    {
-        $this->context->setAspect('backend.user', GeneralUtility::makeInstance(UserAspect::class, $user));
-        $this->context->setAspect('workspace', GeneralUtility::makeInstance(WorkspaceAspect::class, $user ? $user->workspace : 0));
     }
 }
